@@ -1,5 +1,6 @@
-import type { SessionEvent, RunDetail } from "../api";
+import type { Entry, RunDetail } from "../api";
 import { fmtSec, fmtNum } from "./format";
+import type { AgentMessage } from "@earendil-works/pi-agent-core";
 
 // ── session metrics (computed client-side from raw session events) ──
 // NOTE on timestamps: an assistant message's timestamp is when the model request
@@ -37,40 +38,30 @@ export interface SessionMetrics {
   rounds: SessionRound[];
 }
 
-export function computeSessionMetrics(events: SessionEvent[]): SessionMetrics {
+/** Extract timestamp from an AgentMessage (all variants carry timestamp). */
+function msgTimestamp(m: AgentMessage): number {
+  return (m as { timestamp: number }).timestamp;
+}
+
+export function computeSessionMetrics(events: Entry[]): SessionMetrics {
   const messages = events
     .map((event, index) => ({ event, index }))
     .filter((x) => x.event.type === "message");
+  const ts = (x: { event: Entry }) =>
+    x.event.type === "message" ? msgTimestamp(x.event.message) : NaN;
+
   const timestampAdjusted =
-    messages.some(
-      (x) =>
-        x.event.type === "message" &&
-        !Number.isFinite(
-          (x.event as Extract<SessionEvent, { type: "message" }>).message
-            .timestamp
-        )
-    ) ||
+    messages.some((x) => !Number.isFinite(ts(x))) ||
     messages.some(
       (x, i) =>
         i > 0 &&
-        x.event.type === "message" &&
-        messages[i - 1].event.type === "message" &&
-        Number.isFinite(
-          (x.event as Extract<SessionEvent, { type: "message" }>).message
-            .timestamp
-        ) &&
-        Number.isFinite(
-          (messages[i - 1].event as Extract<SessionEvent, { type: "message" }>)
-            .message.timestamp
-        ) &&
-        (x.event as Extract<SessionEvent, { type: "message" }>).message
-          .timestamp <
-          (messages[i - 1].event as Extract<SessionEvent, { type: "message" }>)
-            .message.timestamp
+        Number.isFinite(ts(x)) &&
+        Number.isFinite(ts(messages[i - 1])) &&
+        ts(x) < ts(messages[i - 1])
     );
   messages.sort((a, b) => {
-    const at = a.event.type === "message" ? a.event.message.timestamp : NaN;
-    const bt = b.event.type === "message" ? b.event.message.timestamp : NaN;
+    const at = ts(a),
+      bt = ts(b);
     if (Number.isFinite(at) && Number.isFinite(bt))
       return at - bt || a.index - b.index;
     if (Number.isFinite(at)) return -1;
@@ -100,11 +91,11 @@ export function computeSessionMetrics(events: SessionEvent[]): SessionMetrics {
   }[] = [];
   for (const { event } of messages) {
     if (event.type !== "message") continue;
-    const m = event.message,
-      ts = m.timestamp;
-    if (Number.isFinite(ts)) {
-      firstTs = Math.min(firstTs, ts);
-      lastTs = Math.max(lastTs, ts);
+    const m = event.message;
+    const mts = msgTimestamp(m);
+    if (Number.isFinite(mts)) {
+      firstTs = Math.min(firstTs, mts);
+      lastTs = Math.max(lastTs, mts);
     }
     if (m.role === "assistant") {
       modelRequests++;
@@ -121,7 +112,7 @@ export function computeSessionMetrics(events: SessionEvent[]): SessionMetrics {
           tools.push(part.name);
         }
       assistantMsg.push({
-        ts,
+        ts: mts,
         model: m.model,
         stopReason: m.stopReason,
         input: m.usage?.input ?? 0,

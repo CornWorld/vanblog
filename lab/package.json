@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@earendil-works/pi-agent-core": "^0.84.2",
+    "@earendil-works/pi-telemetry": "^0.84.2",
     "@solidjs/router": "^1.0.0",
     "solid-js": "^1.9.15"
   },

@@ -1,4 +1,10 @@
 // API client + types for the artifacts-server.
+// Session event types are imported from @earendil-works/pi-agent-core
+// instead of hand-written, to stay in sync with pi's session JSONL format.
+
+import type { Entry } from "@earendil-works/pi-agent-core";
+
+export type { Entry, MessageEntry } from "@earendil-works/pi-agent-core";
 
 export interface RunSummary {
   id: string;
@@ -41,52 +47,10 @@ async function get<T>(url: string): Promise<T> {
   return res.json();
 }
 
-// ── Session event types (raw pi session JSONL) ──
-
-/** A single session event as recorded by pi's --session-dir. */
-export type SessionEvent =
-  | { type: "session"; id: string }
-  | { type: "model_change"; modelId: string; provider: string }
-  | { type: "thinking_level_change"; level: string | null }
-  | { type: "message"; message: SessionMessage };
-
-export type SessionMessage =
-  | { role: "user"; content: string; timestamp: number }
-  | {
-      role: "assistant";
-      content: AssistantContent[];
-      usage: {
-        input: number;
-        output: number;
-        cacheRead: number;
-        cacheWrite: number;
-        reasoning: number;
-      };
-      stopReason: string;
-      model: string;
-      provider: string;
-      timestamp: number;
-    }
-  | {
-      role: "toolResult";
-      content: ToolResultContent[];
-      toolName: string;
-      isError: boolean;
-      timestamp: number;
-    };
-
-export type AssistantContent =
-  | { type: "text"; text: string }
-  | { type: "toolCall"; id: string; name: string; args: unknown };
-
-export type ToolResultContent =
-  | { type: "text"; text: string }
-  | { type: "resource"; resource: unknown };
-
 export const api = {
   runs: () => get<RunSummary[]>("/api/runs"),
   run: (id: string) => get<RunDetail>(`/api/runs/${id}`),
-  session: (id: string) => get<SessionEvent[]>(`/api/runs/${id}/session`),
+  session: (id: string) => get<Entry[]>(`/api/runs/${id}/session`),
   file: async (id: string, path: string): Promise<string> => {
     const res = await fetch(
       `/api/runs/${id}/file?path=${encodeURIComponent(path)}`
