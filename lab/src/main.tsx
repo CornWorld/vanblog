@@ -1,6 +1,5 @@
 import { render } from "solid-js/web";
 import { Router } from "@solidjs/router";
-import "daisyui/daisyui.css";
 import "./styles.css";
 import App from "./App";
 

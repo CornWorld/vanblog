@@ -1,4 +1,24 @@
-/* daisyUI 5 dark theme + base layout */
+@import "daisyui/theme/dark.css";
+@import "daisyui/base/properties.css";
+@import "daisyui/base/reset.css";
+@import "daisyui/base/rootcolor.css";
+@import "daisyui/base/scrollbar.css";
+@import "daisyui/base/svg.css";
+@import "daisyui/colors/properties.css";
+@import "daisyui/colors/properties-extended.css";
+@import "daisyui/utilities/radius.css";
+@import "daisyui/utilities/typography.css";
+@import "daisyui/components/alert.css";
+@import "daisyui/components/badge.css";
+@import "daisyui/components/breadcrumbs.css";
+@import "daisyui/components/button.css";
+@import "daisyui/components/card.css";
+@import "daisyui/components/collapse.css";
+@import "daisyui/components/link.css";
+@import "daisyui/components/select.css";
+@import "daisyui/components/stat.css";
+@import "daisyui/components/table.css";
+
 :root {
   color-scheme: dark;
 }
