@@ -62,11 +62,10 @@ export default function App() {
     };
   });
 
-  const nav = useNavigate();
-
-  // Route page components — defined as closures so they can read shared signals
-  // (rows/models/stats/filter) reactively. Access via () => to preserve reactivity.
+  // Route page components — useNavigate/useParams MUST be called here
+  // (inside <Route component={...}>), not in App (direct <Router> child).
   function ListPage() {
+    const nav = useNavigate();
     return (
       <RunList
         rows={rows()}
@@ -82,6 +81,7 @@ export default function App() {
     );
   }
   function DetailPage() {
+    const nav = useNavigate();
     const p = useParams();
     const id = () => p.id!;
     return (
@@ -93,6 +93,7 @@ export default function App() {
     );
   }
   function SessionPage() {
+    const nav = useNavigate();
     const p = useParams();
     const id = () => p.id!;
     return <SessionDetail id={id()} onBack={() => nav(`/runs/${id()}`)} />;
