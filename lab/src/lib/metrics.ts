@@ -19,7 +19,7 @@ export interface SessionRound {
 }
 
 export interface SessionMetrics {
-  timeline: { wallSeconds: number };
+  timeline: { wallSeconds: number; timestampAdjusted: boolean };
   agent: {
     modelRequestCount: number;
     toolCallCount: number;
@@ -38,9 +38,48 @@ export interface SessionMetrics {
 }
 
 export function computeSessionMetrics(events: SessionEvent[]): SessionMetrics {
+  const messages = events
+    .map((event, index) => ({ event, index }))
+    .filter((x) => x.event.type === "message");
+  const timestampAdjusted =
+    messages.some(
+      (x) =>
+        x.event.type === "message" &&
+        !Number.isFinite(
+          (x.event as Extract<SessionEvent, { type: "message" }>).message
+            .timestamp
+        )
+    ) ||
+    messages.some(
+      (x, i) =>
+        i > 0 &&
+        x.event.type === "message" &&
+        messages[i - 1].event.type === "message" &&
+        Number.isFinite(
+          (x.event as Extract<SessionEvent, { type: "message" }>).message
+            .timestamp
+        ) &&
+        Number.isFinite(
+          (messages[i - 1].event as Extract<SessionEvent, { type: "message" }>)
+            .message.timestamp
+        ) &&
+        (x.event as Extract<SessionEvent, { type: "message" }>).message
+          .timestamp <
+          (messages[i - 1].event as Extract<SessionEvent, { type: "message" }>)
+            .message.timestamp
+    );
+  messages.sort((a, b) => {
+    const at = a.event.type === "message" ? a.event.message.timestamp : NaN;
+    const bt = b.event.type === "message" ? b.event.message.timestamp : NaN;
+    if (Number.isFinite(at) && Number.isFinite(bt))
+      return at - bt || a.index - b.index;
+    if (Number.isFinite(at)) return -1;
+    if (Number.isFinite(bt)) return 1;
+    return a.index - b.index;
+  });
   let firstTs = Infinity,
-    lastTs = -Infinity;
-  let modelRequests = 0,
+    lastTs = -Infinity,
+    modelRequests = 0,
     toolCalls = 0,
     toolResultErrors = 0;
   const toolCallCounts: Record<string, number> = {};
@@ -51,7 +90,6 @@ export function computeSessionMetrics(events: SessionEvent[]): SessionMetrics {
     cacheWrite: 0,
     reasoning: 0,
   };
-  const rounds: SessionRound[] = [];
   const assistantMsg: {
     ts: number;
     model: string;
@@ -60,16 +98,14 @@ export function computeSessionMetrics(events: SessionEvent[]): SessionMetrics {
     output: number;
     tools: string[];
   }[] = [];
-  let lastEventTs = -Infinity;
-
-  for (const e of events) {
-    if (e.type !== "message") continue;
-    const m = e.message;
-    const ts = m.timestamp;
-    if (ts < firstTs) firstTs = ts;
-    if (ts > lastTs) lastTs = ts;
-    if (ts > lastEventTs) lastEventTs = ts;
-
+  for (const { event } of messages) {
+    if (event.type !== "message") continue;
+    const m = event.message,
+      ts = m.timestamp;
+    if (Number.isFinite(ts)) {
+      firstTs = Math.min(firstTs, ts);
+      lastTs = Math.max(lastTs, ts);
+    }
     if (m.role === "assistant") {
       modelRequests++;
       tokens.input += m.usage?.input ?? 0;
@@ -78,13 +114,12 @@ export function computeSessionMetrics(events: SessionEvent[]): SessionMetrics {
       tokens.cacheWrite += m.usage?.cacheWrite ?? 0;
       tokens.reasoning += m.usage?.reasoning ?? 0;
       const tools: string[] = [];
-      for (const part of m.content ?? []) {
+      for (const part of m.content ?? [])
         if (part.type === "toolCall") {
           toolCalls++;
           toolCallCounts[part.name] = (toolCallCounts[part.name] ?? 0) + 1;
           tools.push(part.name);
         }
-      }
       assistantMsg.push({
         ts,
         model: m.model,
@@ -93,35 +128,33 @@ export function computeSessionMetrics(events: SessionEvent[]): SessionMetrics {
         output: m.usage?.output ?? 0,
         tools,
       });
-    } else if (m.role === "toolResult") {
-      if (m.isError) toolResultErrors++;
-    }
+    } else if (m.role === "toolResult" && m.isError) toolResultErrors++;
   }
-
-  for (let i = 0; i < assistantMsg.length; i++) {
-    const a = assistantMsg[i];
-    const end =
-      i + 1 < assistantMsg.length ? assistantMsg[i + 1].ts : lastEventTs;
-    rounds.push({
-      model: a.model,
-      stopReason: a.stopReason,
-      input: a.input,
-      output: a.output,
-      elapsedMs: Math.max(0, end - a.ts),
-      tools: a.tools,
-    });
-  }
-
-  const totalTokens =
-    tokens.input +
-    tokens.output +
-    tokens.cacheRead +
-    tokens.cacheWrite +
-    tokens.reasoning;
-  const wallMs = firstTs !== Infinity ? lastTs - firstTs : 0;
-
+  const rounds: SessionRound[] = assistantMsg.map((a, i) => ({
+    model: a.model,
+    stopReason: a.stopReason,
+    input: a.input,
+    output: a.output,
+    elapsedMs:
+      Number.isFinite(a.ts) &&
+      Number.isFinite(
+        i + 1 < assistantMsg.length ? assistantMsg[i + 1].ts : lastTs
+      )
+        ? Math.max(
+            0,
+            (i + 1 < assistantMsg.length ? assistantMsg[i + 1].ts : lastTs) -
+              a.ts
+          )
+        : 0,
+    tools: a.tools,
+  }));
+  const totalTokens = Object.values(tokens).reduce((a, b) => a + b, 0);
   return {
-    timeline: { wallSeconds: Math.round(wallMs / 100) / 10 },
+    timeline: {
+      wallSeconds:
+        firstTs === Infinity ? 0 : Math.round((lastTs - firstTs) / 100) / 10,
+      timestampAdjusted,
+    },
     agent: {
       modelRequestCount: modelRequests,
       toolCallCount: toolCalls,
@@ -132,7 +165,6 @@ export function computeSessionMetrics(events: SessionEvent[]): SessionMetrics {
     rounds,
   };
 }
-
 export interface Insight {
   level: "ok" | "warn" | "err";
   text: string;
@@ -141,8 +173,7 @@ export interface Insight {
 // ── insight: auto-generated findings from a run ──
 export function generateInsights(
   sm: SessionMetrics | null,
-  score: RunDetail["score"],
-  run: Record<string, any>
+  score: RunDetail["score"]
 ): Insight[] {
   const ins: Insight[] = [];
   if (!sm) {
@@ -182,10 +213,21 @@ export function generateInsights(
     const [topTool, cnt] = tools[0];
     ins.push({ level: "ok", text: `最常用工具 ${topTool} (${cnt} 次)` });
   }
-  if (score?.status === "passed")
+  const sd = score?.score;
+  const valid =
+    !!sd &&
+    [sd.total, sd.passed, sd.failed, sd.skipped].every(Number.isInteger) &&
+    sd.total >= 0 &&
+    sd.passed >= 0 &&
+    sd.failed >= 0 &&
+    sd.skipped >= 0 &&
+    sd.passed + sd.failed + sd.skipped === sd.total;
+  if (score?.status === "passed" && valid)
+    ins.push({ level: "ok", text: `评测通过 ${sd.passed}/${sd.total}` });
+  else if (score?.status === "passed")
     ins.push({
-      level: "ok",
-      text: `评测通过 ${score.score?.passed}/${score.score?.total}`,
+      level: "warn",
+      text: "score 数据异常/未验证，无法确认通过数量",
     });
   else if (score?.status === "failed")
     ins.push({

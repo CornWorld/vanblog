@@ -22,6 +22,9 @@ export function RunList(props: {
   filter: RunFilter;
   onFilter: (f: RunFilter) => void;
   onSelect: (id: string) => void;
+  loading: boolean;
+  error: unknown;
+  onRetry: () => void;
 }) {
   const { onFilter, onSelect } = props;
   const models = () => props.models;
@@ -31,7 +34,7 @@ export function RunList(props: {
   return (
     <div class="max-w-6xl mx-auto p-6">
       <h1 class="text-2xl font-bold mb-1">Agent Experiment Reports</h1>
-      <p class="text-sm opacity-60 mb-4">pi agent 实验报告落地页 + 历史溯源</p>
+      <p class="text-sm opacity-60 mb-4">pi agent 实验报告与历史运行记录</p>
 
       <div class="flex flex-wrap gap-2 mb-4">
         <span class="badge badge-outline badge-neutral">
@@ -48,7 +51,7 @@ export function RunList(props: {
         </span>
         {stats().pct != null && (
           <span class="badge badge-outline badge-info">
-            pass rate: {stats().pct}%
+            evaluated pass rate: {stats().pct}%
           </span>
         )}
       </div>
@@ -103,64 +106,96 @@ export function RunList(props: {
         </select>
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="table table-zebra table-sm">
-          <thead>
-            <tr>
-              <th>run</th>
-              <th>exit</th>
-              <th>eval</th>
-              <th>score</th>
-              <th>model</th>
-              <th class="text-right">req</th>
-              <th class="text-right">tokens</th>
-              <th class="text-right">wall</th>
-              <th>mtime</th>
-            </tr>
-          </thead>
-          <tbody>
-            <Show when={rows().length === 0}>
+      <Show when={props.loading}>
+        <p class="text-sm opacity-60 my-4">加载 runs…</p>
+      </Show>
+      <Show when={props.error}>
+        <div class="alert alert-error my-4">
+          <span>加载失败：{String(props.error)}</span>
+          <button class="btn btn-sm" onclick={props.onRetry}>
+            重试
+          </button>
+        </div>
+      </Show>
+      <Show when={!props.loading && !props.error && stats().total === 0}>
+        <p class="text-sm opacity-60 my-4">暂无 run 记录。</p>
+      </Show>
+      <Show when={!props.loading && !props.error && stats().total > 0}>
+        <div class="overflow-x-auto">
+          <table class="table table-zebra table-sm">
+            <thead>
               <tr>
-                <td colspan="9" class="text-center opacity-50 py-4">
-                  no runs match filter
-                </td>
+                <th>run</th>
+                <th>exit</th>
+                <th>eval</th>
+                <th>score</th>
+                <th>model</th>
+                <th class="text-right">req</th>
+                <th class="text-right">tokens</th>
+                <th class="text-right">wall</th>
+                <th>artifact modified (UTC)</th>
               </tr>
-            </Show>
-            <For each={rows()}>
-              {(r) => (
-                <tr class="hover cursor-pointer" onclick={() => onSelect(r.id)}>
-                  <td class="font-mono text-xs">{esc(r.id)}</td>
-                  <td>
-                    <span
-                      class={
-                        "badge badge-sm " +
-                        (r.exitReason === "completed"
-                          ? "badge-success"
-                          : "badge-warning")
+            </thead>
+            <tbody>
+              <Show when={rows().length === 0}>
+                <tr>
+                  <td colspan="9" class="text-center opacity-50 py-4">
+                    筛选无结果{" "}
+                    <button
+                      class="btn btn-xs btn-ghost"
+                      onclick={() =>
+                        onFilter({
+                          state: "all",
+                          eval: "all",
+                          model: "all",
+                          sort: f().sort,
+                        })
                       }
                     >
-                      {esc(r.exitReason)}
-                    </span>
+                      清除筛选
+                    </button>
                   </td>
-                  <td>
-                    <span class={"badge badge-sm " + evalBadge(r.evalStatus)}>
-                      {esc(r.evalStatus)}
-                    </span>
-                  </td>
-                  <td class="font-mono text-xs">{esc(r.evalScore ?? "-")}</td>
-                  <td class="text-xs opacity-70">{esc(r.model)}</td>
-                  <td class="text-right">{esc(r.requests)}</td>
-                  <td class="text-right">{esc(r.tokens)}</td>
-                  <td class="text-right">
-                    {r.wallSeconds != null ? r.wallSeconds + "s" : "-"}
-                  </td>
-                  <td class="text-xs opacity-60">{fmtTime(r.mtime)}</td>
                 </tr>
-              )}
-            </For>
-          </tbody>
-        </table>
-      </div>
+              </Show>
+              <For each={rows()}>
+                {(r) => (
+                  <tr
+                    class="hover cursor-pointer"
+                    onclick={() => onSelect(r.id)}
+                  >
+                    <td class="font-mono text-xs">{esc(r.id)}</td>
+                    <td>
+                      <span
+                        class={
+                          "badge badge-sm " +
+                          (r.exitReason === "completed"
+                            ? "badge-success"
+                            : "badge-warning")
+                        }
+                      >
+                        {esc(r.exitReason)}
+                      </span>
+                    </td>
+                    <td>
+                      <span class={"badge badge-sm " + evalBadge(r.evalStatus)}>
+                        {esc(r.evalStatus)}
+                      </span>
+                    </td>
+                    <td class="font-mono text-xs">{esc(r.evalScore ?? "-")}</td>
+                    <td class="text-xs opacity-70">{esc(r.model)}</td>
+                    <td class="text-right">{esc(r.requests)}</td>
+                    <td class="text-right">{esc(r.tokens)}</td>
+                    <td class="text-right">
+                      {r.wallSeconds != null ? r.wallSeconds + "s" : "-"}
+                    </td>
+                    <td class="text-xs opacity-60">{fmtTime(r.mtime)}</td>
+                  </tr>
+                )}
+              </For>
+            </tbody>
+          </table>
+        </div>
+      </Show>
     </div>
   );
 }

@@ -120,7 +120,9 @@ const server = createServer((req, res) => {
     detail.run = safeReadJson(join(dir, "run.json"));
     detail.score = safeReadJson(join(dir, "score.json"));
     try {
-      detail.transcript = readFileSync(join(dir, "transcript"), "utf8").slice(0, 20000);
+      const transcript = readFileSync(join(dir, "transcript"), "utf8");
+      detail.transcript = transcript.slice(0, 20000);
+      detail.transcriptTruncated = transcript.length > 20000;
     } catch { detail.transcript = null; }
     return json(res, 200, detail);
   }

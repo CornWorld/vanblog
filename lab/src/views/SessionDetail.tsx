@@ -10,7 +10,10 @@ export function SessionDetail({
   id: string;
   onBack: () => void;
 }) {
-  const [sessionEvents] = createResource(() => id, api.session);
+  const [sessionEvents, { refetch: refetchSession }] = createResource(
+    () => id,
+    api.session
+  );
   const sm = createMemo(() => {
     const ev = sessionEvents();
     return ev && ev.length ? computeSessionMetrics(ev) : null;
@@ -35,14 +38,30 @@ export function SessionDetail({
 
       <h1 class="text-xl font-bold mb-2">Session 执行过程</h1>
 
-      {sm() ? (
+      {sessionEvents.loading ? (
+        <p class="text-sm opacity-60 my-3">加载 session…</p>
+      ) : sessionEvents.error ? (
+        <div class="alert alert-error my-3">
+          <span>加载失败：{String(sessionEvents.error)}</span>
+          <button class="btn btn-sm" onclick={() => void refetchSession()}>
+            重试
+          </button>
+        </div>
+      ) : sm() ? (
         <>
+          {sm()!.timeline.timestampAdjusted && (
+            <div class="alert alert-warning my-3">
+              <span>
+                部分 session 时间戳缺失或乱序，已按可用时间排序；耗时仅供参考。
+              </span>
+            </div>
+          )}
           <div class="stats stats-shadow w-full my-3">
             <div class="stat">
               <div class="stat-value text-xl">
                 {fmtSec(sm()?.timeline?.wallSeconds)}
               </div>
-              <div class="stat-title text-xs">wall</div>
+              <div class="stat-title text-xs">wall (session observed)</div>
             </div>
             <div class="stat">
               <div class="stat-value text-xl">
@@ -86,7 +105,7 @@ export function SessionDetail({
           </div>
 
           <h3 class="text-sm font-bold mb-1 mt-2">
-            轮次耗时 <span class="text-xs opacity-50">(按耗时降序)</span>
+            耗时排名 <span class="text-xs opacity-50">(按轮次耗时降序)</span>
           </h3>
           <div class="overflow-x-auto mb-4">
             <table class="table table-xs table-zebra">
@@ -122,7 +141,7 @@ export function SessionDetail({
           </div>
         </>
       ) : (
-        <p class="text-sm opacity-60 my-3">no session data</p>
+        <p class="text-sm opacity-60 my-3">该 run 没有可用的 session 事件。</p>
       )}
     </div>
   );

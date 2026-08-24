@@ -91,7 +91,9 @@ export const api = {
     const res = await fetch(
       `/api/runs/${id}/file?path=${encodeURIComponent(path)}`
     );
-    if (!res.ok) return `(no ${path})`;
+    if (!res.ok) {
+      throw new Error(`${res.url} → ${res.status} ${res.statusText}`);
+    }
     return res.text();
   },
 };

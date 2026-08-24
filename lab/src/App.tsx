@@ -1,7 +1,7 @@
 import { createSignal, createMemo, createResource } from "solid-js";
 import { Route, useParams, useNavigate } from "@solidjs/router";
 import { api, type RunSummary } from "./api";
-import { pctOf } from "./lib/format";
+import { compareScore } from "./lib/format";
 import { RunList, type RunFilter } from "./views/RunList";
 import { RunDetail } from "./views/RunDetail";
 import { SessionDetail } from "./views/SessionDetail";
@@ -14,7 +14,7 @@ export default function App() {
     sort: "mtime-desc",
   });
 
-  const [runs] = createResource(api.runs);
+  const [runs, { refetch: refetchRuns }] = createResource(api.runs);
 
   const models = createMemo(() => {
     const r = runs();
@@ -38,9 +38,9 @@ export default function App() {
         case "mtime-asc":
           return a.mtime.localeCompare(b.mtime);
         case "score-desc":
-          return pctOf(b) - pctOf(a);
+          return compareScore(a, b, "desc");
         case "score-asc":
-          return pctOf(a) - pctOf(b);
+          return compareScore(a, b, "asc");
         default:
           return b.mtime.localeCompare(a.mtime);
       }
@@ -75,6 +75,9 @@ export default function App() {
         filter={filter()}
         onFilter={setFilter}
         onSelect={(id) => nav(`/runs/${id}`)}
+        loading={runs.loading}
+        error={runs.error}
+        onRetry={() => void refetchRuns()}
       />
     );
   }
