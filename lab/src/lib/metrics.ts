@@ -2,6 +2,14 @@ import type { Entry, RunDetail } from "../api";
 import { fmtSec, fmtNum } from "./format";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 
+export const METRIC_DEFINITIONS = {
+  wall: "首条→末条消息时间戳跨度，非实际运行时长",
+  tokens: "input+output+cacheRead+cacheWrite+reasoning 总和",
+  requests: "模型请求次数 (assistant 消息数)",
+  toolCalls: "工具调用总次数",
+  errors: "工具执行报错 (isError) 计数",
+} as const;
+
 // ── session metrics (computed client-side from raw session events) ──
 // NOTE on timestamps: an assistant message's timestamp is when the model request
 // was SENT (right after the previous tool result); a toolResult's timestamp is when
@@ -156,6 +164,7 @@ export function computeSessionMetrics(events: Entry[]): SessionMetrics {
     rounds,
   };
 }
+
 export interface Insight {
   level: "ok" | "warn" | "err";
   text: string;

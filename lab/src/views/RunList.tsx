@@ -130,9 +130,9 @@ export function RunList(props: {
                 <th>eval</th>
                 <th>score</th>
                 <th>model</th>
-                <th class="text-right">req</th>
-                <th class="text-right">tokens</th>
-                <th class="text-right">wall</th>
+                <th class="text-right" title="模型请求次数">req</th>
+                <th class="text-right" title="input+output+cache+reasoning 总和">tokens</th>
+                <th class="text-right" title="session 时间戳跨度">wall</th>
                 <th>artifact modified (UTC)</th>
               </tr>
             </thead>
@@ -177,11 +177,22 @@ export function RunList(props: {
                       </span>
                     </td>
                     <td>
-                      <span class={"badge badge-sm " + evalBadge(r.evalStatus)}>
+                      <span
+                        class={"badge badge-sm " + evalBadge(r.evalStatus)}
+                        title={r.evalStatus === "incomplete" ? "agent 超时或崩溃，pack 未产出，评测提前终止" : undefined}
+                      >
                         {esc(r.evalStatus)}
                       </span>
                     </td>
-                    <td class="font-mono text-xs">{esc(r.evalScore ?? "-")}</td>
+                    <td
+                      class="font-mono text-xs"
+                      title={r.evalStatus === "incomplete" ? "pack 未产出，仅执行 2 项静态检查，运行时检查未执行" : "16 项静态检查 + 8 项运行时验证 = 24 项"}
+                    >
+                      {esc(r.evalScore ?? "-")}
+                      {r.evalStatus === "incomplete" && r.evalScore && (
+                        <span class="text-xs opacity-50 ml-1">(仅静态)</span>
+                      )}
+                    </td>
                     <td class="text-xs opacity-70">{esc(r.model)}</td>
                     <td class="text-right">{esc(r.requests)}</td>
                     <td class="text-right">{esc(r.tokens)}</td>

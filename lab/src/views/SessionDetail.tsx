@@ -1,7 +1,7 @@
 import { createResource, createMemo, For } from "solid-js";
 import { api } from "../api";
 import { esc, fmtSec, fmtNum } from "../lib/format";
-import { computeSessionMetrics } from "../lib/metrics";
+import { computeSessionMetrics, METRIC_DEFINITIONS } from "../lib/metrics";
 
 export function SessionDetail({
   id,
@@ -62,30 +62,35 @@ export function SessionDetail({
                 {fmtSec(sm()?.timeline?.wallSeconds)}
               </div>
               <div class="stat-title text-xs">wall (session observed)</div>
+              <div class="text-xs opacity-50">{METRIC_DEFINITIONS.wall}</div>
             </div>
             <div class="stat">
               <div class="stat-value text-xl">
                 {fmtNum(sm()?.tokens?.totalTokens)}
               </div>
               <div class="stat-title text-xs">tokens</div>
+              <div class="text-xs opacity-50">{METRIC_DEFINITIONS.tokens}</div>
             </div>
             <div class="stat">
               <div class="stat-value text-xl">
                 {esc(sm()?.agent?.modelRequestCount)}
               </div>
               <div class="stat-title text-xs">requests</div>
+              <div class="text-xs opacity-50">{METRIC_DEFINITIONS.requests}</div>
             </div>
             <div class="stat">
               <div class="stat-value text-xl">
                 {esc(sm()?.agent?.toolCallCount)}
               </div>
               <div class="stat-title text-xs">toolCalls</div>
+              <div class="text-xs opacity-50">{METRIC_DEFINITIONS.toolCalls}</div>
             </div>
             <div class="stat">
               <div class="stat-value text-xl">
                 {esc(sm()?.agent?.toolResultErrorCount ?? 0)}
               </div>
               <div class="stat-title text-xs">errors</div>
+              <div class="text-xs opacity-50">{METRIC_DEFINITIONS.errors}</div>
             </div>
           </div>
 

@@ -1,7 +1,8 @@
 import { createResource, createMemo, Show, For } from "solid-js";
 import { api, type RunDetail as RunDetailT } from "../api";
 import { esc, fmtTime, fmtSec, fmtNum, evalBadge } from "../lib/format";
-import { computeSessionMetrics, generateInsights } from "../lib/metrics";
+import { computeSessionMetrics, generateInsights, METRIC_DEFINITIONS } from "../lib/metrics";
+import { EVAL_STRUCTURE, getCheckDesc } from "../lib/testcase-info";
 import { Evidence } from "./Evidence";
 
 export function RunDetail({
@@ -60,6 +61,9 @@ export function RunDetail({
             <li>
               <span class={"badge badge-sm mr-2 " + cls}>✓</span>
               {esc(x)}
+              {getCheckDesc(x) && (
+                <span class="text-xs opacity-50 ml-2">{getCheckDesc(x)}</span>
+              )}
             </li>
           )}
         </For>
@@ -114,6 +118,15 @@ export function RunDetail({
                 <span class="badge badge-ghost">{esc(d().closedNote)}</span>
               )}
             </div>
+            <Show when={score()?.status === "incomplete"}>
+              <div class="alert alert-warning my-2">
+                <span class="text-sm">
+                  评测不完整 — agent {run().piTimedOut ? "超时" : "异常退出"}
+                  {run().piExitReason ? ` (${run().piExitReason})` : ""}，pack 未产出，仅执行了{" "}
+                  {score()?.score?.total ?? 0} 项静态检查
+                </span>
+              </div>
+            </Show>
             {score()?.summary && (
               <p class="text-sm mt-2">
                 <span class="font-bold">结论: </span>
@@ -121,36 +134,42 @@ export function RunDetail({
               </p>
             )}
 
+            <p class="text-xs opacity-50 mb-1">指标由前端从 session JSONL 实时计算，可能与列表页预计算值略有差异</p>
             <div class="stats stats-shadow w-full my-3">
               <div class="stat">
                 <div class="stat-value text-xl">
                   {fmtSec(sessionMetrics()?.timeline?.wallSeconds)}
                 </div>
                 <div class="stat-title text-xs">wall (session observed)</div>
+                <div class="text-xs opacity-50">{METRIC_DEFINITIONS.wall}</div>
               </div>
               <div class="stat">
                 <div class="stat-value text-xl">
                   {fmtNum(sessionMetrics()?.tokens?.totalTokens)}
                 </div>
                 <div class="stat-title text-xs">tokens</div>
+                <div class="text-xs opacity-50">{METRIC_DEFINITIONS.tokens}</div>
               </div>
               <div class="stat">
                 <div class="stat-value text-xl">
                   {esc(sessionMetrics()?.agent?.modelRequestCount)}
                 </div>
                 <div class="stat-title text-xs">requests</div>
+                <div class="text-xs opacity-50">{METRIC_DEFINITIONS.requests}</div>
               </div>
               <div class="stat">
                 <div class="stat-value text-xl">
                   {esc(sessionMetrics()?.agent?.toolCallCount)}
                 </div>
                 <div class="stat-title text-xs">toolCalls</div>
+                <div class="text-xs opacity-50">{METRIC_DEFINITIONS.toolCalls}</div>
               </div>
               <div class="stat">
                 <div class="stat-value text-xl">
                   {esc(sessionMetrics()?.agent?.toolResultErrorCount ?? 0)}
                 </div>
                 <div class="stat-title text-xs">errors</div>
+                <div class="text-xs opacity-50">{METRIC_DEFINITIONS.errors}</div>
               </div>
             </div>
 
@@ -202,6 +221,11 @@ export function RunDetail({
         <div class="card bg-base-200 mt-4">
           <div class="card-body">
             <h3 class="text-sm font-bold mb-1">评测明细</h3>
+            <p class="text-xs opacity-60 mb-2">
+              {score()?.status === "incomplete"
+                ? `仅 ${score()?.score?.total ?? 0} 项静态检查（pack 未产出，运行时检查未执行）`
+                : `${EVAL_STRUCTURE.static.total} ${EVAL_STRUCTURE.static.label} + ${EVAL_STRUCTURE.runtime.total} ${EVAL_STRUCTURE.runtime.label} = ${EVAL_STRUCTURE.fullTotal} 项总检查`}
+            </p>
             <Show
               when={scoreCheck()}
               fallback={
@@ -215,25 +239,25 @@ export function RunDetail({
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div class="bg-base-300 rounded-lg p-3">
                   <h4 class="text-xs font-bold text-success">
-                    静态通过 ({score()?.static?.passed?.length ?? 0})
+                    静态通过 · 文件结构与内容验证 ({score()?.static?.passed?.length ?? 0})
                   </h4>
                   {list(score()?.static?.passed, "badge-success")}
                 </div>
                 <div class="bg-base-300 rounded-lg p-3">
                   <h4 class="text-xs font-bold text-error">
-                    静态失败 ({score()?.static?.failed?.length ?? 0})
+                    静态失败 · 文件结构与内容验证 ({score()?.static?.failed?.length ?? 0})
                   </h4>
                   {list(score()?.static?.failed, "badge-error")}
                 </div>
                 <div class="bg-base-300 rounded-lg p-3">
                   <h4 class="text-xs font-bold text-success">
-                    运行时通过 ({score()?.runtime?.passed?.length ?? 0})
+                    运行时通过 · Docker HTTP 调用验证 ({score()?.runtime?.passed?.length ?? 0})
                   </h4>
                   {list(score()?.runtime?.passed, "badge-success")}
                 </div>
                 <div class="bg-base-300 rounded-lg p-3">
                   <h4 class="text-xs font-bold text-error">
-                    运行时失败 ({score()?.runtime?.failed?.length ?? 0})
+                    运行时失败 · Docker HTTP 调用验证 ({score()?.runtime?.failed?.length ?? 0})
                   </h4>
                   {list(score()?.runtime?.failed, "badge-error")}
                   {score()?.runtime?.blocked?.length ? (
