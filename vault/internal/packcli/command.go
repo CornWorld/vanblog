@@ -36,7 +36,7 @@ func NewCommand() *cobra.Command {
 	var schemaBuilder string
 	root.PersistentFlags().StringVar(&builtinPacksDir, "builtinPacksDir", "packs", "directory with builtin Pack resources")
 	root.PersistentFlags().StringVar(&packsDir, "packsDir", "", "directory with local Pack overrides")
-	root.PersistentFlags().StringVar(&schemaBuilder, "schemaBuilder", "scripts/pack-schema-build.mjs", "Node script that builds Pack schema.ts into schema.js")
+	root.PersistentFlags().StringVar(&schemaBuilder, "schemaBuilder", "scripts/build/pack-schema-build.mjs", "Node script that builds Pack schema.ts into schema.js")
 
 	resolve := func() ([]pack.Pack, error) {
 		builtinPath := resolveExistingPath(builtinPacksDir)

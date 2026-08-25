@@ -133,7 +133,7 @@ func TestResolveAllowed(t *testing.T) {
 		},
 		{
 			name: "scripts denied",
-			rel:  "scripts/override-check.mjs",
+			rel:  "scripts/check/override-check.mjs",
 			want: "",
 		},
 

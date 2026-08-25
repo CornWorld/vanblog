@@ -377,7 +377,7 @@ func (m *Manager) handlePBQuery(e *core.RequestEvent) error {
 
 // override_check (GET): ?theme=<name> → text/plain report.
 //
-//	Runs `node scripts/override-check.mjs themes/<name> app/src` in the repo root.
+//	Runs `node scripts/check/override-check.mjs themes/<name> app/src` in the repo root.
 //	Invalid theme name → 400; exec failure → 500.
 func (m *Manager) handleOverrideCheck(e *core.RequestEvent) error {
 	if !isAdmin(e) {
@@ -398,7 +398,7 @@ func (m *Manager) handleOverrideCheck(e *core.RequestEvent) error {
 	defer cancel()
 
 	//nolint:gosec // name is regex-validated ^[A-Za-z0-9_-]+$ above; fixed argv, no shell
-	cmd := exec.CommandContext(ctx, "node", "scripts/override-check.mjs", "themes/"+name, "app/src")
+	cmd := exec.CommandContext(ctx, "node", "scripts/check/override-check.mjs", "themes/"+name, "app/src")
 	cmd.Dir = root
 	out, err := cmd.CombinedOutput()
 	if err != nil {
