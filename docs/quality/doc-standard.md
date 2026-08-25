@@ -2,7 +2,7 @@
 
 > 本文件是 vanblog 文档包的**权威质量契约**。`doc-reviewer` 子 agent 依此审查;所有文档作者（人 / agent）在写作前必须读本文件。
 > 版本: 1.0 · 生效日期: 2026-08-14 · 维护者: 仓库维护者
-> 机器检测: `node scripts/doc-dup-check.mjs` (见 §6)
+> 机器检测: `node scripts/check/doc-dup-check.mjs` (见 §6)
 
 ---
 
@@ -101,7 +101,7 @@
 
 ## 6. 机器检测方法
 
-`node scripts/doc-dup-check.mjs [glob]` 扫描 docs 包：
+`node scripts/check/doc-dup-check.mjs [glob]` 扫描 docs 包：
 
 1. **切句 + 规范化**：按中英文句号/换行切句；去除 markdown 语法、行内代码标记、链接、空白、大小写。
 2. **shingle 匹配**：以 8 词 shingle 索引所有句子；跨文件 ≥ 2 个连续 shingle 命中的句子合并为「重复块」。
@@ -115,7 +115,7 @@
 
 | 时机               | 动作                                                                                                        |
 | ------------------ | ----------------------------------------------------------------------------------------------------------- |
-| 每次文档变更 PR    | 跑 `node scripts/doc-dup-check.mjs`，要求 S0=0、无新 S1、链接 100%                                          |
+| 每次文档变更 PR    | 跑 `node scripts/check/doc-dup-check.mjs`，要求 S0=0、无新 S1、链接 100%                                          |
 | 每周（或每次大改） | `doc-reviewer` 子 agent 全量审查：`#agent_doc-reviewer`，输出结构化报告（§ 报告模板）                       |
 | 发布前             | 事实漂移抽查：环境变量、端口、镜像 tag 与 `docker/entrypoint.*.sh`、`docker-compose.yml`、`vanblog.sh` 对齐 |
 | 发现过时笔记       | 立即修（不归档旧结论，直接改），见 AGENTS.md「知识源」原则                                                  |

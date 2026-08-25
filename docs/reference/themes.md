@@ -35,7 +35,7 @@
 ## 新建主题
 
 ```bash
-node scripts/theme-init.mjs my-theme   # 克隆 themes/base 模板
+node scripts/build/theme-init.mjs my-theme   # 克隆 themes/base 模板
 cd themes/my-theme && pnpm install && pnpm dev   # http://localhost:4321
 ```
 

@@ -47,4 +47,4 @@
 
 - 新文档先归位到上述四类之一，不要新增平铺文件。
 - 事实写进 `reference/`，使用文档 `ref` 而不是复制。见 [doc-standard](quality/doc-standard.md)。
-- 每次文档变更后运行 `node scripts/doc-dup-check.mjs`，要求 S0 = 0。
+- 每次文档变更后运行 `node scripts/check/doc-dup-check.mjs`，要求 S0 = 0。

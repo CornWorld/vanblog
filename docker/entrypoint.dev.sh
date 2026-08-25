@@ -94,12 +94,12 @@ echo "[vanblog] agent.env written to /etc/vanblog/agent.env (see AGENTS.md §环
 # Fail-open: if init-pi-config fails (network down), pi still starts with
 # the hardcoded fallback model from .pi/settings.json.
 echo "[vanblog] initializing pi agent config..."
-node /workspace/scripts/init-pi-config.mjs || echo "[vanblog] pi config init skipped (will use fallback)"
+node /workspace/scripts/runtime/init-pi-config.mjs || echo "[vanblog] pi config init skipped (will use fallback)"
 
 # 3.7. Start the Zen auth-stripping proxy used by pi's OpenCode Zen provider.
 # The Go agent manager starts one native pi RPC process per persisted session.
 echo "[vanblog] starting pi model proxy..."
-node /workspace/scripts/pi-zen-proxy.mjs &
+node /workspace/scripts/runtime/pi-zen-proxy.mjs &
 PI_PROXY_PID=$!
 
 # 4. Start Theme Host (loads active theme's SSR handler, routes /admin to app)

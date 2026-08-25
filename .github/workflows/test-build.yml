@@ -44,7 +44,7 @@ jobs:
           node-version: 22
 
       - name: doc-dup-check
-        run: node scripts/doc-dup-check.mjs
+        run: node scripts/check/doc-dup-check.mjs
 
   # ── Build Docker images (tagged with commit SHA) ──
   docker:

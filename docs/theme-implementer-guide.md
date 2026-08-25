@@ -27,7 +27,7 @@
 
 ```bash
 # 1. 从模板初始化（脚本会创建 themes/my-theme/ 目录）
-node scripts/theme-init.mjs my-theme
+node scripts/build/theme-init.mjs my-theme
 
 # 2. 进入 theme 项目
 cd themes/my-theme
@@ -365,7 +365,7 @@ const { post, mode = 'list', variant = 'default' } = Astro.props;
 | **内部 helper 函数**  | `app/src/lib/markdown.ts` 内的私有函数                   | 无保证                              |
 | **组件嵌套结构**      | PostCard 是否包了 `<article>`；BaseLayout 是否含 `<nav>` | 无保证                              |
 
-**theme 该怎么用 L2**：**尽量别依赖**。如果你的 override 复制了 base 组件源码然后改 class 名，base 升级时你需要跑轻量 `override_check`（admin 的 MCP 端点 `GET /api/vanblog/mcp/override_check?theme=<name>`，或直接 `node scripts/override-check.mjs themes/<name>`，见 [§11](#11-mcp-tools)）看报告，手动适配。
+**theme 该怎么用 L2**：**尽量别依赖**。如果你的 override 复制了 base 组件源码然后改 class 名，base 升级时你需要跑轻量 `override_check`（admin 的 MCP 端点 `GET /api/vanblog/mcp/override_check?theme=<name>`，或直接 `node scripts/check/override-check.mjs themes/<name>`，见 [§11](#11-mcp-tools)）看报告，手动适配。
 
 ```astro
 ---
@@ -514,7 +514,7 @@ cd /path/to/vanblog
 git pull origin main
 
 # 2. 在主仓库根目录跑轻量 override_check（静态对比，不依赖 git 历史）
-node scripts/override-check.mjs themes/my-theme app/src
+node scripts/check/override-check.mjs themes/my-theme app/src
 # 或通过 admin 的 MCP 端点（admin-only）：
 #   GET /api/vanblog/mcp/override_check?theme=my-theme
 # 输出：ORPHANED / REVIEW / OK 分组报告；REVIEW 的 .astro/.ts/.tsx 若
@@ -528,7 +528,7 @@ pnpm build
 
 ### 8.2 手动 diff（不想跑脚本时）
 
-`node scripts/override-check.mjs` 已经是标准的本地方法；下面的 `find` + `diff` 仅在需要逐文件细看时兜底：
+`node scripts/check/override-check.mjs` 已经是标准的本地方法；下面的 `find` + `diff` 仅在需要逐文件细看时兜底：
 
 ```bash
 # 列出 theme 的所有 override 文件
@@ -564,7 +564,7 @@ diff themes/my-theme/src/base-overrides/layouts/BaseLayout.astro \
 ### 9.1 初始化
 
 ```bash
-node scripts/theme-init.mjs my-theme
+node scripts/build/theme-init.mjs my-theme
 cd themes/my-theme
 pnpm install
 pnpm dev   # 此时所有页面都是 thin shell，re-export base
@@ -851,7 +851,7 @@ Phase D 为 agent / 主题作者工具链提供了一组 **admin-only** 的 MCP 
 | `write_file`     | POST | 写文件（自动建父目录）                   | `{"path": "...", "content": "..."}`   | `{ok}`                                                            |
 | `pb_schema`      | GET  | 取 PB collection schema（仅 GET）        | `?collection=<name>`                  | `{ok, collection:{name,type,fields,...}}`                         |
 | `pb_query`       | GET  | 只读查询 PB records（仅 GET，不写操作）  | `?collection=&filter=&page=&perPage=` | `{ok, items, totalItems, totalPages, page, perPage}`              |
-| `override_check` | GET  | 跑轻量 override-check 报告（text/plain） | `?theme=<name>`                       | `node scripts/override-check.mjs themes/<name> app/src` 的 stdout |
+| `override_check` | GET  | 跑轻量 override-check 报告（text/plain） | `?theme=<name>`                       | `node scripts/check/override-check.mjs themes/<name> app/src` 的 stdout |
 
 ### 11.1 行为要点
 
@@ -937,7 +937,7 @@ import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
 </BaseLayout>
 ```
 
-`override_check` 报告（`node scripts/override-check.mjs` 或 admin MCP 端点，见 [§11](#11-mcp-tools)）会把 base 已删除的文件标为 ORPHANED，把内容有差异的标为 REVIEW。
+`override_check` 报告（`node scripts/check/override-check.mjs` 或 admin MCP 端点，见 [§11](#11-mcp-tools)）会把 base 已删除的文件标为 ORPHANED，把内容有差异的标为 REVIEW。
 
 ---
 

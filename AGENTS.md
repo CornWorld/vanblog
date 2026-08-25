@@ -22,7 +22,7 @@ cd themes/<name> && pnpm build       # 主题构建验证
 cd themes/<name> && pnpm check       # astro check 类型
 cd vault && go test ./...            # Go 后端
 cd vault && go build -o bin/vanblog . # pb 二进制
-node scripts/theme-init.mjs <name>   # 脚手架新主题
+node scripts/build/theme-init.mjs <name>   # 脚手架新主题
 ```
 
 改任何 `themes/*/astro.config.mjs` 或 `app/integrations/` 后，所有 theme 都要 rebuild。
@@ -66,7 +66,7 @@ pi                    # 进入交互模式
 pi -p "帮我 review"   # 单次提问
 ```
 
-模型解析脚本：`scripts/resolve-zen-free-models.mjs`。选型依据：`refs/agent-platform-selection.md`。
+模型解析脚本：`scripts/runtime/resolve-zen-free-models.mjs`。选型依据：`refs/agent-platform-selection.md`。
 
 ## Skill 作者
 

@@ -25,7 +25,7 @@ lab/dist/
 # Generated core CJS runtime artifact (run pnpm build:models before Go serve/build)
 runtime/core-schema/models.js
 
-# Pack schema artifacts (run scripts/pack-schema-build.mjs <pack> before Go builds)
+# Pack schema artifacts (run scripts/build/pack-schema-build.mjs <pack> before Go builds)
 packs/*/schema.js
 # Freshness sidecar produced by `vanblog pack build` (same lifecycle as schema.js)
 packs/*/schema.js.meta.json

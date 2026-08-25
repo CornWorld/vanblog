@@ -538,7 +538,7 @@ const MAX_LOADED_THEMES = 3;
 - [x] PB hook 推送 site 变更给 theme host（或 theme host 订阅 PB realtime）（已实现：采用 5s 轮询方案，`app/src/theme-host/index.mjs` pollSiteChanges）
 - [x] theme astro.config 增加 `base` + `assetsPrefix`（已实现：收敛到 `themes/shared-config.mjs`，所有 theme 共用；Dockerfile 按 theme 注入 `VANBLOG_THEME_NAME`）
 - [x] admin/site.astro UI 改造（单下拉 + 高级折叠）（已实现：演进为卡牌式主题/调色盘选择器 + iframe 实时预览）
-- [x] 集成测试：切换 theme 不丢请求（已实现：`scripts/test-theme-switch.mjs` + `app/test/lifecycle.test.mjs`）
+- [x] 集成测试：切换 theme 不丢请求（已实现：`scripts/test/test-theme-switch.mjs` + `app/test/lifecycle.test.mjs`）
 
 ### Phase 3（生态完善，~1-2 周）
 
@@ -556,7 +556,7 @@ const MAX_LOADED_THEMES = 3;
 > - **theme.zip 上传 → CLI 安装（已实现）** —— admin UI 上传去语义化；预构建 theme 用 `pack theme install <dir|zip>` 原子落盘到持久卷，themeWatcher 自动发现；`pack theme remove` 拒绝删内置/活动主题。
 > - **palette migration「prompt」** 去语义化 —— admin 已是卡牌选择器 + iframe 实时预览，保存前即可见效果，confirm() 无必要；保留 `paletteMigrationMode` 字段兼容。
 > - **theme marketplace** 保持远期，不实现（依赖上传能力）。
-> - **第二测试主题不新建** —— `themes/base` 即 minimal/兜底主题（theme.json 自述），`scripts/test-theme-switch.mjs` 已按 vanblog + base 双主题验证。
+> - **第二测试主题不新建** —— `themes/base` 即 minimal/兜底主题（theme.json 自述），`scripts/test/test-theme-switch.mjs` 已按 vanblog + base 双主题验证。
 
 ---
 

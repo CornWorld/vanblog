@@ -26,7 +26,7 @@ A review target, one of:
 
 1. **Load the standard.** Read `docs/quality/doc-standard.md`. Extract the current severity rules (S0/S1/S2/S3), thresholds, and allowed-duplication whitelist. If the standard is missing or outdated, report that as a finding before proceeding.
 2. **Load the doc map.** Read `docs/README.md` (if present) to know the intended structure: which files are `reference/` (SSOT facts) vs `guide/` (usage, must ref) vs facade vs FAQ.
-3. **Run the automated scanner** if available: `node scripts/doc-dup-check.mjs [target]`. Use `terminal-execute`. Treat its output as machine evidence; you still do a human-grade pass on top.
+3. **Run the automated scanner** if available: `node scripts/check/doc-dup-check.mjs [target]`. Use `terminal-execute`. Treat its output as machine evidence; you still do a human-grade pass on top.
 4. **Manual review pass** — for each file under review:
    - **Factual accuracy (drift)**: cross-check every concrete parameter (ports, paths, volume mounts, env var names/defaults, commands, image names, URLs) against the actual code/config: `docker/entrypoint.*.sh`, `docker-compose.yml`, `vault/internal/**`, `app/src/**`, `themes/*/package.json`, `vanblog.sh`. Any mismatch → record as fact-drift with file:line.
    - **SSOT violation**: a fact defined in `reference/` that is re-defined (not merely referenced) elsewhere, OR the same fact defined in two non-reference files.

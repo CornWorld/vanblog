@@ -33,7 +33,7 @@ import { MomentSchema } from "@vanblog/sdk";
 export const models = { moments: MomentSchema };
 ```
 
-构建链：`schema.ts` → `scripts/pack-schema-build.mjs` → `schema.js`（CJS bundle）→ 运行时由 `vault/internal/validation.PackSource` 加载，只挂 `OnRecordValidate` 做**写入校验**，**不建表**。
+构建链：`schema.ts` → `scripts/build/pack-schema-build.mjs` → `schema.js`（CJS bundle）→ 运行时由 `vault/internal/validation.PackSource` 加载，只挂 `OnRecordValidate` 做**写入校验**，**不建表**。
 
 ### 1.2 collection 定义（耦合死）
 

@@ -60,11 +60,11 @@ Zen free 模型**不能带任何 Authorization header**(任何 key 都返回 401
 - Zen 要求「绝不能有 key」→ 有 key 就 401
 - 无任何配置能解开
 
-**解法**:`scripts/pi-zen-proxy.mjs` 提供一个独立的反向代理,剥掉 Authorization header 再转发 Zen。pi 配假 key(满足 pi),baseUrl 指向本地 proxy(满足 Zen)。若未来 pi 去掉 apiKey 强制要求,proxy 可删。
+**解法**:`scripts/runtime/pi-zen-proxy.mjs` 提供一个独立的反向代理,剥掉 Authorization header 再转发 Zen。pi 配假 key(满足 pi),baseUrl 指向本地 proxy(满足 Zen)。若未来 pi 去掉 apiKey 强制要求,proxy 可删。
 
 ### 3.3 模型动态解析
 
-Zen 模型列表**会轮换**(promo 模型下架)。模型名不能硬编码。`scripts/resolve-zen-free-models.mjs` 启动时 `GET /zen/v1/models` → filter `-free` 后缀 → 选当前可用最佳模型写入配置。
+Zen 模型列表**会轮换**(promo 模型下架)。模型名不能硬编码。`scripts/runtime/resolve-zen-free-models.mjs` 启动时 `GET /zen/v1/models` → filter `-free` 后缀 → 选当前可用最佳模型写入配置。
 
 ## 4. 系统架构
 
@@ -95,7 +95,7 @@ Zen 模型列表**会轮换**(promo 模型下架)。模型名不能硬编码。`
 浏览器(admin UI) → PB /api/vanblog/agent/chat (admin-only 认证)
   → Go agent manager
   → 每个 PB session 独占一个 pi --mode rpc 子进程
-  → `scripts/pi-zen-proxy.mjs` (:4330, 剥 Authorization)
+  → `scripts/runtime/pi-zen-proxy.mjs` (:4330, 剥 Authorization)
   → Zen free 模型
   → SSE 流式返回 pi 事件
 ```
@@ -138,11 +138,11 @@ Zen 模型列表**会轮换**(promo 模型下架)。模型名不能硬编码。`
 
 | 文件                                                      | 作用                                                          |
 | --------------------------------------------------------- | ------------------------------------------------------------- |
-| `scripts/resolve-zen-free-models.mjs`                     | 动态解析 Zen free 模型(启动时调用)                            |
-| `scripts/init-pi-config.mjs`                              | 写 pi 全局配置(models.json/trust/settings)                    |
+| `scripts/runtime/resolve-zen-free-models.mjs`                     | 动态解析 Zen free 模型(启动时调用)                            |
+| `scripts/runtime/init-pi-config.mjs`                              | 写 pi 全局配置(models.json/trust/settings)                    |
 | `vault/internal/agent/agent.go`                           | PB session 元数据 + Go 直接管理 pi 原生 RPC 子进程 + SSE 透传 |
-| `scripts/test-agent-rpc.sh`                               | Go + pi 原生 RPC smoke/E2E 测试                               |
-| `scripts/pi-zen-proxy.mjs`                                | Zen auth-stripping proxy(:4330)                               |
+| `scripts/test/test-agent-rpc.sh`                               | Go + pi 原生 RPC smoke/E2E 测试                               |
+| `scripts/runtime/pi-zen-proxy.mjs`                                | Zen auth-stripping proxy(:4330)                               |
 | `vault/pb_migrations/1783600000_create_agent_sessions.go` | agent_sessions collection                                     |
 | `vault/internal/agent/agent.go`                           | PB `/api/vanblog/agent/chat`(admin-only + SSE)                |
 | `app/src/pages/admin/agent.astro`                         | admin 聊天 UI                                                 |
@@ -232,21 +232,21 @@ Pi 生成 pack 的测试流程采用**两层评价** + **artifact 存档**架构
 
 | 文件                              | 作用                                         |
 | --------------------------------- | -------------------------------------------- |
-| `scripts/test-pi-pack.sh`         | Layer 1:现场生成 + 存档 + 调用 evaluator     |
-| `scripts/evaluate-agent-pack.mjs` | Layer 2:独立确定性 evaluator,输出 score.json |
+| `scripts/test/test-pi-pack.sh`         | Layer 1:现场生成 + 存档 + 调用 evaluator     |
+| `scripts/test/evaluate-agent-pack.mjs` | Layer 2:独立确定性 evaluator,输出 score.json |
 | `.snow/artifacts/`                | 存档目录(已加入 `.gitignore`)                |
 
 ### 8.5 使用
 
 ```bash
 # 完整测试
-./scripts/test-pi-pack.sh
+./scripts/test/test-pi-pack.sh
 
 # 跳过 Docker 构建,保留容器和证据
-./scripts/test-pi-pack.sh --no-build --keep-evidence
+./scripts/test/test-pi-pack.sh --no-build --keep-evidence
 
 # 只对已有 artifact 运行 evaluator(不经过 layer 1)
-node scripts/evaluate-agent-pack.mjs \
+node scripts/test/evaluate-agent-pack.mjs \
   --artifact-dir .snow/artifacts/pi-pack-20260818-090807/artifact \
   --image vanblog:dev-test \
   --port 8890 \

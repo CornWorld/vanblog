@@ -20,7 +20,7 @@
 - **定位**：纯布局 + 简单颜色的 minimal 主题。
 - **用途**：验证后端能力；提供最基本前端能力（列表/详情/归档/时间轴/搜索/分类/标签/关于/404）；作为**兜底/降级主题**。
 - **不依赖** vanblog 主题；直接复用平台层 base 布局。
-- **脚手架**：`node scripts/theme-init.mjs <name>` 会克隆本目录作为新主题起点。
+- **脚手架**：`node scripts/build/theme-init.mjs <name>` 会克隆本目录作为新主题起点。
 
 ### `vanblog/` — 旗舰主题（mereithhh 迁移）
 
@@ -41,7 +41,7 @@
 ## 新增主题
 
 ```bash
-node scripts/theme-init.mjs my-theme   # 克隆 themes/base 模板
+node scripts/build/theme-init.mjs my-theme   # 克隆 themes/base 模板
 cd themes/my-theme
 pnpm install
 pnpm dev                               # http://localhost:4321

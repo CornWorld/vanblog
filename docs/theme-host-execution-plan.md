@@ -499,7 +499,7 @@ async function pollSiteChanges() {
 **改动文件**：
 
 - `themes/default/astro.config.mjs`（当前唯一的 theme）
-- `scripts/theme-init.mjs`（新建 theme 时的脚手架脚本，如果存在）
+- `scripts/build/theme-init.mjs`（新建 theme 时的脚手架脚本，如果存在）
 
 **改动要点**：
 
@@ -744,7 +744,7 @@ func init() {
 
 **新建目录**：`themes/minimal/`
 
-**最小内容**（用 `scripts/theme-init.mjs` 或手动创建）：
+**最小内容**（用 `scripts/build/theme-init.mjs` 或手动创建）：
 
 - `theme.json`：name=`minimal`，label=`极简风`
 - `astro.config.mjs`：复制 default 的，改 themeName
@@ -761,7 +761,7 @@ func init() {
 
 ### Step E2：端到端测试 + 更新文档
 
-**测试脚本**：`scripts/test-theme-switch.mjs`
+**测试脚本**：`scripts/test/test-theme-switch.mjs`
 
 测试流程：
 

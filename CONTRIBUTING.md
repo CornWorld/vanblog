@@ -8,7 +8,7 @@
 
 ```bash
 docker build --target dev -t vanblog:dev .
-./scripts/dev-up.sh        # 启动 dev 容器（PocketBase :8090 / Astro :4321 / Caddy :80/:443）
+./scripts/dev/dev-up.sh        # 启动 dev 容器（PocketBase :8090 / Astro :4321 / Caddy :80/:443）
 ```
 
 也可以本地直接开发（`pnpm` + `go`）：
@@ -44,7 +44,7 @@ test(migration): 补导入回环测试
 - 文档分四层：`docs/reference/`（事实 SSOT）、`docs/guide/`（按 level 使用）、`docs/faq.md`（症状→ref）、README（门面）。
 - **事实只写一次**：端口/路径/变量/默认值/命令在 `reference/` 定义，使用文档引用（`ref`）而不是复制。
 - 动手写文档前读 [docs/quality/doc-standard.md](docs/quality/doc-standard.md)。
-- 文档变更后跑：`node scripts/doc-dup-check.mjs`，要求 **S0 冲突 = 0**。
+- 文档变更后跑：`node scripts/check/doc-dup-check.mjs`，要求 **S0 冲突 = 0**。
 
 ## 禁区（不要改）
 
@@ -64,7 +64,7 @@ test(migration): 补导入回环测试
 1. 从 `main` 切分支。
 2. 提交信息遵循规范；一个 PR 聚焦一件事。
 3. 跑测试：`cd vault && go test ./...` + `pnpm --filter vanblog-app build`。
-4. 若涉及 docs，跑 `node scripts/doc-dup-check.mjs`。
+4. 若涉及 docs，跑 `node scripts/check/doc-dup-check.mjs`。
 5. 打开 PR 并描述改动动机与验证方式。
 
 ## 安全
