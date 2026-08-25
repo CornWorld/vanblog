@@ -37,6 +37,7 @@ help:
 	@echo "  vet           Run go vet -all + golangci-lint (strict static analysis)"
 	@echo "  docker        Build production Docker image (docker buildx)"
 	@echo "  clean         Remove all build artifacts"
+	@echo "  scripts       List scripts/ categories and usage"
 
 # --- Development ---
 
@@ -101,3 +102,29 @@ clean:
 	rm -rf app/dist/
 	rm -rf sdk/dist/
 	rm -rf runtime/core-schema/
+
+# --- Scripts registry ---
+
+.PHONY: scripts
+
+# List scripts/ categories and per-script usage (first line of each usage banner).
+scripts:
+	@echo "scripts/ — 分层脚本目录（受众: dev=开发者 / check=静态检查 / build=构建 / test=测试 / runtime=容器内部组件 / ops=运维）"
+	@echo ""
+	@for d in dev check build test runtime ops; do \
+	  echo "[$$d]"; \
+	  for f in scripts/$$d/*; do \
+	    [ -f "$$f" ] || continue; \
+	    case "$$f" in \
+	      *.sh|*.mjs|*.js) \
+	        if head -n 40 "$$f" | grep -qE '^# *(用法|Usage|usage)'; then \
+	          u="$$(head -n 40 "$$f" | grep -m1 -E '^# *(用法|Usage|usage)' | sed 's/^# *//')"; \
+	          echo "    $$(basename "$$f")  —  $$u"; \
+	        else \
+	          echo "    $$(basename "$$f")"; \
+	        fi ;; \
+	      *) echo "    $$(basename "$$f")";; \
+	    esac; \
+	  done; \
+	  echo ""; \
+	done
