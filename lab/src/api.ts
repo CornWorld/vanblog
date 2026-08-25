@@ -19,6 +19,7 @@ export interface RunSummary {
   toolCalls: number | null;
   tokens: number | null;
   wallSeconds: number | null;
+  langfuse: { enabled: boolean; host: string } | null;
 }
 
 export interface Score {

@@ -1,19 +1,23 @@
 import { createResource, createMemo, Show, For } from "solid-js";
+import { A } from "@solidjs/router";
 import { api, type RunDetail as RunDetailT } from "../api";
-import { esc, fmtTime, fmtSec, fmtNum, evalBadge } from "../lib/format";
-import { computeSessionMetrics, generateInsights, METRIC_DEFINITIONS } from "../lib/metrics";
+import {
+  esc,
+  fmtTime,
+  fmtSec,
+  fmtNum,
+  evalBadge,
+  highlightJson,
+} from "../lib/format";
+import {
+  computeSessionMetrics,
+  generateInsights,
+  METRIC_DEFINITIONS,
+} from "../lib/metrics";
 import { EVAL_STRUCTURE, getCheckDesc } from "../lib/testcase-info";
 import { Evidence } from "./Evidence";
 
-export function RunDetail({
-  id,
-  onBack,
-  onOpenSession,
-}: {
-  id: string;
-  onBack: () => void;
-  onOpenSession: (id: string) => void;
-}) {
+export function RunDetail({ id }: { id: string }) {
   const [detail, { refetch: refetchDetail }] = createResource(
     () => id,
     api.run
@@ -21,12 +25,6 @@ export function RunDetail({
   const d = () => detail() ?? ({} as RunDetailT);
   const score = () => d().score ?? null;
   const run = () => d().run ?? {};
-  const isolation = () => {
-    const value = run().isolation;
-    return value && typeof value === "object"
-      ? (value as Record<string, unknown>)
-      : {};
-  };
   const [sessionEvents] = createResource(() => id, api.session);
   const sessionMetrics = createMemo(() => {
     const ev = sessionEvents();
@@ -92,9 +90,9 @@ export function RunDetail({
         <div class="breadcrumbs text-sm mb-4">
           <ul>
             <li>
-              <a class="link link-hover cursor-pointer" onclick={onBack}>
+              <A href="/" class="link link-hover">
                 runs
-              </a>
+              </A>
             </li>
             <li class="font-mono">{esc(d().id)}</li>
           </ul>
@@ -122,8 +120,8 @@ export function RunDetail({
               <div class="alert alert-warning my-2">
                 <span class="text-sm">
                   评测不完整 — agent {run().piTimedOut ? "超时" : "异常退出"}
-                  {run().piExitReason ? ` (${run().piExitReason})` : ""}，pack 未产出，仅执行了{" "}
-                  {score()?.score?.total ?? 0} 项静态检查
+                  {run().piExitReason ? ` (${run().piExitReason})` : ""}，pack
+                  未产出，仅执行了 {score()?.score?.total ?? 0} 项静态检查
                 </span>
               </div>
             </Show>
@@ -134,7 +132,9 @@ export function RunDetail({
               </p>
             )}
 
-            <p class="text-xs opacity-50 mb-1">指标由前端从 session JSONL 实时计算，可能与列表页预计算值略有差异</p>
+            <p class="text-xs opacity-50 mb-1">
+              指标由前端从 session JSONL 实时计算，可能与列表页预计算值略有差异
+            </p>
             <div class="stats stats-shadow w-full my-3">
               <div class="stat">
                 <div class="stat-value text-xl">
@@ -148,28 +148,36 @@ export function RunDetail({
                   {fmtNum(sessionMetrics()?.tokens?.totalTokens)}
                 </div>
                 <div class="stat-title text-xs">tokens</div>
-                <div class="text-xs opacity-50">{METRIC_DEFINITIONS.tokens}</div>
+                <div class="text-xs opacity-50">
+                  {METRIC_DEFINITIONS.tokens}
+                </div>
               </div>
               <div class="stat">
                 <div class="stat-value text-xl">
                   {esc(sessionMetrics()?.agent?.modelRequestCount)}
                 </div>
                 <div class="stat-title text-xs">requests</div>
-                <div class="text-xs opacity-50">{METRIC_DEFINITIONS.requests}</div>
+                <div class="text-xs opacity-50">
+                  {METRIC_DEFINITIONS.requests}
+                </div>
               </div>
               <div class="stat">
                 <div class="stat-value text-xl">
                   {esc(sessionMetrics()?.agent?.toolCallCount)}
                 </div>
                 <div class="stat-title text-xs">toolCalls</div>
-                <div class="text-xs opacity-50">{METRIC_DEFINITIONS.toolCalls}</div>
+                <div class="text-xs opacity-50">
+                  {METRIC_DEFINITIONS.toolCalls}
+                </div>
               </div>
               <div class="stat">
                 <div class="stat-value text-xl">
                   {esc(sessionMetrics()?.agent?.toolResultErrorCount ?? 0)}
                 </div>
                 <div class="stat-title text-xs">errors</div>
-                <div class="text-xs opacity-50">{METRIC_DEFINITIONS.errors}</div>
+                <div class="text-xs opacity-50">
+                  {METRIC_DEFINITIONS.errors}
+                </div>
               </div>
             </div>
 
@@ -204,16 +212,26 @@ export function RunDetail({
 
             <div class="flex gap-2 mt-3">
               <Show when={!!sessionMetrics()}>
-                <button
+                <A
+                  href={`/runs/${d().id}/session`}
                   class="btn btn-sm btn-primary"
-                  onclick={() => onOpenSession(d().id)}
                 >
                   查看 Session 执行过程
-                </button>
+                </A>
               </Show>
-              <button class="btn btn-sm btn-ghost" onclick={onBack}>
+              <Show when={d().langfuse?.enabled}>
+                <a
+                  class="btn btn-sm btn-outline"
+                  href={`${d().langfuse!.host}/sessions`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  📊 View in Langfuse
+                </a>
+              </Show>
+              <A href="/" class="btn btn-sm btn-ghost">
                 返回列表
-              </button>
+              </A>
             </div>
           </div>
         </div>
@@ -223,7 +241,9 @@ export function RunDetail({
             <h3 class="text-sm font-bold mb-1">评测明细</h3>
             <p class="text-xs opacity-60 mb-2">
               {score()?.status === "incomplete"
-                ? `仅 ${score()?.score?.total ?? 0} 项静态检查（pack 未产出，运行时检查未执行）`
+                ? `仅 ${
+                    score()?.score?.total ?? 0
+                  } 项静态检查（pack 未产出，运行时检查未执行）`
                 : `${EVAL_STRUCTURE.static.total} ${EVAL_STRUCTURE.static.label} + ${EVAL_STRUCTURE.runtime.total} ${EVAL_STRUCTURE.runtime.label} = ${EVAL_STRUCTURE.fullTotal} 项总检查`}
             </p>
             <Show
@@ -239,25 +259,29 @@ export function RunDetail({
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div class="bg-base-300 rounded-lg p-3">
                   <h4 class="text-xs font-bold text-success">
-                    静态通过 · 文件结构与内容验证 ({score()?.static?.passed?.length ?? 0})
+                    静态通过 · 文件结构与内容验证 (
+                    {score()?.static?.passed?.length ?? 0})
                   </h4>
                   {list(score()?.static?.passed, "badge-success")}
                 </div>
                 <div class="bg-base-300 rounded-lg p-3">
                   <h4 class="text-xs font-bold text-error">
-                    静态失败 · 文件结构与内容验证 ({score()?.static?.failed?.length ?? 0})
+                    静态失败 · 文件结构与内容验证 (
+                    {score()?.static?.failed?.length ?? 0})
                   </h4>
                   {list(score()?.static?.failed, "badge-error")}
                 </div>
                 <div class="bg-base-300 rounded-lg p-3">
                   <h4 class="text-xs font-bold text-success">
-                    运行时通过 · Docker HTTP 调用验证 ({score()?.runtime?.passed?.length ?? 0})
+                    运行时通过 · Docker HTTP 调用验证 (
+                    {score()?.runtime?.passed?.length ?? 0})
                   </h4>
                   {list(score()?.runtime?.passed, "badge-success")}
                 </div>
                 <div class="bg-base-300 rounded-lg p-3">
                   <h4 class="text-xs font-bold text-error">
-                    运行时失败 · Docker HTTP 调用验证 ({score()?.runtime?.failed?.length ?? 0})
+                    运行时失败 · Docker HTTP 调用验证 (
+                    {score()?.runtime?.failed?.length ?? 0})
                   </h4>
                   {list(score()?.runtime?.failed, "badge-error")}
                   {score()?.runtime?.blocked?.length ? (
@@ -283,34 +307,16 @@ export function RunDetail({
           </div>
         </div>
 
-        <details class="collapse collapse-arrow bg-base-300 mt-4">
-          <summary class="collapse-title text-sm">配置 run.json</summary>
-          <div class="collapse-content text-sm space-y-1">
-            <p>model: {esc(run().agentModel)}</p>
-            <p>image: {esc(run().image)}</p>
-            <p>timeout: {esc(run().agentTimeout)}s</p>
-            <p>isolation.probePassed: {esc(isolation().probePassed)}</p>
-            <p>
-              exitReason: {esc(run().piExitReason)}
-              {run().piTimedOut ? " (timed out)" : ""}
-            </p>
-            <p>
-              generatedAt:{" "}
-              {fmtTime(
-                typeof run().generatedAt === "string"
-                  ? String(run().generatedAt)
-                  : undefined
-              )}
-            </p>
-          </div>
-        </details>
-
         <h3 class="text-sm font-bold mb-1 mt-4">证据链</h3>
         <Show
           when={d().transcript}
           fallback={<p class="text-sm opacity-60">transcript unavailable</p>}
         >
-          <Evidence title="transcript" getter={() => d().transcript!} />
+          <Evidence
+            title="transcript"
+            description="Agent 原始输出流 — 模型对话记录"
+            getter={() => d().transcript!}
+          />
         </Show>
         <Show
           when={
@@ -324,14 +330,19 @@ export function RunDetail({
         </Show>
         <Evidence
           title="container.log"
+          description="Docker 容器日志 — vanblog 启动 + pack hook 加载"
           getter={() => api.file(d().id, "container.log")}
         />
         <Evidence
           title="score.json"
+          description="评测结果 — 静态 + 运行时检查明细"
+          lang="json"
           getter={() => JSON.stringify(score(), null, 2)}
         />
         <Evidence
           title="run.json"
+          description="运行元数据 — 模型/容器/超时/隔离配置"
+          lang="json"
           getter={() => JSON.stringify(run(), null, 2)}
         />
       </Show>

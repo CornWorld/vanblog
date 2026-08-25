@@ -64,6 +64,7 @@ function runSummary(id, dir) {
     toolCalls: metrics?.agent?.toolCallCount,
     tokens: metrics?.tokens?.totalTokens,
     wallSeconds: metrics?.timeline?.wallSeconds,
+    langfuse: run.langfuse ?? null,
   };
 }
 
