@@ -34,8 +34,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
+PROJECT_ROOT="$(project_root)"
 IMAGE_TAG="vanblog:dev-test"
 CONTAINER_NAME="vanblog-pi-test-$$"
 HTTP_PORT="${TEST_PORT:-8880}"

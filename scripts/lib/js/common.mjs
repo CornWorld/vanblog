@@ -9,6 +9,17 @@ import process from 'node:process';
 export const REPO_ROOT = resolve(new URL('../../..', import.meta.url).pathname);
 
 /**
+ * Workspace root shared by all scripts, in both environments:
+ *  - dev container: VANBLOG_WORKSPACE=/workspace (entrypoint.dev.sh exports it)
+ *  - source checkout: derived from this file's location (scripts/lib/js → ../../)
+ * Env-first so the container layout wins wherever it is set; the derivation is
+ * only a fallback so running from a checkout never points at a stale /workspace.
+ */
+export function workspaceRoot() {
+  return process.env.VANBLOG_WORKSPACE ?? REPO_ROOT;
+}
+
+/**
  * Recursively list all files under dir, returning '/' -relative paths.
  * Mirrors the walk in doc-dup-check.mjs / override-check.mjs.
  */

@@ -16,19 +16,17 @@
 //
 // After running, you can `cd themes/<new-theme-name> && pnpm dev` to start
 // hacking. Edit src/pages/* or src/base-overrides/* to customise.
-
 import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import process from 'node:process';
+import { fail, workspaceRoot } from '../lib/js/common.mjs';
+
+// Keep the source layout: node scripts/theme-init.mjs <name> runs from anywhere,
+// so anchor on this file (scripts/build/theme-init.mjs) rather than CWD.
+const REPO_ROOT = workspaceRoot();
 
 const NAME_RE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
-const REPO_ROOT = resolve(new URL('../..', import.meta.url).pathname);
 const DEFAULT_THEME = join(REPO_ROOT, 'themes', 'base');
-
-function fail(msg) {
-  console.error(`theme-init: ${msg}`);
-  process.exit(1);
-}
 
 const name = process.argv[2];
 if (!name) fail('missing theme name. Usage: node scripts/build/theme-init.mjs <name>');

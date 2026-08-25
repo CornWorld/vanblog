@@ -23,7 +23,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(project_root)"
 
 # 交互检查点: VANBLOG_TEST_INTERACTIVE=0 可跳过
 interactive_pause() {
@@ -85,8 +85,7 @@ TEST_EMAIL="test@vanblog.local"
 info "测试目录: $TEST_DIR"
 info "HTTP 端口: $HTTP_PORT  HTTPS 端口: $HTTPS_PORT"
 
-SCRIPT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-VANBLOG_SH="$SCRIPT_DIR/vanblog.sh"
+VANBLOG_SH="$PROJECT_ROOT/vanblog.sh"
 
 if [[ ! -f "$VANBLOG_SH" ]]; then
     assert_fail "找不到 vanblog.sh" "$VANBLOG_SH"

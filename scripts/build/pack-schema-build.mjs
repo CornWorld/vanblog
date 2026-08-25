@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 import { existsSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { isAbsolute, join, resolve } from 'node:path';
 import { build } from 'vite';
+import { workspaceRoot } from '../lib/js/common.mjs';
 
 function usage() {
   console.error('usage: node scripts/build/pack-schema-build.mjs <pack-directory> [output-file]');
@@ -29,8 +29,7 @@ if (!existsSync(schemaEntry)) {
   process.exit(0);
 }
 
-const scriptDirectory = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(scriptDirectory, '../..');
+const repoRoot = workspaceRoot();
 const tempDirectory = mkdtempSync(join(tmpdir(), 'vanblog-pack-schema-'));
 const tempOutput = join(tempDirectory, 'schema.js');
 
