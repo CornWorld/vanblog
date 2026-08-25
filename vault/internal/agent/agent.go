@@ -23,10 +23,24 @@ import (
 const (
 	sessionCollection = "agent_sessions"
 	piBinary          = "pi"
-	piWorkingDir      = "/workspace"
 	sessionIdleTTL    = 30 * time.Minute
 	sessionFileTTL    = 7 * 24 * time.Hour
 )
+
+// piWorkDir is the directory pi child processes run in. The dev container
+// exports VANBLOG_WORKSPACE=/workspace (same root the runtime scripts use);
+// any other environment (prod image, local binary) falls back to the current
+// working directory, which always exists, instead of a hardcoded /workspace
+// that prod does not ship.
+func piWorkDir() string {
+	if dir := os.Getenv("VANBLOG_WORKSPACE"); dir != "" {
+		return dir
+	}
+	if dir, err := os.Getwd(); err == nil {
+		return dir
+	}
+	return "/"
+}
 
 // Manager exposes pi's native JSONL RPC through the authenticated PocketBase API.
 // PocketBase owns durable session metadata; runtimes only contain local child processes.
@@ -190,7 +204,7 @@ func (m *Manager) acquireRuntime(record *core.Record) (*runtimeSession, error) {
 	}
 
 	cmd := exec.Command(piBinary, "--mode", "rpc", "--approve", "--session-dir", dir)
-	cmd.Dir = piWorkingDir
+	cmd.Dir = piWorkDir()
 	cmd.Stderr = os.Stderr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

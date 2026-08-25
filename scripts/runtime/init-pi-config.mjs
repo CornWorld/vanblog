@@ -87,9 +87,9 @@ try {
   const trust = existsSync(PI_TRUST)
     ? JSON.parse(readFileSync(PI_TRUST, "utf-8"))
     : {};
-  // Trust /workspace and its children (pi expects boolean, not string)
+  // Trust the workspace root and its children (pi expects boolean, not string)
   trust[WORKSPACE] = true;
-  trust["/workspace/"] = true;
+  trust[WORKSPACE.replace(/\/$/, "") + "/"] = true;
   writeFileSync(PI_TRUST, JSON.stringify(trust, null, 2) + "\n", "utf-8");
   console.log(`[pi-init] trust written: ${PI_TRUST}`);
 } catch (err) {
