@@ -1,11 +1,10 @@
 import { createSignal, createMemo, createResource } from "solid-js";
-import { Route, useParams, useNavigate } from "@solidjs/router";
-import { api, type RunSummary } from "./api";
+import { Route, useParams } from "@solidjs/router";
+import { api } from "./api";
 import { compareScore } from "./lib/format";
 import { RunList, type RunFilter } from "./views/RunList";
 import { RunDetail } from "./views/RunDetail";
 import { SessionDetail } from "./views/SessionDetail";
-
 export default function App() {
   const [filter, setFilter] = createSignal<RunFilter>({
     state: "all",
@@ -65,7 +64,6 @@ export default function App() {
   // Route page components — useNavigate/useParams MUST be called here
   // (inside <Route component={...}>), not in App (direct <Router> child).
   function ListPage() {
-    const nav = useNavigate();
     return (
       <RunList
         rows={rows()}
@@ -73,7 +71,6 @@ export default function App() {
         stats={stats()}
         filter={filter()}
         onFilter={setFilter}
-        onSelect={(id) => nav(`/runs/${id}`)}
         loading={runs.loading}
         error={runs.error}
         onRetry={() => void refetchRuns()}
@@ -81,22 +78,14 @@ export default function App() {
     );
   }
   function DetailPage() {
-    const nav = useNavigate();
     const p = useParams();
     const id = () => p.id!;
-    return (
-      <RunDetail
-        id={id()}
-        onBack={() => nav("/")}
-        onOpenSession={(rid) => nav(`/runs/${rid}/session`)}
-      />
-    );
+    return <RunDetail id={id()} />;
   }
   function SessionPage() {
-    const nav = useNavigate();
     const p = useParams();
     const id = () => p.id!;
-    return <SessionDetail id={id()} onBack={() => nav(`/runs/${id()}`)} />;
+    return <SessionDetail id={id()} />;
   }
 
   return (

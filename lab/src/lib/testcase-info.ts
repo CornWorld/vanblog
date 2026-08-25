@@ -4,8 +4,6 @@ export const EVAL_STRUCTURE = {
   fullTotal: 24,
 } as const;
 
-export const INCOMPLETE_CHECKS = ["artifact-dir-exists", "pack-dir-found"] as const;
-
 // 24 个 check ID → 中文描述
 export const TESTCASE_DESCRIPTIONS: Record<string, string> = {
   "artifact-dir-exists": "artifact 目录存在",

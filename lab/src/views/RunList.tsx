@@ -1,6 +1,7 @@
 import { Show, For } from "solid-js";
+import { A } from "@solidjs/router";
 import type { RunSummary } from "../api";
-import { esc, fmtTime, evalBadge } from "../lib/format";
+import { esc, fmtTime, fmtSec, evalBadge } from "../lib/format";
 
 export interface RunFilter {
   state: string;
@@ -21,12 +22,11 @@ export function RunList(props: {
   };
   filter: RunFilter;
   onFilter: (f: RunFilter) => void;
-  onSelect: (id: string) => void;
   loading: boolean;
   error: unknown;
   onRetry: () => void;
 }) {
-  const { onFilter, onSelect } = props;
+  const { onFilter } = props;
   const models = () => props.models;
   const rows = () => props.rows;
   const stats = () => props.stats;
@@ -130,9 +130,18 @@ export function RunList(props: {
                 <th>eval</th>
                 <th>score</th>
                 <th>model</th>
-                <th class="text-right" title="模型请求次数">req</th>
-                <th class="text-right" title="input+output+cache+reasoning 总和">tokens</th>
-                <th class="text-right" title="session 时间戳跨度">wall</th>
+                <th class="text-right" title="模型请求次数">
+                  req
+                </th>
+                <th
+                  class="text-right"
+                  title="input+output+cache+reasoning 总和"
+                >
+                  tokens
+                </th>
+                <th class="text-right" title="session 时间戳跨度">
+                  wall
+                </th>
                 <th>artifact modified (UTC)</th>
               </tr>
             </thead>
@@ -159,11 +168,12 @@ export function RunList(props: {
               </Show>
               <For each={rows()}>
                 {(r) => (
-                  <tr
-                    class="hover cursor-pointer"
-                    onclick={() => onSelect(r.id)}
-                  >
-                    <td class="font-mono text-xs">{esc(r.id)}</td>
+                  <tr class="hover">
+                    <td class="font-mono text-xs">
+                      <A href={`/runs/${r.id}`} class="link link-hover">
+                        {esc(r.id)}
+                      </A>
+                    </td>
                     <td>
                       <span
                         class={
@@ -179,14 +189,22 @@ export function RunList(props: {
                     <td>
                       <span
                         class={"badge badge-sm " + evalBadge(r.evalStatus)}
-                        title={r.evalStatus === "incomplete" ? "agent 超时或崩溃，pack 未产出，评测提前终止" : undefined}
+                        title={
+                          r.evalStatus === "incomplete"
+                            ? "agent 超时或崩溃，pack 未产出，评测提前终止"
+                            : undefined
+                        }
                       >
                         {esc(r.evalStatus)}
                       </span>
                     </td>
                     <td
                       class="font-mono text-xs"
-                      title={r.evalStatus === "incomplete" ? "pack 未产出，仅执行 2 项静态检查，运行时检查未执行" : "16 项静态检查 + 8 项运行时验证 = 24 项"}
+                      title={
+                        r.evalStatus === "incomplete"
+                          ? "pack 未产出，仅执行 2 项静态检查，运行时检查未执行"
+                          : "16 项静态检查 + 8 项运行时验证 = 24 项"
+                      }
                     >
                       {esc(r.evalScore ?? "-")}
                       {r.evalStatus === "incomplete" && r.evalScore && (
@@ -196,9 +214,7 @@ export function RunList(props: {
                     <td class="text-xs opacity-70">{esc(r.model)}</td>
                     <td class="text-right">{esc(r.requests)}</td>
                     <td class="text-right">{esc(r.tokens)}</td>
-                    <td class="text-right">
-                      {r.wallSeconds != null ? r.wallSeconds + "s" : "-"}
-                    </td>
+                    <td class="text-right">{fmtSec(r.wallSeconds)}</td>
                     <td class="text-xs opacity-60">{fmtTime(r.mtime)}</td>
                   </tr>
                 )}

@@ -47,3 +47,51 @@ export const compareScore = (
   if (bp == null) return -1;
   return direction === "desc" ? bp - ap : ap - bp;
 };
+
+export const fmtCost = (c?: number | null) =>
+  c != null && c > 0 ? "$" + c.toFixed(4) : "-";
+
+/**
+ * Lightweight JSON syntax highlighter — no dependencies.
+ * Returns an HTML string with <span> tags using daisyUI color classes.
+ * Input is HTML-escaped first to prevent XSS.
+ */
+export function highlightJson(str: string): string {
+  // First HTML-escape to prevent injection
+  const escaped = str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Then wrap JSON tokens in colored spans.
+  // Order matters: process strings first (they may contain colons, braces etc.)
+  return escaped.replace(
+    // Match: "key": value | "string" | number | boolean | null
+    /("(?:\\.|[^"\\])*"\s*:)|("(?:\\.|[^"\\])*")|(\b-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b)|(\b(?:true|false|null)\b)/g,
+    (
+      _match: string,
+      key?: string,
+      strVal?: string,
+      num?: string,
+      bool?: string
+    ): string => {
+      if (key) {
+        // JSON key (includes trailing colon) — info color
+        return `<span class="text-info">${key}</span>`;
+      }
+      if (strVal) {
+        // String value — success (green)
+        return `<span class="text-success">${strVal}</span>`;
+      }
+      if (num) {
+        // Number — warning (amber)
+        return `<span class="text-warning">${num}</span>`;
+      }
+      if (bool) {
+        // Boolean/null — error (red)
+        return `<span class="text-error">${bool}</span>`;
+      }
+      return _match;
+    }
+  );
+}
