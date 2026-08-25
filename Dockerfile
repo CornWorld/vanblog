@@ -28,6 +28,8 @@ WORKDIR /build
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY sdk/package.json ./sdk/package.json
 COPY app/package.json ./app/package.json
+COPY themes/base/package.json ./themes/base/package.json
+COPY themes/vanblog/package.json ./themes/vanblog/package.json
 RUN pnpm config set store-dir /pnpm/store && \
     if [ -n "$NPM_MIRROR" ]; then \
       pnpm config set registry "$NPM_MIRROR"; \
@@ -117,7 +119,7 @@ RUN printf '%s' "${BUILD_VERSION}" > /build/.build-version
 # The Go runtime reads schema.js from the Pack fs.FS to validate Pack-owned models.
 RUN for pack in packs/*/; do \
       if [ -f "$pack/schema.ts" ]; then \
-        node scripts/pack-schema-build.mjs "$pack"; \
+        node scripts/build/pack-schema-build.mjs "$pack"; \
       fi; \
     done
 
@@ -138,8 +140,12 @@ RUN apk add --no-cache caddy nodejs ca-certificates tzdata curl
 COPY --from=go-build /pocketbase /usr/local/bin/vanblog
 COPY --from=go-build /core/models.js /core/models.js
 
-# Copy the whole astro-build workspace so the pnpm symlink layout resolves.
-COPY --from=astro-build /build /build
+# Runtime deps: pnpm symlink layout + builtin themes + admin SSR dist.
+# Copying the whole /build workspace would ship source, scripts and build
+# caches into the runtime image — keep this to what the process actually loads.
+COPY --from=astro-build /build/node_modules /build/node_modules
+COPY --from=astro-build /build/themes /build/themes
+COPY --from=astro-build /build/app/dist /build/app/dist
 
 # Copy built themes (all of them, not just active).
 # Each theme has its own dist/ with server/entry.mjs + client/ assets.
@@ -151,8 +157,8 @@ COPY --from=astro-build /build/.build-version /etc/vanblog/build-version
 # ./core.mjs at runtime, so both must land side-by-side in /app/.
 COPY --from=astro-build /build/app/src/theme-host/index.mjs /app/theme-host.mjs
 COPY --from=astro-build /build/app/src/theme-host/core.mjs /app/core.mjs
-# The standalone admin SSR app lives at /build/app/dist (part of the workspace
-# COPY above), so its runtime deps resolve via /build/node_modules like themes.
+# The standalone admin SSR app lives at /build/app/dist (copied above), so its
+# runtime deps resolve via /build/node_modules like the themes.
 # VANBLOG_ADMIN_DIST_DIR=/build/app/dist (see entrypoint.prod.sh + Go defaults).
 
 # Copy core hooks and builtin Pack resources (with schema.js artifacts built in
