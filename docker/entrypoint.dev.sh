@@ -93,7 +93,10 @@ echo "[vanblog] agent.env written to /etc/vanblog/agent.env (see AGENTS.md §环
 # 3.6. Initialize pi coding agent config — resolve live Zen free model + write trust.
 # Fail-open: if init-pi-config fails (network down), pi still starts with
 # the hardcoded fallback model from .pi/settings.json.
+# VANBLOG_WORKSPACE pins the workspace root for source-less container runs
+# (init-pi-config falls back to deriving the repo root from its own path).
 echo "[vanblog] initializing pi agent config..."
+export VANBLOG_WORKSPACE=/workspace
 node /workspace/scripts/runtime/init-pi-config.mjs || echo "[vanblog] pi config init skipped (will use fallback)"
 
 # 3.7. Start the Zen auth-stripping proxy used by pi's OpenCode Zen provider.

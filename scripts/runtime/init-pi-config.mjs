@@ -13,9 +13,13 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
-const WORKSPACE = "/workspace";
+// In the dev container the workspace is /workspace (entrypoint sets
+// VANBLOG_WORKSPACE). Running from a source checkout, derive the repo root
+// from this file's location (scripts/runtime/ -> ../../).
+const WORKSPACE =
+  process.env.VANBLOG_WORKSPACE ?? resolve(new URL("../../", import.meta.url).pathname);
 const PI_SETTINGS = join(WORKSPACE, ".pi", "settings.json");
 const PI_GLOBAL_DIR = join(homedir(), ".pi", "agent");
 const PI_TRUST = join(PI_GLOBAL_DIR, "trust.json");
