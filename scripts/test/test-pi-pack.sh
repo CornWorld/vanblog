@@ -13,18 +13,18 @@
 #   7. Report results
 #
 # Usage:
-#   ./scripts/test-pi-pack.sh                        # full test (builds if needed)
-#   ./scripts/test-pi-pack.sh --no-build              # skip Docker build
-#   ./scripts/test-pi-pack.sh --cleanup               # remove container after run
-#   ./scripts/test-pi-pack.sh --keep-evidence         # keep container + temp dirs
-#   ./scripts/test-pi-pack.sh --debug                 # alias for --keep-evidence
-#   ./scripts/test-pi-pack.sh --skip-eval             # skip evaluator
-#   ./scripts/test-pi-pack.sh --run-id <id>           # explicit run-id
-#   ./scripts/test-pi-pack.sh --agent-timeout <sec>   # pi timeout (default 300)
-#   ./scripts/test-pi-pack.sh --model <id>            # model id (default deepseek-v4-flash-0731:floor)
-#   ./scripts/test-pi-pack.sh --base-url <url>        # api base url (default http://host.docker.internal:8317/v1)
-#   ./scripts/test-pi-pack.sh --api-key <key>         # api key (default from AGENT_API_KEY env)
-#   ./scripts/test-pi-pack.sh --dry-run               # dry-run mode
+#   ./scripts/test/test-pi-pack.sh                        # full test (builds if needed)
+#   ./scripts/test/test-pi-pack.sh --no-build              # skip Docker build
+#   ./scripts/test/test-pi-pack.sh --cleanup               # remove container after run
+#   ./scripts/test/test-pi-pack.sh --keep-evidence         # keep container + temp dirs
+#   ./scripts/test/test-pi-pack.sh --debug                 # alias for --keep-evidence
+#   ./scripts/test/test-pi-pack.sh --skip-eval             # skip evaluator
+#   ./scripts/test/test-pi-pack.sh --run-id <id>           # explicit run-id
+#   ./scripts/test/test-pi-pack.sh --agent-timeout <sec>   # pi timeout (default 300)
+#   ./scripts/test/test-pi-pack.sh --model <id>            # model id (default deepseek-v4-flash-0731:floor)
+#   ./scripts/test/test-pi-pack.sh --base-url <url>        # api base url (default http://host.docker.internal:8317/v1)
+#   ./scripts/test/test-pi-pack.sh --api-key <key>         # api key (default from AGENT_API_KEY env)
+#   ./scripts/test/test-pi-pack.sh --dry-run               # dry-run mode
 #
 # Prerequisites:
 #   - Docker daemon running
@@ -33,9 +33,9 @@
 
 set -euo pipefail
 
-# ── Config ────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+source "$SCRIPT_DIR/../lib/common.sh"
 IMAGE_TAG="vanblog:dev-test"
 CONTAINER_NAME="vanblog-pi-test-$$"
 HTTP_PORT="${TEST_PORT:-8880}"
@@ -92,18 +92,6 @@ Then create the pack with:
 
 Do NOT explore the architecture, test endpoints, or read source code.
 EOF
-
-# ── Color output ─────────────────────────────────────────────────
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m'
-pass() { echo -e "${GREEN}[PASS]${NC} $*"; }
-fail() { echo -e "${RED}[FAIL]${NC} $*"; }
-info() { echo -e "${YELLOW}[INFO]${NC} $*"; }
-detail() { echo -e "${CYAN}[DETAIL]${NC} $*"; }
-step() { echo -e "\n${GREEN}── $* ──${NC}"; }
 
 # ── Args ─────────────────────────────────────────────────────────
 DO_BUILD=true
@@ -203,13 +191,13 @@ if [ "$DRY_RUN" = true ]; then
 elif [ "$DO_BUILD" = true ]; then
   info "Building $IMAGE_TAG..."
   docker build --target dev -t "$IMAGE_TAG" "$PROJECT_ROOT" \
-    || fail "Docker build failed"
-  pass "Image built: $IMAGE_TAG"
+    || assert_fail "Docker build failed"
+  assert_ok "Image built: $IMAGE_TAG"
 else
   info "Skipping build (--no-build). Checking image..."
   docker image inspect "$IMAGE_TAG" >/dev/null 2>&1 \
-    || fail "Image $IMAGE_TAG not found. Run without --no-build first."
-  pass "Image exists: $IMAGE_TAG"
+    || assert_fail "Image $IMAGE_TAG not found. Run without --no-build first."
+  assert_ok "Image exists: $IMAGE_TAG"
 fi
 
 # ── Step 2: Start container ─────────────────────────────────────
@@ -225,8 +213,8 @@ else
     -e VANBLOG_PACKS_DIR="$CONTAINER_USER_PACKS" \
     -v "$HOST_USER_PACKS:$CONTAINER_USER_PACKS" \
     "$IMAGE_TAG" \
-    || fail "Failed to start container"
-  pass "Container started: $CONTAINER_NAME (port $HTTP_PORT)"
+    || assert_fail "Failed to start container"
+  assert_ok "Container started: $CONTAINER_NAME (port $HTTP_PORT)"
 fi
 
 # ── Step 3: Wait for readiness ───────────────────────────────────
@@ -237,20 +225,20 @@ else
   ATTEMPT=0
   while [ $ATTEMPT -lt $TEST_TIMEOUT ]; do
     if curl -sf -o /dev/null "http://127.0.0.1:$HTTP_PORT/api/health" 2>/dev/null; then
-      pass "PocketBase ready (${ATTEMPT}s)"
+      assert_ok "PocketBase ready (${ATTEMPT}s)"
       break
     fi
     ATTEMPT=$((ATTEMPT + 1))
     sleep 1
   done
   if [ $ATTEMPT -ge $TEST_TIMEOUT ]; then
-    fail "Container did not become ready within ${TEST_TIMEOUT}s"
+    assert_fail "Container did not become ready within ${TEST_TIMEOUT}s"
   fi
 
   # Also verify pi is installed
   docker exec "$CONTAINER_NAME" which pi >/dev/null 2>&1 \
-    || fail "pi not found in container"
-  pass "pi binary present"
+    || assert_fail "pi not found in container"
+  assert_ok "pi binary present"
 fi
 
 # ── Step 3.5: Override pi config for the CLIProxyAPI-backed model ──
@@ -280,8 +268,8 @@ else
     }
   }
 }
-EOF_MODEL" || fail "Failed to write models.json"
-  pass "models.json written with openrouter provider (baseUrl → CLIProxyAPI)"
+EOF_MODEL" || assert_fail "Failed to write models.json"
+  assert_ok "models.json written with openrouter provider (baseUrl → CLIProxyAPI)"
 
   # Override /workspace/.pi/settings.json model/defaultModel.
   # Use environment variables inside the container to avoid host shell expansion
@@ -308,10 +296,39 @@ NODE
       cat "$TMP" > "$SETTINGS"
       rm -f "$TMP"
       echo "settings.json configured"
-    ' || fail "Failed to update settings.json"
-  pass "settings.json model/defaultModel set to $AGENT_MODEL"
+    ' || assert_fail "Failed to update settings.json"
+  assert_ok "settings.json model/defaultModel set to $AGENT_MODEL"
 
   info "Model config applied (api key never persisted to artifacts)"
+fi
+
+# ── Step 3.5b: Install pi-langfuse (optional, if LANGFUSE keys are set) ──
+LANGFUSE_ENABLED=false
+step "Step 3.5b: Configure pi-langfuse (optional)"
+if [ "$DRY_RUN" = true ]; then
+  info "DRY RUN — skipping pi-langfuse setup"
+elif [ -n "${LANGFUSE_PUBLIC_KEY:-}" ] && [ -n "${LANGFUSE_SECRET_KEY:-}" ] && [ -n "${LANGFUSE_BASE_URL:-}" ]; then
+  info "Installing pi-langfuse in container..."
+  if docker exec "$CONTAINER_NAME" pi install npm:pi-langfuse 2>&1 | tail -1; then
+    assert_ok "pi-langfuse installed"
+    # Write config.json — keys are NOT persisted to run.json/artifacts, only in
+    # the container's /root/.pi/agent/ which is destroyed with the container.
+    docker exec "$CONTAINER_NAME" sh -c \
+      "mkdir -p /root/.pi/agent/pi-langfuse && cat > /root/.pi/agent/pi-langfuse/config.json << 'EOF_LF'
+{
+  \"publicKey\": \"$LANGFUSE_PUBLIC_KEY\",
+  \"secretKey\": \"$LANGFUSE_SECRET_KEY\",
+  \"host\": \"$LANGFUSE_BASE_URL\",
+  \"privacyPreset\": \"full-debug\"
+}
+EOF_LF" || assert_fail "Failed to write pi-langfuse config"
+    assert_ok "pi-langfuse config written (host=$LANGFUSE_BASE_URL)"
+    LANGFUSE_ENABLED=true
+  else
+    info "pi-langfuse install failed — continuing without tracing"
+  fi
+else
+  info "LANGFUSE_PUBLIC_KEY/SECRET_KEY/BASE_URL not set — skipping pi-langfuse"
 fi
 
 # ── Step 3.6: Isolate test/evaluator code from agent workspace ──
@@ -329,22 +346,23 @@ else
 
   # Files to remove from agent-visible workspace (only test infrastructure).
   for f in \
-    scripts/test-pi-pack.sh \
-    scripts/evaluate-agent-pack.mjs \
-    scripts/init-pi-config.mjs \
-    scripts/resolve-zen-free-models.mjs \
-    scripts/pi-zen-proxy.mjs \
+    scripts/test/test-pi-pack.sh \
+    scripts/test/evaluate-agent-pack.mjs \
+    scripts/runtime/init-pi-config.mjs \
+    scripts/runtime/resolve-zen-free-models.mjs \
+    scripts/runtime/pi-zen-proxy.mjs \
     scripts/lib/common.sh \
-    scripts/test-agent-rpc.sh \
-    scripts/test-theme-switch.mjs \
-    scripts/dev-verify.sh \
-    scripts/dev-up.sh \
-    scripts/demo-setup.sh \
-    scripts/install-test.sh \
-    scripts/doc-dup-check.mjs \
-    scripts/override-check.mjs \
-    scripts/pack-schema-build.mjs \
-    scripts/theme-init.mjs \
+    scripts/lib/js/common.mjs \
+    scripts/test/test-agent-rpc.sh \
+    scripts/test/test-theme-switch.mjs \
+    scripts/dev/dev-verify.sh \
+    scripts/dev/dev-up.sh \
+    scripts/ops/demo-setup.sh \
+    scripts/test/install-test.sh \
+    scripts/check/doc-dup-check.mjs \
+    scripts/check/override-check.mjs \
+    scripts/build/pack-schema-build.mjs \
+    scripts/build/theme-init.mjs \
     .pi/settings.json \
     .agents/; do
     if docker exec "$CONTAINER_NAME" test -e "/workspace/$f" 2>/dev/null; then
@@ -363,22 +381,23 @@ else
   # scripts at /build/scripts (absolute path, NOT under /workspace). pi reads
   # this if not removed, leaking the expected solution + evaluator.
   for bf in \
-    test-pi-pack.sh \
-    evaluate-agent-pack.mjs \
-    init-pi-config.mjs \
-    resolve-zen-free-models.mjs \
-    pi-zen-proxy.mjs \
+    test/test-pi-pack.sh \
+    test/evaluate-agent-pack.mjs \
+    runtime/init-pi-config.mjs \
+    runtime/resolve-zen-free-models.mjs \
+    runtime/pi-zen-proxy.mjs \
     lib/common.sh \
-    test-agent-rpc.sh \
-    test-theme-switch.mjs \
-    dev-verify.sh \
-    dev-up.sh \
-    demo-setup.sh \
-    install-test.sh \
-    doc-dup-check.mjs \
-    override-check.mjs \
-    pack-schema-build.mjs \
-    theme-init.mjs; do
+    lib/js/common.mjs \
+    test/test-agent-rpc.sh \
+    test/test-theme-switch.mjs \
+    dev/dev-verify.sh \
+    dev/dev-up.sh \
+    ops/demo-setup.sh \
+    test/install-test.sh \
+    check/doc-dup-check.mjs \
+    check/override-check.mjs \
+    build/pack-schema-build.mjs \
+    build/theme-init.mjs; do
     if docker exec "$CONTAINER_NAME" test -e "/build/scripts/$bf" 2>/dev/null; then
       docker exec "$CONTAINER_NAME" rm -rf "/build/scripts/$bf" 2>/dev/null && \
         ISOLATION_REMOVED="$ISOLATION_REMOVED build/scripts/$bf"
@@ -386,7 +405,6 @@ else
       ISOLATION_MISSING="$ISOLATION_MISSING build/scripts/$bf"
     fi
   done
-
   info "Isolation removed:${ISOLATION_REMOVED}"
   [ -n "$ISOLATION_MISSING" ] && info "Already absent:${ISOLATION_MISSING}"
 
@@ -394,36 +412,36 @@ else
   ISOLATION_PROBE_PASSED=true
   ISOLATION_PROBE_DETAIL=""
   for probe_path in \
-    scripts/test-pi-pack.sh \
-    scripts/evaluate-agent-pack.mjs \
-    scripts/init-pi-config.mjs \
+    scripts/test/test-pi-pack.sh \
+    scripts/test/evaluate-agent-pack.mjs \
+    scripts/runtime/init-pi-config.mjs \
     .pi/settings.json \
     .agents/skills; do
     if docker exec "$CONTAINER_NAME" test -e "/workspace/$probe_path" 2>/dev/null; then
       ISOLATION_PROBE_PASSED=false
       ISOLATION_PROBE_DETAIL="$ISOLATION_PROBE_DETAIL [STILL PRESENT] $probe_path"
-      fail "Isolation probe: $probe_path still present!"
+      assert_fail "Isolation probe: $probe_path still present!"
     else
       ISOLATION_PROBE_DETAIL="$ISOLATION_PROBE_DETAIL [REMOVED] $probe_path"
     fi
   done
-  # Also probe /build/scripts/test-pi-pack.sh (absolute path leak)
-  if docker exec "$CONTAINER_NAME" test -e "/build/scripts/test-pi-pack.sh" 2>/dev/null; then
+  # Also probe /build/scripts/test/test-pi-pack.sh (absolute path leak)
+  if docker exec "$CONTAINER_NAME" test -e "/build/scripts/test/test-pi-pack.sh" 2>/dev/null; then
     ISOLATION_PROBE_PASSED=false
-    ISOLATION_PROBE_DETAIL="$ISOLATION_PROBE_DETAIL [STILL PRESENT] build/scripts/test-pi-pack.sh"
-    fail "Isolation probe: build/scripts/test-pi-pack.sh still present!"
+    ISOLATION_PROBE_DETAIL="$ISOLATION_PROBE_DETAIL [STILL PRESENT] build/scripts/test/test-pi-pack.sh"
+    assert_fail "Isolation probe: build/scripts/test/test-pi-pack.sh still present!"
   else
-    ISOLATION_PROBE_DETAIL="$ISOLATION_PROBE_DETAIL [REMOVED] build/scripts/test-pi-pack.sh"
+    ISOLATION_PROBE_DETAIL="$ISOLATION_PROBE_DETAIL [REMOVED] build/scripts/test/test-pi-pack.sh"
   fi
 
   if [ "$ISOLATION_PROBE_PASSED" = true ]; then
-    pass "Isolation probe: all test/evaluator paths removed from agent workspace"
+    assert_ok "Isolation probe: all test/evaluator paths removed from agent workspace"
   else
-    fail "Isolation failed — some test paths remain accessible to agent"
+    assert_fail "Isolation failed — some test paths remain accessible to agent"
   fi
 
   ISOLATION_MANIFEST="removed:${ISOLATION_REMOVED}"
-  pass "Isolation complete"
+  assert_ok "Isolation complete"
 fi
 
 # Re-apply model config after isolation. The dev entrypoint may finish its
@@ -444,7 +462,7 @@ if [ "$DRY_RUN" = false ]; then
     }
   }
 }
-EOF_MODEL_FINAL" || fail "Failed to re-apply final models.json"
+EOF_MODEL_FINAL" || assert_fail "Failed to re-apply final models.json"
   docker exec -e AGENT_MODEL="$AGENT_MODEL" "$CONTAINER_NAME" sh -c '
     SETTINGS=/workspace/.pi/settings.json
     TMP=$(mktemp)
@@ -453,10 +471,10 @@ EOF_MODEL_FINAL" || fail "Failed to re-apply final models.json"
       "$(node -e "console.log(JSON.stringify(process.argv[1]))" "$AGENT_MODEL")" > "$TMP"
     cat "$TMP" > "$SETTINGS"
     rm -f "$TMP"
-  ' || fail "Failed to re-apply final settings.json"
+  ' || assert_fail "Failed to re-apply final settings.json"
   docker exec "$CONTAINER_NAME" sh -c 'test -f /root/.pi/agent/models.json && grep -q '"'"'openrouter'"'"' /root/.pi/agent/models.json' \
-    || fail "Final pi model config probe failed"
-  pass "Final pi model config applied after isolation"
+    || assert_fail "Final pi model config probe failed"
+  assert_ok "Final pi model config applied after isolation"
 fi
 
 # ── Step 4: Run pi agent to create pack in user-packs volume ─────
@@ -512,7 +530,7 @@ else
     if [ $PI_STATUS -ne 0 ]; then
       info "pi exited with status $PI_STATUS (see transcript for details)"
     else
-      pass "pi completed successfully"
+      assert_ok "pi completed successfully"
     fi
   fi
 fi
@@ -524,7 +542,7 @@ if [ "$DRY_RUN" = true ]; then
 else
   # Capture container logs
   docker logs "$CONTAINER_NAME" > "$CONTAINER_LOG_PATH" 2>&1
-  pass "Container log saved: $CONTAINER_LOG_PATH"
+  assert_ok "Container log saved: $CONTAINER_LOG_PATH"
 
   # Archive pi session history before the container is removed.
   mkdir -p "$PI_SESSION_ARCHIVE"
@@ -532,7 +550,7 @@ else
     docker cp "$CONTAINER_NAME:$CONTAINER_SESSION_DIR/." "$PI_SESSION_ARCHIVE/" 2>/dev/null || true
     find "$PI_SESSION_ARCHIVE" -type f -print | sort > "$ARTIFACTS_DIR/pi-session-files.txt" || true
     find "$PI_SESSION_ARCHIVE" -type f -exec shasum -a 256 {} \; > "$ARTIFACTS_DIR/pi-session-sha256.txt" || true
-    pass "Pi session archived: $PI_SESSION_ARCHIVE"
+    assert_ok "Pi session archived: $PI_SESSION_ARCHIVE"
 
     # Metrics are now computed client-side by the lab frontend from raw session JSONL.
     # See lab/src/App.tsx — computeSessionMetrics().
@@ -543,7 +561,7 @@ else
   # Copy pack artifacts from user-packs volume
   if docker exec "$CONTAINER_NAME" test -d "$CONTAINER_USER_PACKS" 2>/dev/null; then
     docker cp "$CONTAINER_NAME:$CONTAINER_USER_PACKS/." "$ARTIFACT_DIR/" 2>/dev/null || true
-    pass "Pack files copied to $ARTIFACT_DIR"
+    assert_ok "Pack files copied to $ARTIFACT_DIR"
   else
     info "No user-packs volume found — artifact dir may be empty"
   fi
@@ -587,13 +605,17 @@ meta = {
     'piSessionDir': '$CONTAINER_SESSION_DIR',
     'piSessionArchive': '$PI_SESSION_ARCHIVE',
     'piSessionFilesManifest': '$ARTIFACTS_DIR/pi-session-files.txt',
-    'piSessionSha256': '$ARTIFACTS_DIR/pi-session-sha256.txt'
+    'piSessionSha256': '$ARTIFACTS_DIR/pi-session-sha256.txt',
+    'langfuse': {
+        'enabled': '$LANGFUSE_ENABLED' == 'true',
+        'host': '${LANGFUSE_BASE_URL:-}'
+    }
 }
 with open('$RUN_JSON_PATH', 'w') as f:
     json.dump(meta, f, indent=2)
 print('run.json written')
 " || info "run.json write failed (non-fatal)"
-  pass "Run metadata saved: $RUN_JSON_PATH"
+  assert_ok "Run metadata saved: $RUN_JSON_PATH"
 fi
 
 # ── Step 6: Run evaluator ────────────────────────────────────────
@@ -616,7 +638,7 @@ else
     --report-dir "$ARTIFACTS_DIR" \
     --timeout "$AGENT_TIMEOUT" \
     --verbose 2>&1; then
-    pass "Evaluator completed"
+    assert_ok "Evaluator completed"
   else
     info "Evaluator exited with non-zero (see score.json for details)"
   fi
@@ -625,7 +647,7 @@ else
     # SCORE_STATUS
     SCORE_STATUS="$(python3 -c "import json; print(json.load(open('$SCORE_JSON_PATH'))['status'])" 2>/dev/null || echo "unknown")"
     info "Evaluator status: $SCORE_STATUS"
-    pass "Score saved: $SCORE_JSON_PATH"
+    assert_ok "Score saved: $SCORE_JSON_PATH"
   else
     info "No score.json produced by evaluator"
   fi
@@ -645,6 +667,9 @@ info "  artifact/:      $(find "$ARTIFACT_DIR" -type f 2>/dev/null | wc -l) file
 info "  transcript:     $(wc -c < "$TRANSCRIPT_PATH" 2>/dev/null || echo 0) bytes"
 info "  container.log:  $(wc -c < "$CONTAINER_LOG_PATH" 2>/dev/null || echo 0) bytes"
 info "  score.json:     $(wc -c < "$SCORE_JSON_PATH" 2>/dev/null || echo "N/A")"
+if [ "$LANGFUSE_ENABLED" = true ]; then
+  info "  langfuse:       ${LANGFUSE_BASE_URL}/sessions"
+fi
 echo ""
 
 # Print evaluator summary if available

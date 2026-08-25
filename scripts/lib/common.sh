@@ -16,17 +16,17 @@ ok()    { echo -e "${GREEN}[OK]${NC}    $1"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $1"; }
 err()   { echo -e "${RED}[ERROR]${NC} $1"; }
 header(){ echo -e "${YELLOW}--- $1 ---${NC}"; }
-
-# Legacy aliases used by test/install-test.sh
-red()   { echo -e "${RED}$1${NC}"; }
-green() { echo -e "${GREEN}$1${NC}"; }
-blue()  { echo -e "${CYAN}$1${NC}"; }
+# Title line for a multi-step phase (same intent as header(), so scripts can use
+# either name when migrating their own step helpers onto this library).
+step()   { header "$1"; }
+# Cyan detail line for secondary output within a step.
+detail() { echo -e "${CYAN}[DETAIL]${NC}   $1"; }
 
 # Test assertions (pass/fail counters)
 PASS=0
 FAIL=0
-assert_ok()   { PASS=$((PASS+1)); green "  ✓ $1"; }
-assert_fail() { FAIL=$((FAIL+1)); red   "  ✗ $1 (${2:-})"; }
+assert_ok()   { PASS=$((PASS+1)); echo -e "${GREEN}  ✓ $1${NC}"; }
+assert_fail() { FAIL=$((FAIL+1)); echo -e "${RED}  ✗ $1 (${2:-})${NC}"; }
 
 # --- Helpers ---
 

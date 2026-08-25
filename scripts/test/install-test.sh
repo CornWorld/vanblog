@@ -9,7 +9,7 @@ set -uo pipefail
 #     - 需要 root 权限（vanblog.sh 需要 root）
 #
 #   用法:
-#     sudo bash scripts/install-test.sh
+#     sudo bash scripts/test/install-test.sh
 #
 #   测试流程:
 #     1. 创建临时目录作为 VANBLOG_BASE_PATH
@@ -22,19 +22,19 @@ set -uo pipefail
 #========================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/lib/common.sh"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPT_DIR/../lib/common.sh"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # 交互检查点: VANBLOG_TEST_INTERACTIVE=0 可跳过
 interactive_pause() {
     local title="$1" body="$2"
     if [[ "${VANBLOG_TEST_INTERACTIVE:-1}" != "0" ]]; then
-        blue ""
-        blue "┌──────────────────────────────────────────┐"
-        blue "│  🖐  ${title}"
-        blue "├──────────────────────────────────────────┤"
+        info ""
+        info "┌──────────────────────────────────────────┐"
+        info "│  🖐  ${title}"
+        info "├──────────────────────────────────────────┤"
         echo -e "${body}"
-        blue "└──────────────────────────────────────────┘"
+        info "└──────────────────────────────────────────┘"
         read -p "  服务就绪后按 Enter 继续测试..." _ || exit 1
     fi
 }
@@ -46,7 +46,7 @@ cleanup() {
     if [[ $CLEANED -eq 1 ]]; then return; fi
     CLEANED=1
     if [[ -n "$TEST_DIR" && -d "$TEST_DIR" ]]; then
-        blue "--- 清理测试环境 ---"
+        info "--- 清理测试环境 ---"
         local proj
         proj=$(basename "$TEST_DIR")
         # 1. 直接 docker rm -f 清除容器（不通过 compose，不等待优雅退出，不会卡死）
@@ -82,10 +82,10 @@ HTTP_PORT=$(pick_free_port)
 HTTPS_PORT=$((HTTP_PORT + 363))
 TEST_EMAIL="test@vanblog.local"
 
-blue "测试目录: $TEST_DIR"
-blue "HTTP 端口: $HTTP_PORT  HTTPS 端口: $HTTPS_PORT"
+info "测试目录: $TEST_DIR"
+info "HTTP 端口: $HTTP_PORT  HTTPS 端口: $HTTPS_PORT"
 
-SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 VANBLOG_SH="$SCRIPT_DIR/vanblog.sh"
 
 if [[ ! -f "$VANBLOG_SH" ]]; then
@@ -104,15 +104,15 @@ fi
 # === 阶段 0: 确保本地有最新 ghcr 镜像 ===
 # install 的 compose up 默认复用本地缓存镜像；这里显式预拉最新构建。
 # 镜像较大，首次/更新时可能较慢 —— 明确提示，避免被误认为卡死。
-blue "正在拉取 ghcr prod-edge 镜像（较大，请稍候...）"
+info "正在拉取 ghcr prod-edge 镜像（较大，请稍候...）"
 docker pull ghcr.io/cornworld/vanblog:prod-edge >/dev/null 2>&1 && \
     assert_ok "已拉取最新 ghcr prod-edge 镜像" || \
     echo "⚠ 拉取 ghcr 镜像失败，将使用本地已有镜像（可能不是最新）"
 
 # === 阶段 1: 模拟首次安装 ===
 
-blue ""
-blue "=== 阶段 1: 模拟首次安装（完整输出如下）==="
+info ""
+info "=== 阶段 1: 模拟首次安装（完整输出如下）==="
 
 # 模拟 stdin 输入序列(gum 由 ensure_gum 自动处理)。
 # ⚠️ 耦合警告:下面的输入行必须与 vanblog.sh install 的交互提示顺序
@@ -147,8 +147,8 @@ fi
 
 # === 阶段 2: 验证 compose 文件 ===
 
-blue ""
-blue "=== 阶段 2: 验证 compose 文件 ==="
+info ""
+info "=== 阶段 2: 验证 compose 文件 ==="
 
 COMPOSE_FILE="$VANBLOG_BASE_PATH/docker-compose.yml"
 if [[ -f "$COMPOSE_FILE" ]]; then
@@ -175,8 +175,8 @@ interactive_pause "检查 compose 配置" "${COMPOSE_FILE}"
 
 # === 阶段 3: 等待服务就绪 ===
 
-blue ""
-blue "=== 阶段 3: 等待服务就绪（Caddy + PocketBase + Theme Host）==="
+info ""
+info "=== 阶段 3: 等待服务就绪（Caddy + PocketBase + Theme Host）==="
 
 cd "$VANBLOG_BASE_PATH" || exit 1
 
@@ -208,8 +208,8 @@ fi
 
 # === 阶段 4: 诊断 ===
 
-blue ""
-blue "=== 阶段 4: 诊断 + 容器详情 ==="
+info ""
+info "=== 阶段 4: 诊断 + 容器详情 ==="
 
 cd "$VANBLOG_BASE_PATH"
 if docker compose ps --format '{{.Status}}' 2>/dev/null | grep -q "Up"; then
@@ -227,8 +227,8 @@ fi
 
 # === 阶段 6: 维护模式测试（override compose） ===
 
-blue ""
-blue "=== 阶段 6: 维护模式 ==="
+info ""
+info "=== 阶段 6: 维护模式 ==="
 
 {
     echo "y"
@@ -270,12 +270,12 @@ else
 fi
 
 # === 报告 ===
-blue ""
-blue "========================================"
+info ""
+info "========================================"
 echo -n "结果: "
 if [[ $FAIL -eq 0 ]]; then
-    green "全部通过 ($PASS/$PASS)"
+    ok "全部通过 ($PASS/$PASS)"
 else
-    red "$FAIL 失败, $PASS 通过"
+    err "$FAIL 失败, $PASS 通过"
 fi
 exit $FAIL
