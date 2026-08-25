@@ -12,7 +12,7 @@
  *     used to exercise hot-switching. No separate 'minimal' theme is needed.
  *
  * Usage:
- *   node scripts/test-theme-switch.mjs [baseUrl] [pbApiKey]
+ *   node scripts/test/test-theme-switch.mjs [baseUrl] [pbApiKey]
  *
  * Defaults:
  *   - baseUrl: http://127.0.0.1:4321

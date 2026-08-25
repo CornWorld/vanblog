@@ -16,7 +16,7 @@
 // override_check（检查 override 是否适配当前 base）。
 //
 // 用法：
-//   node scripts/override-check.mjs [themeDir=themes/vanblog] [baseDir=app/src]
+//   node scripts/check/override-check.mjs [themeDir=themes/vanblog] [baseDir=app/src]
 //
 // 输出分组：
 //   ORPHANED — base 已删除该文件，override 成孤儿

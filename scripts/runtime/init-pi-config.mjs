@@ -21,7 +21,7 @@ const PI_GLOBAL_DIR = join(homedir(), ".pi", "agent");
 const PI_TRUST = join(PI_GLOBAL_DIR, "trust.json");
 const PI_GLOBAL_SETTINGS = join(PI_GLOBAL_DIR, "settings.json");
 
-const RESOLVE_SCRIPT = join(WORKSPACE, "scripts", "resolve-zen-free-models.mjs");
+const RESOLVE_SCRIPT = join(WORKSPACE, "scripts", "runtime", "resolve-zen-free-models.mjs");
 
 // Step 1: Resolve the current free model
 console.log("[pi-init] resolving OpenCode Zen free models...");

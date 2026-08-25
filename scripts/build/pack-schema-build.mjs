@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 
 function usage() {
-  console.error('usage: node scripts/pack-schema-build.mjs <pack-directory> [output-file]');
+  console.error('usage: node scripts/build/pack-schema-build.mjs <pack-directory> [output-file]');
 }
 
 const [, , packDirectoryArg, outputArg] = process.argv;
@@ -30,7 +30,7 @@ if (!existsSync(schemaEntry)) {
 }
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(scriptDirectory, '..');
+const repoRoot = resolve(scriptDirectory, '../..');
 const tempDirectory = mkdtempSync(join(tmpdir(), 'vanblog-pack-schema-'));
 const tempOutput = join(tempDirectory, 'schema.js');
 

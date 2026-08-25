@@ -2,7 +2,7 @@
 // Scaffold a new theme by cloning themes/base/.
 //
 // Usage:
-//   node scripts/theme-init.mjs <new-theme-name>
+//   node scripts/build/theme-init.mjs <new-theme-name>
 //
 // Behaviour:
 //   - Validates <new-theme-name> against the Pack name grammar
@@ -22,7 +22,7 @@ import { join, resolve } from 'node:path';
 import process from 'node:process';
 
 const NAME_RE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
-const REPO_ROOT = resolve(new URL('..', import.meta.url).pathname);
+const REPO_ROOT = resolve(new URL('../..', import.meta.url).pathname);
 const DEFAULT_THEME = join(REPO_ROOT, 'themes', 'base');
 
 function fail(msg) {
@@ -31,7 +31,7 @@ function fail(msg) {
 }
 
 const name = process.argv[2];
-if (!name) fail('missing theme name. Usage: node scripts/theme-init.mjs <name>');
+if (!name) fail('missing theme name. Usage: node scripts/build/theme-init.mjs <name>');
 if (!NAME_RE.test(name)) fail(`invalid theme name "${name}" (must match ${NAME_RE})`);
 
 const dest = join(REPO_ROOT, 'themes', name);

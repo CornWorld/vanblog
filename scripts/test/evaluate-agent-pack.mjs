@@ -10,7 +10,7 @@
  *                       endpoints, PoW solve, +/− samples, homepage injection.
  *
  * Usage:
- *   node scripts/evaluate-agent-pack.mjs \
+ *   node scripts/test/evaluate-agent-pack.mjs \
  *     --artifact-dir <dir> \
  *     --image <tag> \
  *     --port <port> \

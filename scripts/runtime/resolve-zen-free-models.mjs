@@ -6,9 +6,9 @@
  * free model ID for pi's default model config.
  *
  * Usage:
- *   node scripts/resolve-zen-free-models.mjs              # prints best model ID
- *   node scripts/resolve-zen-free-models.mjs --json        # prints full list as JSON
- *   node scripts/resolve-zen-free-models.mjs --list        # prints all free model IDs
+ *   node scripts/runtime/resolve-zen-free-models.mjs              # prints best model ID
+ *   node scripts/runtime/resolve-zen-free-models.mjs --json        # prints full list as JSON
+ *   node scripts/runtime/resolve-zen-free-models.mjs --list        # prints all free model IDs
  *
  * Model IDs rotate — never hardcode model names outside this script.
  *

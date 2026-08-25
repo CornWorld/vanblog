@@ -3,7 +3,7 @@
 # Requires a running dev container and an admin bearer token:
 #   VANBLOG_AGENT_URL=http://127.0.0.1:8880 \
 #   VANBLOG_ADMIN_TOKEN=... \
-#   ./scripts/test-agent-rpc.sh
+#   ./scripts/test/test-agent-rpc.sh
 set -euo pipefail
 
 BASE_URL="${VANBLOG_AGENT_URL:-http://127.0.0.1:8880}"

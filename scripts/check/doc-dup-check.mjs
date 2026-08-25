@@ -9,7 +9,7 @@
  *   4. 输出每文件重复率 / 全局重复率 / 重复块清单 / S0 清单
  *
  * 用法:
- *   node scripts/doc-dup-check.mjs [glob] [--json]
+ *   node scripts/check/doc-dup-check.mjs [glob] [--json]
  *   默认扫描 docs 目录下所有 md（含 quality/doc-standard.md 自身,便于自查）
  *   退出码: 0 通过 | 1 S0 或单文件重复率>=30% | 2 S1 或单文件重复率>=15%
  */
