@@ -33,9 +33,16 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/../lib/common.sh"
-PROJECT_ROOT="$(project_root)"
+# Load local-dev secrets from a gitignored project .env (LANGFUSE_*, AGENT_API_KEY, etc.)
+# before reading defaults. Real shell env / CLI overrides always win (set -a + source
+# only fills unset vars via ${VAR:-} default pattern below).
+if [ -f "$PROJECT_ROOT/.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$PROJECT_ROOT/.env"
+  set +a
+fi
+IMAGE_TAG="vanblog:dev-test"
 IMAGE_TAG="vanblog:dev-test"
 CONTAINER_NAME="vanblog-pi-test-$$"
 HTTP_PORT="${TEST_PORT:-8880}"
@@ -84,10 +91,11 @@ First, understand the pack format:
 1. Run `tree /workspace/docs/` to see the documentation structure
 2. Read docs/reference/packs.md for the pack format specification
 3. Read /workspace/packs/visits/ as a working example (pack.json, hooks/, frontend/)
+4. BEFORE writing any hooks/*.pb.js, grep docs/reference/pb-jsvm-types.d.ts for every PB global you plan to use (e.g. `grep -n "namespace $security" docs/reference/pb-jsvm-types.d.ts`, `grep -n "declare function routerAdd" …`) to confirm the API exists and its exact signature. Do not invent globals — the file is the authoritative contract for the exact PB version in this container.
 
 Then create the pack with:
 - pack.json — frontend script injection (scope: public)
-- hooks/<name>.pb.js — GET /api/vanblog/pow-guard/challenge (random challenge + difficulty) and POST /api/vanblog/pow-guard/verify (validate SHA-256 hash with leading zeros, return stateless token)
+- hooks/<name>.pb.js — GET /api/vanblog/pow-guard/challenge (random challenge + difficulty) and POST /api/vanblog/pow-guard/verify (validate SHA-256 hash with leading zeros, use the canonical input format sha256(challenge + ":" + nonce), return stateless token)
 - frontend/<name>.js — SHA-256 PoW, full-screen overlay during verification, localStorage cache for 1 hour
 
 Do NOT explore the architecture, test endpoints, or read source code.
@@ -345,12 +353,13 @@ else
   ISOLATION_MISSING=""
 
   # Files to remove from agent-visible workspace (only test infrastructure).
+  # NOTE: scripts/runtime/* is intentionally KEPT — it is container runtime
+  # infrastructure (init-pi-config, resolve-zen-free-models, pi-zen-proxy),
+  # not evaluation criteria, and removing it races the dev entrypoint's
+  # startup (pi-zen-proxy launch → MODULE_NOT_FOUND → FATAL proxy died).
   for f in \
     scripts/test/test-pi-pack.sh \
     scripts/test/evaluate-agent-pack.mjs \
-    scripts/runtime/init-pi-config.mjs \
-    scripts/runtime/resolve-zen-free-models.mjs \
-    scripts/runtime/pi-zen-proxy.mjs \
     scripts/lib/common.sh \
     scripts/lib/js/common.mjs \
     scripts/test/test-agent-rpc.sh \
@@ -383,9 +392,6 @@ else
   for bf in \
     test/test-pi-pack.sh \
     test/evaluate-agent-pack.mjs \
-    runtime/init-pi-config.mjs \
-    runtime/resolve-zen-free-models.mjs \
-    runtime/pi-zen-proxy.mjs \
     lib/common.sh \
     lib/js/common.mjs \
     test/test-agent-rpc.sh \
@@ -414,7 +420,6 @@ else
   for probe_path in \
     scripts/test/test-pi-pack.sh \
     scripts/test/evaluate-agent-pack.mjs \
-    scripts/runtime/init-pi-config.mjs \
     .pi/settings.json \
     .agents/skills; do
     if docker exec "$CONTAINER_NAME" test -e "/workspace/$probe_path" 2>/dev/null; then
