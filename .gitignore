@@ -48,8 +48,11 @@ docker/ocr-review/ocr-config.json
 .snow-task-*.json
 *-task.json
 
+# 本地 MCP 服务器配置 —— 含明文凭据（langfuse Basic 密钥对），不进仓库
+.mcp.json
+
 # IDE
-.DS_Store
+.env
 
 # IDE 本地缓存（desktop 话题状态等）
 .reasonix/
