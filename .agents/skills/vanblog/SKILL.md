@@ -82,7 +82,12 @@ Source the agent env file before any operation:
 1. Reference a working pack: `packs/bookmarks/` — the canonical example
 2. Pack structure: `pack.json` + `hooks/` (JSVM) + `pages/` (Astro)
 3. Build: `pnpm --filter sdk build` (after SDK changes)
-4. Test: restart dev container, verify pack appears in nav
+4. Load: Pack hooks are staged at PocketBase startup only — there is no runtime restage. After writing a new pack, trigger a supervised service restart so the pack takes effect:
+   ```bash
+   curl -X POST "$PB_URL/api/vanblog/system/restart" -H "Authorization: $PB_TOKEN"
+   ```
+5. Wait for recovery: poll `$PB_URL/api/health` until it returns 200 (~5-15s downtime).
+6. Test: verify pack hooks respond (curl the endpoints) and frontend scripts inject correctly.
 
 ## Build Commands
 
@@ -101,3 +106,4 @@ cd vault && go build -o bin/vanblog . # Go backend binary
 - CSS: always use `var(--color-*)` tokens, never hardcode colors
 - Theme overrides: preserve all existing props, add optional new props only
 - Destructive operations (data deletion, schema changes): dry-run first, confirm with user
+- Service restart: `POST /api/vanblog/system/restart` causes ~5-15s API downtime; poll `/api/health` afterward. Do not call restart concurrently.

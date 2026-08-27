@@ -30,6 +30,7 @@ import (
 	"github.com/cornworld/vanblog/internal/palette"
 	"github.com/cornworld/vanblog/internal/revisions"
 	"github.com/cornworld/vanblog/internal/schema"
+	"github.com/cornworld/vanblog/internal/system"
 	"github.com/cornworld/vanblog/internal/theme"
 	"github.com/cornworld/vanblog/internal/traceid"
 	"github.com/cornworld/vanblog/internal/validation"
@@ -253,6 +254,7 @@ func main() {
 	_ = caddy.New(app)
 	_ = agent.New(app)
 	_ = mcp.New(app)
+	_ = system.New(app)
 
 	// seed subcommand: populate dev database with sample data
 	seedCmd := &cobra.Command{

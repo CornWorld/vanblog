@@ -228,6 +228,13 @@ export interface VanblogServices {
     }>;
     overrideCheck(theme: string): Promise<string>;
   };
+  // system exposes admin-only service management endpoints (restart).
+  // restart sends SIGUSR1 to the entrypoint supervisor, which kills and
+  // relaunches PocketBase so newly-added Pack hooks are loaded. The caller
+  // must poll /api/health afterwards (~5-15s downtime).
+  system: {
+    restart(): Promise<{ accepted: boolean; message: string }>;
+  };
 }
 
 // A generic service namespace (for user-extended APIs)
@@ -512,6 +519,12 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
           );
         return res.text();
       },
+    },
+    system: {
+      restart: () =>
+        pb.send("/api/vanblog/system/restart", {
+          method: "POST",
+        }) as Promise<{ accepted: boolean; message: string }>,
     },
   };
 }
