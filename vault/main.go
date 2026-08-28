@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -210,6 +211,25 @@ func main() {
 		event.Router.GET("/debug/pprof/trace", func(e *core.RequestEvent) error {
 			pprof.Trace(e.Response, e.Request)
 			return nil
+		})
+
+		// Concurrency limiter: cap concurrent requests at the hooksPool size.
+		// PB jsvm's pool overflows by creating one-off goja.Runtimes (~44MB
+		// each, never returned) when all pool slots are busy. Capping
+		// concurrent requests below the pool size ensures the pool never
+		// overflows, preventing heap exhaustion under load.
+		hookSem := make(chan struct{}, hooksPool)
+		event.Router.BindFunc(func(e *core.RequestEvent) error {
+			select {
+			case hookSem <- struct{}{}:
+				defer func() { <-hookSem }()
+				return e.Next()
+			default:
+				// All slots busy: reject rather than overflow the VM pool.
+				return e.JSON(http.StatusServiceUnavailable, map[string]string{
+					"message": "server busy, retry shortly",
+				})
+			}
 		})
 
 		// Trace ID middleware: generates a request ID, stores it in the

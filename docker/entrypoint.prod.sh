@@ -6,7 +6,10 @@ set -e
 # Caddy boots with bootstrap.json, then pb's OnBootstrap hook calls LoadConfig
 # via admin API to inject full routes. Entrypoint is PID 1, Caddy runs in background.
 
-PB_HTTP="127.0.0.1:8090"
+# PB listens on loopback by default (safe: not reachable outside the container).
+# Set VANBLOG_PB_BIND=0.0.0.0:8090 to expose PB directly (e.g. benchmarks, when
+# Caddy is not the only ingress). Keep 127.0.0.1 for normal prod.
+PB_HTTP="${VANBLOG_PB_BIND:-127.0.0.1:8090}"
 PB_DATA="${VANBLOG_DATA_DIR:-/pb_data}"
 ARTALK_PID=""
 RESTARTING_FLAG="/tmp/vanblog-restarting"
@@ -41,6 +44,33 @@ export VANBLOG_THEMES_DIR="${VANBLOG_THEMES_DIR:-/var/lib/vanblog/themes}"
 export VANBLOG_THEMES_BUILTIN_DIR="${VANBLOG_THEMES_BUILTIN_DIR:-/build/themes}"
 export VANBLOG_ADMIN_DIST_DIR="${VANBLOG_ADMIN_DIST_DIR:-/build/app/dist}"
 export VANBLOG_ENTRYPOINT=1
+
+# Go GC tuning: derive GOMEMLIMIT from the cgroup memory limit so the GC
+# works harder BEFORE the kernel OOM-kills the process.
+#   - cgroup v2: /sys/fs/cgroup/memory.max ("max" = unlimited)
+#   - cgroup v1: /sys/fs/cgroup/memory/memory.limit_in_bytes (huge sentinel = unlimited)
+# We take 80% of the limit: the rest covers Go runtime overhead (stacks,
+# metadata), Caddy, and the Node theme host sharing the same cgroup.
+# VANBLOG_GOMEMLIMIT explicitly set (e.g. "1500000000" or "off") wins.
+CGROUP_MEM_LIMIT=""
+if [ -r /sys/fs/cgroup/memory.max ]; then
+  _v=$(cat /sys/fs/cgroup/memory.max 2>/dev/null)
+  [ "$_v" = "max" ] || CGROUP_MEM_LIMIT="$_v"
+fi
+if [ -z "$CGROUP_MEM_LIMIT" ] && [ -r /sys/fs/cgroup/memory/memory.limit_in_bytes ]; then
+  _v=$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null)
+  # v1 no-limit sentinel is near 2^63; anything >64GB means unlimited
+  [ "$_v" -gt 68719476736 ] 2>/dev/null || CGROUP_MEM_LIMIT="$_v"
+fi
+if [ -n "$CGROUP_MEM_LIMIT" ]; then
+  export GOMEMLIMIT="${VANBLOG_GOMEMLIMIT:-$((CGROUP_MEM_LIMIT * 80 / 100))}"
+else
+  # No cgroup limit: only export if the operator set one explicitly.
+  [ -n "${VANBLOG_GOMEMLIMIT:-}" ] && export GOMEMLIMIT="$VANBLOG_GOMEMLIMIT"
+fi
+# GOGC=50 triggers GC at 1.5x live heap (default 100 = 2x) — more aggressive
+# under burst traffic, keeping the heap from doubling before GC reacts.
+export GOGC="${VANBLOG_GOGC:-50}"
 
 echo "[vanblog] starting in PROD mode"
 echo "[vanblog] pb data: $PB_DATA"
@@ -86,7 +116,12 @@ wait_for "http://127.0.0.1:2019/config/" "Caddy admin API" 30 || exit 1
 # 3. Start PocketBase
 start_pocketbase() {
   echo "[vanblog] starting PocketBase..."
-  set -- --http="$PB_HTTP" --dir="$PB_DATA" --coreSchemaPath=/core/models.js
+  # hooksPool: pre-warm enough goja Runtime instances to cover peak concurrency.
+  # PB jsvm's pool overflows by creating one-off Runtimes when all slots are busy;
+  # each Runtime is ~40-50MB and not returned to pool → heap leak under load.
+  # Default 15 is too low for high-traffic sites. 64 covers most burst scenarios.
+  HOOKS_POOL="${VANBLOG_HOOKS_POOL:-64}"
+  set -- --http="$PB_HTTP" --dir="$PB_DATA" --hooksPool="$HOOKS_POOL" --coreSchemaPath=/core/models.js
   if [ -n "$VANBLOG_PACKS_DIR" ]; then
     echo "[vanblog] local Pack overrides: $VANBLOG_PACKS_DIR"
     set -- "$@" --packsDir="$VANBLOG_PACKS_DIR"

@@ -12,6 +12,33 @@ RESTARTING_FLAG="/tmp/vanblog-restarting"
 PB_PID_FILE="/tmp/vanblog-pb.pid"
 export VANBLOG_ENTRYPOINT=1
 
+# Go GC tuning: derive GOMEMLIMIT from the cgroup memory limit so the GC
+# works harder BEFORE the kernel OOM-kills the process.
+#   - cgroup v2: /sys/fs/cgroup/memory.max ("max" = unlimited)
+#   - cgroup v1: /sys/fs/cgroup/memory/memory.limit_in_bytes (huge sentinel = unlimited)
+# We take 80% of the limit: the rest covers Go runtime overhead (stacks,
+# metadata), Caddy, and the Node theme host sharing the same cgroup.
+# VANBLOG_GOMEMLIMIT explicitly set (e.g. "1500000000" or "off") wins.
+CGROUP_MEM_LIMIT=""
+if [ -r /sys/fs/cgroup/memory.max ]; then
+  _v=$(cat /sys/fs/cgroup/memory.max 2>/dev/null)
+  [ "$_v" = "max" ] || CGROUP_MEM_LIMIT="$_v"
+fi
+if [ -z "$CGROUP_MEM_LIMIT" ] && [ -r /sys/fs/cgroup/memory/memory.limit_in_bytes ]; then
+  _v=$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null)
+  # v1 no-limit sentinel is near 2^63; anything >64GB means unlimited
+  [ "$_v" -gt 68719476736 ] 2>/dev/null || CGROUP_MEM_LIMIT="$_v"
+fi
+if [ -n "$CGROUP_MEM_LIMIT" ]; then
+  export GOMEMLIMIT="${VANBLOG_GOMEMLIMIT:-$((CGROUP_MEM_LIMIT * 80 / 100))}"
+else
+  # No cgroup limit: only export if the operator set one explicitly.
+  [ -n "${VANBLOG_GOMEMLIMIT:-}" ] && export GOMEMLIMIT="$VANBLOG_GOMEMLIMIT"
+fi
+# GOGC=50 triggers GC at 1.5x live heap (default 100 = 2x) — more aggressive
+# under burst traffic, keeping the heap from doubling before GC reacts.
+export GOGC="${VANBLOG_GOGC:-50}"
+
 # Clean stale flags from a previous run (e.g. container restarted without fresh /tmp)
 rm -f "$RESTARTING_FLAG" 2>/dev/null || true
 
@@ -66,12 +93,17 @@ wait_for "http://127.0.0.1:2019/config/" "Caddy admin API" 30 || exit 1
 # 3. Start PocketBase (--hooksWatch for hot reload of JSVM hooks)
 start_pocketbase() {
   echo "[vanblog] starting PocketBase..."
+  # hooksPool: pre-warm enough goja Runtime instances to cover peak concurrency.
+  # PB jsvm's pool overflows by creating one-off Runtimes when all slots are busy;
+  # each Runtime is ~40-50MB and not returned to pool → heap leak under load.
+  # Default 15 is too low for high-traffic sites. 64 covers most burst scenarios.
+  HOOKS_POOL="${VANBLOG_HOOKS_POOL:-64}"
   PB_PACKS_FLAG=""
   if [ -n "$VANBLOG_PACKS_DIR" ]; then
     echo "[vanblog] local Pack overrides: $VANBLOG_PACKS_DIR"
     PB_PACKS_FLAG="--packsDir=$VANBLOG_PACKS_DIR"
   fi
-  vanblog serve --http=$PB_HTTP --dir=$PB_DATA --hooksWatch --coreSchemaPath=/core/models.js ${PB_PACKS_FLAG:+"$PB_PACKS_FLAG"} &
+  vanblog serve --http=$PB_HTTP --dir=$PB_DATA --hooksPool=$HOOKS_POOL --hooksWatch --coreSchemaPath=/core/models.js ${PB_PACKS_FLAG:+"$PB_PACKS_FLAG"} &
   PB_PID=$!
   echo "$PB_PID" > "$PB_PID_FILE"
   wait_for "http://127.0.0.1:8090/api/health" "PocketBase" 30 || return 1
