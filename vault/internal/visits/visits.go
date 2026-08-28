@@ -2,8 +2,11 @@
 package visits
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pocketbase/dbx"
@@ -24,7 +27,71 @@ type Manager struct {
 func New(app core.App) *Manager {
 	m := &Manager{app: app}
 	app.OnRecordCreateRequest("visits").BindFunc(m.bumpPostViewOnVisitCreate)
+
+	// Public counting endpoints. `record` is the hot path (fired on every
+	// page load by the theme); `summary` feeds read-side displays (total
+	// views in the footer). Both are plain SQL — no Pack/JSVM involvement.
+	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		se.Router.POST("/api/vanblog/visits/record", m.handleRecord)
+		se.Router.GET("/api/vanblog/visits/summary", m.handleSummary)
+		return se.Next()
+	})
 	return m
+}
+
+// recordRequest is the body of POST /api/vanblog/visits/record.
+type recordRequest struct {
+	// Path is the canonical article path (e.g. /posts/abc). Used for the
+	// per-path daily row.
+	Path string `json:"path"`
+	// PostID is the article id, sent by the theme from the article page.
+	// When set, that post's viewCount is bumped atomically — this avoids
+	// relying on the posts.pathname field (optional custom permalink).
+	PostID string `json:"postId"`
+}
+
+// handleRecord counts one page view: per-path daily rows plus (when a post is
+// identified) an atomic viewCount bump. Public — no auth: page loads are
+// fire-and-forget from the theme.
+func (m *Manager) handleRecord(e *core.RequestEvent) error {
+	var req recordRequest
+	if err := json.NewDecoder(e.Request.Body).Decode(&req); err != nil {
+		return e.BadRequestError("invalid JSON body", "")
+	}
+	path := strings.TrimSpace(req.Path)
+	if path == "" {
+		return e.BadRequestError("missing 'path'", "")
+	}
+
+	// Resolve post id: prefer the explicit postId the theme sends; fall back
+	// to pathname lookup (best effort; non-article paths still count).
+	postID := strings.TrimSpace(req.PostID)
+	if postID == "" {
+		if post, err := m.app.FindFirstRecordByFilter(
+			"posts",
+			"pathname={:p} && deleted=false",
+			dbx.Params{"p": path},
+		); err == nil && post != nil {
+			postID = post.Id
+		}
+	}
+
+	if err := m.Increment(path, postID); err != nil {
+		return e.JSON(http.StatusInternalServerError, err.Error())
+	}
+	return e.JSON(http.StatusOK, map[string]bool{"ok": true})
+}
+
+// handleSummary returns the site-wide total view count (sum of all per-path
+// daily rows), for footer/stat displays.
+func (m *Manager) handleSummary(e *core.RequestEvent) error {
+	var total int64
+	if err := m.app.DB().NewQuery(
+		"SELECT COALESCE(SUM(views), 0) FROM visits WHERE path != ''",
+	).Row(&total); err != nil {
+		return e.JSON(http.StatusInternalServerError, err.Error())
+	}
+	return e.JSON(http.StatusOK, map[string]int64{"totalViews": total})
 }
 
 // bumpPostViewOnVisitCreate runs after the visit record is created by an
@@ -70,12 +137,19 @@ func (m *Manager) Increment(path string, postID string) error {
 			return fmt.Errorf("visits: failed to create record: %w", err)
 		}
 	} else {
-		// Increment existing record
-		views := existing.GetInt("views") + 1
-		existing.Set("views", views)
-		existing.Set("lastVisitedAt", time.Now().UTC().Format(time.RFC3339))
-		if err := m.app.Save(existing); err != nil {
-			return fmt.Errorf("visits: failed to update record: %w", err)
+		// Atomically bump the daily counter (SQL `views = views + 1`),
+		// avoiding the read-modify-write race that loses increments under
+		// concurrent requests. The find above only decides create-vs-update.
+		now := time.Now().UTC().Format(time.RFC3339)
+		if _, err := m.app.DB().
+			Update("visits",
+				dbx.Params{
+					"views":         dbx.NewExp("views + 1"),
+					"lastVisitedAt": now,
+				},
+				dbx.NewExp("date = {:date} AND path = {:path}", dbx.Params{"date": today, "path": path}),
+			).Execute(); err != nil {
+			return fmt.Errorf("visits: failed to bump views: %w", err)
 		}
 	}
 
@@ -87,14 +161,14 @@ func (m *Manager) Increment(path string, postID string) error {
 	return nil
 }
 
+// IncrementPostView atomically bumps a post's viewCount via SQL
+// (`viewCount = viewCount + 1`). A missing post is a no-op (0 rows affected).
 func (m *Manager) IncrementPostView(postID string) {
-	post, err := m.app.FindRecordById("posts", postID)
-	if err != nil {
-		return
-	}
-	current := post.GetInt("viewCount")
-	post.Set("viewCount", current+1)
-	if err := m.app.Save(post); err != nil {
+	if _, err := m.app.DB().
+		Update("posts",
+			dbx.Params{"viewCount": dbx.NewExp("viewCount + 1")},
+			dbx.NewExp("id = {:id}", dbx.Params{"id": postID}),
+		).Execute(); err != nil {
 		slog.Warn("[visits] failed to bump post viewCount", "post", postID, "err", err)
 	}
 }

@@ -284,6 +284,22 @@ if (data?.category) {
   )}
 </BaseLayout>
 
+<script is:inline>
+  // 文章浏览计数：平台 Go 层 /api/vanblog/visits/record（原子 viewCount+1）。
+  // 仅当文章真正渲染（<article> 存在）时触发，避免 404/密码错误页误计数。
+  if (document.querySelector('article')) {
+    ;(async () => {
+      try {
+        await fetch('/api/vanblog/visits/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: '/posts/{id}', postId: '{id}' }),
+        });
+      } catch { /* silent */ }
+    })();
+  }
+</script>
+
 <script>
   // ── Mermaid: render + export toolbar ──
   import mermaid from 'mermaid';

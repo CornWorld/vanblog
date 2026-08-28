@@ -61,14 +61,10 @@ const since = site?.since;
 
     {since && <p class="select-none">&copy; {new Date(since).getFullYear()} - {new Date().getFullYear()} {siteName}</p>}
 
-    <p class="flex justify-center gap-4 pt-1">
-      <a href="/api/feed.xml" class="hover:text-[var(--text)]">RSS</a>
-      <a href="/api/atom.xml" class="hover:text-[var(--text)]">Atom</a>
-      <a href="/api/sitemap.xml" class="hover:text-[var(--text)]">Sitemap</a>
-    </p>
-
-    {/* visits pack 挂载点（全站访问量 + 当前在线） */}
-    <div id="pack-visits" class="mt-1"></div>
+    {/* 全站总访问（平台 Go 层 /api/vanblog/visits/summary，SUM per-path 计数） */}
+    <p id="site-total-views" class="select-none text-sm"></p>
+    {/* 当前在线：由 online pack 前端注入渲染 */}
+    <div id="pack-online" class="mt-1"></div>
   </div>
 </footer>
 
@@ -89,4 +85,19 @@ const since = site?.since;
       setInterval(update, 1000);
     }
   }
+
+  // 全站总访问（平台 Go /api/vanblog/visits/summary）
+  (async () => {
+    try {
+      const res = await fetch('/api/vanblog/visits/summary', { headers: { Accept: 'application/json' } });
+      if (!res.ok) return;
+      const data = await res.json();
+      const el = document.getElementById('site-total-views');
+      if (el && typeof data.totalViews === 'number' && data.totalViews > 0) {
+        el.textContent = `📊 总访问 ${data.totalViews}`;
+      }
+    } catch {
+      /* silent */
+    }
+  })();
 </script>
