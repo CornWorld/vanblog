@@ -45,7 +45,7 @@ Pack 是 vanblog 的扩展单元，通过 `pack.json` 描述自身，可携带�
 
 ### 顶层限制
 
-- hook 顶层**不能声明 `const`/`function`/`let`**：`routerAdd` 回调会在 executor VM 中被重新编译执行，顶层变量不可见。所有逻辑内联进回调（参考 `packs/visits/hooks/visits.pb.js`）。
+- hook 顶层**不能声明 `const`/`function`/`let`**：`routerAdd` 回调会在 executor VM 中被重新编译执行，顶层变量不可见。所有逻辑内联进回调（参考 `packs/online/hooks/online.pb.js`）。
 - 每个 `.pb.js` 会被级联为 `pack--<name>--<orig>.pb.js`，路由注册在加载时完成。
 
 ### 路由与请求

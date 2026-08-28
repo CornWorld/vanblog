@@ -1,10 +1,10 @@
 {
-  "name": "visits",
+  "name": "online",
   "version": "1.0.0",
-  "title": "访问统计",
+  "title": "当前在线",
   "frontend": {
     "scope": "public",
     "styles": [],
-    "scripts": ["visits.js"]
+    "scripts": ["online.js"]
   }
 }

@@ -90,7 +90,7 @@ Create a vanblog user pack called pow-guard in /workspace/user-packs/pow-guard/.
 First, understand the pack format:
 1. Run `tree /workspace/docs/` to see the documentation structure
 2. Read docs/reference/packs.md for the pack format specification
-3. Read /workspace/packs/visits/ as a working example (pack.json, hooks/, frontend/)
+3. Read /workspace/packs/online/ as a working example (pack.json, hooks/, frontend/)
 4. BEFORE writing any hooks/*.pb.js, grep docs/reference/pb-jsvm-types.d.ts for every PB global you plan to use (e.g. `grep -n "namespace $security" docs/reference/pb-jsvm-types.d.ts`, `grep -n "declare function routerAdd" …`) to confirm the API exists and its exact signature. Do not invent globals — the file is the authoritative contract for the exact PB version in this container.
 
 Then create the pack with:
