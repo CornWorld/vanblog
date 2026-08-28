@@ -36,6 +36,7 @@ import (
 	"github.com/cornworld/vanblog/internal/validation"
 	"github.com/cornworld/vanblog/internal/visits"
 	_ "github.com/cornworld/vanblog/pb_migrations"
+	"net/http/pprof"
 )
 
 func resolveCoreSchemaSource(path string) (validation.ModelSource, error) {
@@ -187,6 +188,30 @@ func main() {
 	loadablePacks := loadable
 
 	app.OnServe().BindFunc(func(event *core.ServeEvent) error {
+		// pprof endpoints for memory/goroutine profiling (dev/debug only).
+		// Mounted under /debug/pprof/* — not behind admin auth, but only
+		// reachable from localhost (Caddy doesn't proxy /debug/*).
+		event.Router.GET("/debug/pprof/{key}", func(e *core.RequestEvent) error {
+			pprof.Index(e.Response, e.Request)
+			return nil
+		})
+		event.Router.GET("/debug/pprof/cmdline", func(e *core.RequestEvent) error {
+			pprof.Cmdline(e.Response, e.Request)
+			return nil
+		})
+		event.Router.GET("/debug/pprof/profile", func(e *core.RequestEvent) error {
+			pprof.Profile(e.Response, e.Request)
+			return nil
+		})
+		event.Router.GET("/debug/pprof/symbol", func(e *core.RequestEvent) error {
+			pprof.Symbol(e.Response, e.Request)
+			return nil
+		})
+		event.Router.GET("/debug/pprof/trace", func(e *core.RequestEvent) error {
+			pprof.Trace(e.Response, e.Request)
+			return nil
+		})
+
 		// Trace ID middleware: generates a request ID, stores it in the
 		// event data store (e.Get / e.Set), and sets the X-Trace-Id
 		// response header for client-side correlation.

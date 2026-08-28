@@ -33,21 +33,31 @@ import (
 
 const restartCooldown = 30 * time.Second
 
-// Manager wires the system restart route onto the PB serve mux.
+// Manager wires system management routes (restart + metrics) onto the PB
+// serve mux. It owns the metrics collector goroutine.
 type Manager struct {
 	app core.App
 
 	mu          sync.Mutex
 	lastRestart time.Time
+
+	collector *metricsCollector
 }
 
-// New registers the system management routes.
+// New registers the system management routes and starts the metrics collector.
 func New(app core.App) *Manager {
 	m := &Manager{app: app}
+	m.collector = newMetricsCollector(app)
+
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.POST("/api/vanblog/system/restart", m.handleRestart)
+		se.Router.GET("/api/vanblog/system/metrics", m.handleMetrics)
 		return se.Next()
 	})
+
+	// Start the background metrics collector goroutine.
+	m.collector.start()
+
 	return m
 }
 
