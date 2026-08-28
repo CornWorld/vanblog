@@ -1,0 +1,20 @@
+# bench 中间产物 — 一律不提交
+# 压测产生的 raw binary 时序 & 日志（r.bin 可达 GB 级）
+results/*/r.bin
+results/*/*.log
+results/*/client_err.txt
+results/current/
+
+# 其他临时结果（多轮跑出来的噪声），核心结果目录单独保留
+results/20260828-171*/
+results/20260828-171256/
+results/20260828-171401/
+results/20260828-171510/
+results/20260828-170728/
+results/20260828-170802/
+
+# 内置 vegeta 二进制 — 不提交（README 说明如何获取；或用 Docker 镜像）
+bin/vegeta-linux-*
+
+# 运行时产生的 targets（脚本每次重建）
+targets.txt

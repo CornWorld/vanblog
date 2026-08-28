@@ -1,0 +1,20 @@
+{
+  "mem": "2g",
+  "posts": 0,
+  "run": 1,
+  "target_qps": 1000.0799069401645,
+  "actual_qps": 1000.0799069401645,
+  "duration_s": 44.996404475,
+  "sent": 45000,
+  "success_rate": 1,
+  "bytes_transferred": 535345000,
+  "latency_ms": {
+    "mean": 1.442206,
+    "p50": 1.139201,
+    "p90": 2.486389,
+    "p95": 3.258667,
+    "p99": 5.739758,
+    "max": 38.022194
+  },
+  "server_oom_killed": false
+}
