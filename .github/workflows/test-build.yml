@@ -32,6 +32,36 @@ jobs:
           GONOSUMDB: "*"
         run: go test ./...
 
+  # ── JS behavior tests: node:test suites (pure resolver, hermetic
+  #     lifecycle, real-build cache e2e). Previously only runnable by hand ──
+  js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # pnpm version is pinned via package.json "packageManager"
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Packs resolver (pure functions, fixture FS)
+        run: pnpm --filter vanblog-app test:packs
+
+      - name: Themes integration (base-alias resolution)
+        run: pnpm --filter vanblog-app test:themes
+
+      - name: Pack + theme lifecycle (hermetic, no processes)
+        run: pnpm --filter vanblog-app test:lifecycle
+
+      - name: Cache e2e (builds base theme, real HTTP on :4399)
+        run: pnpm --filter vanblog-app test:e2e:cache
+
   # ── Docs quality gate: duplicate-content check (doc-standard §6) ──
   # 要求 S0=0、S1=0、单文件重复率 < 阈值。失败即拦截（doc-dup-check 退出码 1/2）。
   docs:
