@@ -2,23 +2,29 @@ package caddy
 
 // routes_admin_test.go covers the admin API for site.routing.
 //
-// Strategy: avoid constructing *core.RequestEvent (zero-value panics on the
-// internal data store — see bootstrap_test.go). The handler HTTP shim is
-// thin; we exercise applyRules / readRouting / TranslateAll directly. The
-// pre-save validation paths (dup IDs, quota, reserved paths, SSRF) are
-// plain functions and get their own table-driven tests.
+// Strategy: avoid constructing *core.RequestEvent by hand (zero-value
+// panics on the internal data store — see bootstrap_test.go). The handler
+// HTTP shim is thin; we exercise applyRules / readRouting / TranslateAll
+// directly. Exception: the quota is a wire contract, so
+// TestReplaceRules_QuotaRejectedOverHTTP drives the real mux via
+// apis.NewRouter (which builds the RequestEvent for us).
 //
 // Mocks: setupApp (real pb + migrations) + newMockCaddyAdmin (httptest
 // server impersonating Caddy's admin API). Both come from bootstrap_test.go
 // in the same package.
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
 	_ "github.com/cornworld/vanblog/pb_migrations"
+	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -172,32 +178,88 @@ func TestApplyRules_SkipCaddyMode(t *testing.T) {
 	}
 }
 
-// --- Quota boundary ---
+// --- Quota boundary (real HTTP) ---
 
-func TestMaxUserRules_Boundary(t *testing.T) {
-	// Quota is enforced in handleReplaceRules (the HTTP shim), not in
-	// applyRules. We test the boundary by calling the constant directly;
-	// the handler-level assertion lives in the HTTP integration test below.
-	if MaxUserRules != 50 {
-		t.Errorf("MaxUserRules changed: %d — bump deliberately?", MaxUserRules)
+// TestReplaceRules_QuotaRejectedOverHTTP exercises the real HTTP shim
+// (handleReplaceRules): a body with MaxUserRules+1 rules must be rejected
+// 400 "too many rules" BEFORE anything is persisted or pushed to Caddy.
+func TestReplaceRules_QuotaRejectedOverHTTP(t *testing.T) {
+	app := setupApp(t)
+	srv, m := newMockCaddyAdmin(t, 0)
+	svc := &Service{app: app, caddyAdminURL: srv.URL}
+
+	baseRouter, err := apis.NewRouter(app)
+	if err != nil {
+		t.Fatalf("apis.NewRouter: %v", err)
+	}
+	svc.registerAdminRoutes(&core.ServeEvent{App: app, Router: baseRouter})
+	mux, err := baseRouter.BuildMux()
+	if err != nil {
+		t.Fatalf("BuildMux: %v", err)
 	}
 
-	// TranslateAll itself does NOT enforce the cap (it's a translation
-	// primitive), so a 100-rule input should still translate fine.
-	rules := make([]UserRule, 100)
+	// Capture the pre-request routing so the rejection assertion is
+	// independent of the fresh-install default ("[]").
+	beforeRouting, _ := readSiteRouting(t, app)
+	// requireAdmin checks users.role (not the PB superuser), so the token
+	// must come from a users-collection record.
+	usersCol, err := app.FindCollectionByNameOrId("users")
+	if err != nil {
+		t.Fatalf("users collection: %v", err)
+	}
+	adminRec := core.NewRecord(usersCol)
+	adminRec.Set("username", "admin")
+	adminRec.Set("email", "admin@example.com")
+	adminRec.Set("verified", true)
+	adminRec.Set("role", "admin")
+	adminRec.Set("password", "password12345")
+	if err := app.Save(adminRec); err != nil {
+		t.Fatalf("save admin: %v", err)
+	}
+	token, err := adminRec.NewAuthToken()
+	if err != nil {
+		t.Fatalf("auth token: %v", err)
+	}
+
+	// MaxUserRules+1 individually valid rules with unique IDs, so the
+	// request clears the dedup/missing-id checks and hits the quota.
+	rules := make([]UserRule, MaxUserRules+1)
 	for i := range rules {
 		rules[i] = UserRule{
-			ID:   "r" + string(rune('a'+i%26)) + string(rune('a'+i/26)),
+			ID:   fmt.Sprintf("r%03d", i),
 			Type: "block",
-			From: "/p" + string(rune('a'+i%26)) + "/*",
+			From: fmt.Sprintf("/p%03d/*", i),
 		}
 	}
-	out, err := TranslateAll(rules, nil)
+	body, err := json.Marshal(replaceRulesReq{Rules: rules})
 	if err != nil {
-		t.Fatalf("TranslateAll should accept >MaxUserRules: %v", err)
+		t.Fatalf("marshal rules: %v", err)
 	}
-	if len(out) != 100 {
-		t.Errorf("TranslateAll lost rules: got %d", len(out))
+
+	req := httptest.NewRequest(http.MethodPut, "/api/vanblog/routing/rules", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", token)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body: %s", rec.Code, rec.Body.String())
+	}
+	respBody := rec.Body.String()
+	if !strings.Contains(strings.ToLower(respBody), "too many rules") || !strings.Contains(respBody, "51") {
+		t.Fatalf("body missing quota error: %s", respBody)
+	}
+
+	// The oversized set must be rejected before persistence and before any
+	// Caddy push — the route table and the running config stay untouched.
+	gotRouting, _ := readSiteRouting(t, app)
+	if gotRouting != beforeRouting {
+		t.Errorf("oversized rule set must not be persisted:\nbefore: %s\nafter:  %s", beforeRouting, gotRouting)
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.loadCalls != 0 {
+		t.Errorf("quota rejection must not push config, got %d /load calls", m.loadCalls)
 	}
 }
 

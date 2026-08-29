@@ -6,11 +6,20 @@ import (
 	"testing"
 )
 
-func TestPostJSONRoundTrip(t *testing.T) {
-	original := Post{
+// The JSON wire format is the contract: admin/export.go writes it,
+// migration/zip_import.go reads it (posts.json arrays and single post.json
+// objects alike — the array-vs-single import behavior is covered by
+// migration's zip_import tests end to end).
+//
+// A struct self round-trip can't detect a tag rename: marshal and unmarshal
+// share the same tags, so a renamed field round-trips cleanly while every
+// existing export zip becomes unreadable. The format is therefore pinned
+// with golden strings.
+func TestPostGoldenJSON(t *testing.T) {
+	p := Post{
 		ID:        "abc123",
 		Title:     "My Post",
-		Content:   "# Hello\n\n<img src=\"/api/files/x/y/a.png\">",
+		Content:   "# Hello\n\nworld",
 		Status:    "published",
 		Pathname:  "my-post",
 		Private:   true,
@@ -23,58 +32,36 @@ func TestPostJSONRoundTrip(t *testing.T) {
 		Updated:   "2026-01-02T00:00:00.000Z",
 	}
 
-	data, err := json.Marshal(original)
+	b, err := json.Marshal(p)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-
-	var decoded Post
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		t.Fatalf("unmarshal: %v", err)
+	want := `{"id":"abc123","title":"My Post","content":"# Hello\n\nworld","status":"published","pathname":"my-post","private":true,"password":"secret","top":1,"copyright":"cc-by","category":"dev","tags":["go","web"],"created":"2026-01-01T00:00:00.000Z","updated":"2026-01-02T00:00:00.000Z"}`
+	if string(b) != want {
+		t.Fatalf("wire format drifted:\n got:  %s\n want: %s", b, want)
 	}
 
-	if !reflect.DeepEqual(original, decoded) {
-		t.Errorf("round-trip mismatch:\noriginal: %+v\ndecoded:  %+v", original, decoded)
+	// Import side: the golden must decode back to the exact struct.
+	var back Post
+	if err := json.Unmarshal([]byte(want), &back); err != nil {
+		t.Fatalf("unmarshal golden: %v", err)
+	}
+	if !reflect.DeepEqual(p, back) {
+		t.Fatalf("golden does not round-trip:\nwant: %+v\ngot:  %+v", p, back)
 	}
 }
 
-func TestPostArrayRoundTrip(t *testing.T) {
-	// Full export writes posts.json as an array of Post.
-	posts := []Post{
-		{Title: "One", Status: "published"},
-		{Title: "Two", Status: "draft", Pathname: "two"},
-	}
-	data, err := json.Marshal(posts)
+// TestPostGoldenJSON_OmittedAndZero pins the remaining wire behaviors the
+// import side relies on: password is omitted when empty (omitempty), nil tags
+// marshal as null, and every other key is always present (no omitempty) so
+// importers can rely on the key set.
+func TestPostGoldenJSON_OmittedAndZero(t *testing.T) {
+	b, err := json.Marshal(Post{Title: "Two", Status: "draft", Pathname: "two"})
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-
-	var decoded []Post
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		t.Fatalf("unmarshal array: %v", err)
-	}
-	if len(decoded) != 2 {
-		t.Fatalf("len = %d, want 2", len(decoded))
-	}
-	if decoded[1].Pathname != "two" {
-		t.Errorf("decoded[1].Pathname = %q, want two", decoded[1].Pathname)
-	}
-}
-
-func TestPost_SingleObjectUnmarshal(t *testing.T) {
-	// Single-post export writes post.json as one object, not an array.
-	raw := `{"title":"Solo","content":"body","status":"published"}`
-	var post Post
-	if err := json.Unmarshal([]byte(raw), &post); err != nil {
-		t.Fatalf("unmarshal single: %v", err)
-	}
-	if post.Title != "Solo" || post.Status != "published" {
-		t.Errorf("unexpected: %+v", post)
-	}
-	if post.Password != "" {
-		t.Errorf("password should default empty, got %q", post.Password)
-	}
-	if post.Tags != nil {
-		t.Errorf("tags should default nil, got %v", post.Tags)
+	want := `{"id":"","title":"Two","content":"","status":"draft","pathname":"two","private":false,"top":0,"copyright":"","category":"","tags":null,"created":"","updated":""}`
+	if string(b) != want {
+		t.Fatalf("wire format drifted:\n got:  %s\n want: %s", b, want)
 	}
 }

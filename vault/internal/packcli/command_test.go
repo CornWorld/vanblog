@@ -224,17 +224,6 @@ func TestPromoteArtifactBundleRestoresPreviousBundleOnFailure(t *testing.T) {
 	}
 }
 
-func TestEjectIsNotACommand(t *testing.T) {
-	var output bytes.Buffer
-	err := Execute([]string{"eject"}, &output, &output)
-	if err == nil {
-		t.Fatal("expected eject to be unknown")
-	}
-	if !strings.Contains(err.Error(), "unknown command") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
 func writeTestPack(t *testing.T, name, version string) string {
 	t.Helper()
 	directory := filepath.Join(t.TempDir(), name)

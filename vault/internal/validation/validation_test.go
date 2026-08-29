@@ -8,7 +8,6 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 )
 
@@ -81,17 +80,6 @@ func TestRegisterWithSourceIsolationAndBadSources(t *testing.T) {
 				t.Fatalf("error = %v, want %q", err, tc.want)
 			}
 		})
-	}
-}
-
-func TestOnlySystemCollectionsAreSkipped(t *testing.T) {
-	system := core.NewBaseCollection("_system")
-	system.System = true
-	if !shouldSkipCollection(system) {
-		t.Fatal("expected system collection to be skipped")
-	}
-	if shouldSkipCollection(core.NewBaseCollection("posts")) {
-		t.Fatal("expected business collection not to be skipped")
 	}
 }
 

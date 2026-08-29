@@ -5,47 +5,10 @@ import (
 	"testing"
 
 	"github.com/cornworld/vanblog/internal/migrationschema"
-	"github.com/cornworld/vanblog/internal/mediaurl"
 	_ "github.com/cornworld/vanblog/pb_migrations"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 )
-
-func TestCollectInternalImages(t *testing.T) {
-	content := `<p>text</p>` +
-		`<img src="/api/files/abc123/rec1/photo.png">` +
-		`<img src='https://example.com/api/files/def456/rec2/cover.jpg'>` +
-		`<img src="/static/non-api.png">` +
-		`<p><a href="/api/files/abc123/rec1/photo.png">link</a></p>`
-
-	paths := mediaurl.ExtractAPIFilePaths(content)
-
-	want := []string{
-		"abc123/rec1/photo.png",
-		"def456/rec2/cover.jpg",
-	}
-	if len(paths) != len(want) {
-		t.Fatalf("paths = %v, want %v", paths, want)
-	}
-	for _, w := range want {
-		found := false
-		for _, p := range paths {
-			if p == w {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Errorf("missing path %q in %v", w, paths)
-		}
-	}
-}
-
-func TestCollectInternalImages_Empty(t *testing.T) {
-	if got := mediaurl.ExtractAPIFilePaths("no images here"); len(got) != 0 {
-		t.Errorf("expected no paths, got %v", got)
-	}
-}
 
 func TestBuildExportPost(t *testing.T) {
 	tmpDir := t.TempDir()

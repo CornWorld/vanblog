@@ -2,6 +2,7 @@ package media
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -58,15 +59,38 @@ func TestApplyS3BackendToSettings_AppliesEnabledConfig(t *testing.T) {
 func TestApplyS3BackendToSettings_Idempotent(t *testing.T) {
 	app := setupApp(t)
 
-	// Apply once.
+	// Seed an enabled config so the first sync actually writes settings.
+	site, err := app.FindFirstRecordByFilter("site", "")
+	if err != nil || site == nil {
+		t.Fatalf("find site: %v", err)
+	}
+	cfg := core.S3Config{
+		Enabled:        true,
+		Bucket:         "vanblog-test",
+		Region:         "us-east-1",
+		Endpoint:       "https://s3.example.com",
+		AccessKey:      "AKIAFAKE",
+		Secret:         "FAKESECRET",
+		ForcePathStyle: true,
+	}
+	raw, _ := json.Marshal(cfg)
+	site.Set("s3Config", json.RawMessage(raw))
+	if err := app.Save(site); err != nil {
+		t.Fatalf("save site: %v", err)
+	}
+
 	if err := ApplyS3BackendToSettings(app); err != nil {
 		t.Fatalf("first sync: %v", err)
 	}
+	first := app.Settings().S3
 
-	// Calling again with same config should be a no-op (no error, no change).
-	// We can't directly assert "no DB write" but a clean return is the contract.
+	// Second sync with the same config must be a no-op: no error and no
+	// drift in the settings that end up in effect.
 	if err := ApplyS3BackendToSettings(app); err != nil {
 		t.Fatalf("second sync should be no-op: %v", err)
+	}
+	if got := app.Settings().S3; !reflect.DeepEqual(got, first) {
+		t.Errorf("second sync drifted settings:\nfirst:  %+v\nsecond: %+v", first, got)
 	}
 }
 

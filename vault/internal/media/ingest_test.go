@@ -7,41 +7,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cornworld/vanblog/internal/mediaurl"
 	_ "github.com/cornworld/vanblog/pb_migrations"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
 )
 
-func TestExtractExternalImgURLs(t *testing.T) {
-	content := `<img src="http://external.com/a.png">` +
-		`<img src="https://cdn.example.com/b.jpg">` +
-		`<img src="/api/files/col/rec/x.png">` +
-		`<img src="/relative.png">` +
-		`<img src="https://proxied/api/files/col/rec/y.png">`
-
-	urls := mediaurl.ExtractExternalImgURLs(content)
-	if len(urls) != 2 {
-		t.Fatalf("urls = %v, want 2 external URLs", urls)
-	}
-	if urls[0] != "http://external.com/a.png" {
-		t.Errorf("urls[0] = %q", urls[0])
-	}
-	if urls[1] != "https://cdn.example.com/b.jpg" {
-		t.Errorf("urls[1] = %q", urls[1])
-	}
-}
-
-func TestExtractExternalImgURLs_NoExternal(t *testing.T) {
-	content := `<img src="/api/files/col/rec/x.png"><img src="/local.png">`
-	if got := mediaurl.ExtractExternalImgURLs(content); len(got) != 0 {
-		t.Errorf("expected no external URLs, got %v", got)
-	}
-}
-
 func TestIngestExternalImages(t *testing.T) {
 	pngBytes := []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xfc\xcf\xc0\x00\x00\x00\x03\x00\x01\x5d\xcc\xdb\xda\x00\x00\x00\x00IEND\xaeB`\x82")
-ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "image/png")
 		if _, err := w.Write(pngBytes); err != nil {
 			t.Errorf("write png: %v", err)

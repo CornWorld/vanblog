@@ -71,8 +71,11 @@ func TestUploadOrDedup_New(t *testing.T) {
 	if !isNew {
 		t.Error("expected new record for first upload")
 	}
-	if record.GetString("sign") != ComputeSign(content) {
-		t.Error("sign mismatch")
+	// Known-answer constant (sha256 of "fake image data"): asserting the
+	// literal pins what lands in the record, instead of re-invoking
+	// ComputeSign — the same expression the implementation uses.
+	if record.GetString("sign") != "5b3397652358a6663a0225ee76466d4e4fd6c58d484d1aa25170bb617d6bb086" {
+		t.Errorf("stored sign = %q, want known sha256 of content", record.GetString("sign"))
 	}
 	if record.GetString("staticType") != "img" {
 		t.Errorf("staticType = %q, want %q", record.GetString("staticType"), "img")

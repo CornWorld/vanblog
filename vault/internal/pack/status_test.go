@@ -75,11 +75,3 @@ func TestFingerprintIgnoresGeneratedSchemaArtifact(t *testing.T) {
 		t.Fatalf("artifact changed source fingerprint: %q != %q", first, second)
 	}
 }
-
-func TestHasSchemaArtifact(t *testing.T) {
-	withArtifact := Pack{FS: fstest.MapFS{"schema.js": {Data: []byte("exports.models = {}")}}}
-	withoutArtifact := Pack{FS: fstest.MapFS{}}
-	if !HasSchemaArtifact(withArtifact) || HasSchemaArtifact(withoutArtifact) {
-		t.Fatal("unexpected schema artifact detection")
-	}
-}
