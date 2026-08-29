@@ -1,4 +1,6 @@
-# golangci-lint configuration for the Go backend (vault/).
+version: "2"
+
+# golangci-lint v2 configuration for the Go backend (vault/).
 #
 # Linter set: core correctness + real-bug finders.
 #   errcheck / govet / ineffassign / staticcheck / unused  — baseline correctness
@@ -8,69 +10,107 @@
 #   make vet  →  golangci-lint run ./...
 #   .githooks/pre-commit  →  golangci-lint run ./...
 #
-# Install: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+# Install: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+#          (v2 module path — v1 cannot target Go >= 1.27)
 # Run:     golangci-lint run ./...
 
-run:
-  timeout: 5m
-
 linters:
-  disable-all: true
+  default: none
   enable:
-    # core correctness
+    - bodyclose
     - errcheck
+    - gocritic
+    - gosec
     - govet
     - ineffassign
-    - staticcheck
-    - unused
-    # real-bug finders / security
     - nilerr
-    - gosec
-    - unconvert
-    - bodyclose
     - noctx
-    - gocritic
-
-linters-settings:
-  gosec:
-    excludes:
-      # G115: int→uint overflow conversions are intentional where a
-      # non-negative timestamp/seed is guaranteed (e.g. dev seed).
-      - G115
-      # G301: dirs created 0755 for shared/web-served content — 0750 is too strict here.
-      - G301
-      # G304: config-driven file reads (theme/palette/pack paths) are the app's
-      # core and already path-escape validated. High false-positive rate.
-      - G304
-
-issues:
-  # golangci default exclusions (errcheck Close/Remove/Fprintf, os.Setenv, etc.)
-  # are applied — they filter universal noise, not real bugs.
-  max-per-linter: 0
-  max-same-issues: 0
-  exclude-rules:
-    # Locked schema migrations (AGENTS.md 禁区) — never modified by lint fixes.
-    - path: pb_migrations/
-      linters:
-        [
-          errcheck,
-          govet,
-          ineffassign,
-          staticcheck,
-          unused,
-          nilerr,
-          gosec,
-          unconvert,
-          bodyclose,
-          noctx,
-          gocritic,
-        ]
-    # Dev-only seed tool: math/rand for sample data is intentional.
-    - path: internal/devseed/
-      linters: [gosec]
-    # Migration CLI: subprocess/URL args are user-provided by design.
-    - path: cmd/migrate/
-      linters: [gosec]
-    # Test fixtures write temp files with 0644 — not sensitive.
-    - path: _test\.go
-      linters: [gosec]
+    - staticcheck
+    - unconvert
+    - unused
+  settings:
+    gosec:
+      excludes:
+        # G115: int→uint overflow conversions are intentional where a
+        # non-negative timestamp/seed is guaranteed (e.g. dev seed).
+        - G115
+        # G301: dirs created 0755 for shared/web-served content — 0750 is too strict here.
+        - G301
+        # G304: config-driven file reads (theme/palette/pack paths) are the app's
+        # core and already path-escape validated. High false-positive rate.
+        - G304
+        # G703/G704/G122: taint-analysis rules added in gosec v2.28 — the pack/theme
+        # loader and revalidation paths are config-driven (same nature as G304);
+        # pack FS walks are over trusted read-only fs.FS.
+        - G703
+        - G704
+        - G122
+    staticcheck:
+      checks:
+        # staticcheck's own default set (style checks ST1000/ST1003/ST1016/
+        # ST1020-1023 off) plus: QF1011 (quickfix: omit explicit type) —
+        # `var _ Iface = v` interface assertions rely on the explicit type.
+        - all
+        - -ST1000
+        - -ST1003
+        - -ST1016
+        - -ST1020
+        - -ST1021
+        - -ST1022
+        - -ST1023
+        - -QF1011
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - bodyclose
+          - errcheck
+          - gocritic
+          - gosec
+          - govet
+          - ineffassign
+          - nilerr
+          - noctx
+          - staticcheck
+          - unconvert
+          - unused
+        path: pb_migrations/
+      - linters:
+          - gosec
+        path: internal/devseed/
+      - linters:
+          - gosec
+        path: cmd/migrate/
+      # Pack CLI: spawns node on operator-provided builder scripts (see the
+      # existing per-line nolint:gosec G204) — subprocess args are user-supplied
+      # by design, same rationale as cmd/migrate.
+      - linters:
+          - noctx
+        path: internal/packcli/
+      # Test fixtures: 0644 temp writes (gosec) and plain httptest.NewRequest
+      # (noctx) are standard test idioms — no request context exists there.
+      - linters:
+          - gosec
+          - noctx
+        path: _test\.go
+      # Process supervisors (agent, bootstrap) own child lifecycle via
+      # signal-based restart/kill — there is no request-scoped context to pass.
+      - linters:
+          - noctx
+        path: internal/(agent|bootstrap)/
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

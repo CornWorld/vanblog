@@ -15,7 +15,7 @@ if [ -x "$GL_BIN" ] || command -v golangci-lint >/dev/null 2>&1; then
     (cd vault && golangci-lint run ./...) || exit 1
   fi
 else
-  echo "  (golangci-lint 未安装,跳过 — 安装: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)"
+  echo "  (golangci-lint 未安装,跳过 — 安装: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest (v2 module path; v1 cannot target Go >= 1.27))"
 fi
 
 echo "→ astro check..."
