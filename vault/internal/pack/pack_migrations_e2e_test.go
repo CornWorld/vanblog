@@ -91,13 +91,18 @@ func TestStageMigrationsEndToEnd(t *testing.T) {
 	assertField(t, live2d, "modelId", core.FieldTypeNumber)
 	assertField(t, live2d, "tools", core.FieldTypeJSON)
 
-	// site_visits
-	siteVisits, err := app.FindCollectionByNameOrId("site_visits")
+	// visit_sessions (online pack — per-session rows, heartbeat-driven)
+	sessions, err := app.FindCollectionByNameOrId("visit_sessions")
 	if err != nil {
-		t.Fatalf("site_visits collection missing: %v", err)
+		t.Fatalf("visit_sessions collection missing: %v", err)
 	}
-	assertField(t, siteVisits, "visited", core.FieldTypeNumber)
-	assertField(t, siteVisits, "sessions", core.FieldTypeJSON)
+	assertField(t, sessions, "session", core.FieldTypeText)
+	assertField(t, sessions, "lastSeenAt", core.FieldTypeDate)
+
+	// The legacy site_visits collection must not exist on a fresh install.
+	if _, err := app.FindCollectionByNameOrId("site_visits"); err == nil {
+		t.Fatal("legacy site_visits should not exist on fresh install")
+	}
 }
 
 func assertField(t *testing.T, col *core.Collection, name, wantType string) core.Field {

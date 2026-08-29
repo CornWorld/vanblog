@@ -24,13 +24,20 @@ func TestStageMigrationsSkipsExistingCollections(t *testing.T) {
 
 	// Simulate the existing DB: pre-create each Pack collection with a marker
 	// field so we can prove the JS migration does NOT recreate/overwrite it.
-	names := []string{"moments", "bookmarks", "live2d_config", "site_visits"}
+	names := []string{"moments", "bookmarks", "live2d_config", "visit_sessions"}
 	for _, name := range names {
 		col := core.NewCollection(core.CollectionTypeBase, name)
 		col.Fields.Add(&core.TextField{Name: "old_marker"})
 		if err := app.Save(col); err != nil {
 			t.Fatalf("pre-create %q: %v", name, err)
 		}
+	}
+
+	// Simulate the pre-rename database: the old visits pack's collection.
+	legacy := core.NewCollection(core.CollectionTypeBase, "site_visits")
+	legacy.Fields.Add(&core.TextField{Name: "visited"})
+	if err := app.Save(legacy); err != nil {
+		t.Fatalf("pre-create legacy site_visits: %v", err)
 	}
 
 	builtins, err := Builtins(os.DirFS("../../../packs"))
@@ -65,5 +72,11 @@ func TestStageMigrationsSkipsExistingCollections(t *testing.T) {
 		if col.Fields.GetByName("old_marker") == nil {
 			t.Fatalf("collection %q was recreated (old_marker lost)", name)
 		}
+	}
+
+	// Upgrade contract: the online pack's migration deletes the legacy
+	// site_visits collection (superseded by visit_sessions).
+	if _, err := app.FindCollectionByNameOrId("site_visits"); err == nil {
+		t.Fatal("legacy site_visits should be deleted by the online pack migration")
 	}
 }
