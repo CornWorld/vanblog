@@ -10,8 +10,9 @@ export * from "./site";
 export * from "./visits";
 export * from "./audits";
 export * from "./moments";
+export * from "./agentSessions";
 export * from "./bookmarks";
-
+import { AgentSessionSchema } from "./agentSessions";
 import { TagSchema } from "./tags";
 import { CategorySchema } from "./categories";
 import { UserSchema } from "./users";
@@ -32,6 +33,7 @@ export const models = {
   media: MediaSchema,
   site: SiteSchema,
   visits: VisitSchema,
+  agent_sessions: AgentSessionSchema,
   audits: AuditSchema,
   bookmarks: BookmarkSchema,
 } as const;

@@ -53,6 +53,7 @@ const valid = {
     result: "success",
     detail: { after: ["rule-1"], custom: true },
   },
+  agent_sessions: { owner: id, status: "idle", sessionDir: "/tmp/agent-sessions/x" },
   bookmarks: { title: "VanBlog", url: "https://vanblog.example", owner: id },
 } satisfies Record<keyof typeof models, unknown>;
 
@@ -68,6 +69,7 @@ const invalid = {
   media: { staticType: "img", meta: { width: -1 } },
   site: { mediaConfig: { enabled: true, targetFormat: "webp", quality: 101 } },
   visits: { date: "2026-07-10T00:00:00Z" },
+  agent_sessions: { owner: id, status: "running", sessionDir: "/tmp/x" },
   audits: { result: "unknown" },
   bookmarks: { title: "VanBlog", url: "not-a-url", owner: id },
 } satisfies Record<keyof typeof models, unknown>;

@@ -1,37 +1,73 @@
 package agent
 
 import (
-	"bufio"
 	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/pocketbase/pocketbase/core"
 
 	"github.com/cornworld/vanblog/internal/validation"
 )
 
-const (
-	sessionCollection = "agent_sessions"
-	piBinary          = "pi"
-	sessionIdleTTL    = 30 * time.Minute
-	sessionFileTTL    = 7 * 24 * time.Hour
-)
+// Package agent hosts the platform agent surface. Since the 2026-08
+// redesign all interactive capability lives in the engine's own TUI,
+// served to browsers over a WebSocket PTY bridge (terminal.go). The old
+// SSE chat API and the PB-side session bookkeeping were removed:
+//
+//   - sessions are engine-native files under <pb_data>/agent-sessions,
+//     shared verbatim by the web terminal and `docker exec pi` (same file,
+//     no sync), persisted with the data volume;
+//   - the engine binary is selected by agent-config/engine.json
+//     (loadEngineConfig below), shared by the terminal bridge;
+//   - prod images register none of these routes (dev-only, see Enabled).
 
-// piWorkDir is the directory pi child processes run in. The dev container
-// exports VANBLOG_WORKSPACE=/workspace (same root the runtime scripts use);
-// any other environment (prod image, local binary) falls back to the current
-// working directory, which always exists, instead of a hardcoded /workspace
-// that prod does not ship.
+const piBinary = "pi"
+
+// Enabled reports whether agent capability should register in this process.
+// Agent (TUI bridge, validation tool) is a dev-container feature: prod must
+// not run engines or expose agent endpoints. Default-closed — only an
+// explicit VANBLOG_MODE=dev enables it.
+func Enabled() bool {
+	return os.Getenv("VANBLOG_MODE") == "dev"
+}
+
+// engineConfig selects the coding-agent binary. Resolution order:
+// env (VANBLOG_AGENT_BIN) > agent-config/engine.json > built-in default.
+type engineConfig struct {
+	Bin       string   `json:"bin"`
+	ExtraArgs []string `json:"extraArgs"`
+	// TuiBin selects the engine for interactive TUI runs (web terminal /
+	// docker exec). Defaults to pi: bridge wrappers (engine.json "bin")
+	// are rpc-mode constructs and make no sense attached to a PTY.
+	TuiBin string `json:"tuiBin"`
+}
+
+func loadEngineConfig() engineConfig {
+	cfg := engineConfig{Bin: piBinary, ExtraArgs: []string{}}
+	if data, err := os.ReadFile(filepath.Join(piWorkDir(), "agent-config", "engine.json")); err == nil {
+		var file engineConfig
+		if json.Unmarshal(data, &file) == nil && file.Bin != "" {
+			cfg = file
+			if cfg.ExtraArgs == nil {
+				cfg.ExtraArgs = []string{}
+			}
+		}
+	}
+	if b := os.Getenv("VANBLOG_AGENT_BIN"); b != "" {
+		cfg.Bin = b
+	}
+	if s := os.Getenv("VANBLOG_AGENT_EXTRA_ARGS"); s != "" {
+		cfg.ExtraArgs = strings.Fields(s)
+	}
+	return cfg
+}
+
+// piWorkDir is the directory the engine runs in. The dev container exports
+// VANBLOG_WORKSPACE (the live bind-mounted tree at /app); other
+// environments fall back to the current working directory.
 func piWorkDir() string {
 	if dir := os.Getenv("VANBLOG_WORKSPACE"); dir != "" {
 		return dir
@@ -42,277 +78,30 @@ func piWorkDir() string {
 	return "/"
 }
 
-// Manager exposes pi's native JSONL RPC through the authenticated PocketBase API.
-// PocketBase owns durable session metadata; runtimes only contain local child processes.
-type Manager struct {
-	app core.App
-
-	mu       sync.Mutex
-	runtimes map[string]*runtimeSession
+// SessionsDir returns the shared engine session directory inside the PB
+// data dir. Both the web terminal and interactive `pi` runs point here so
+// a conversation started in the browser continues in a terminal (and vice
+// versa) — one file, no synchronization.
+func SessionsDir(app core.App) string {
+	return filepath.Join(app.DataDir(), "agent-sessions")
 }
 
-type runtimeSession struct {
-	id     string
-	cmd    *exec.Cmd
-	stdin  io.WriteCloser
-	reader *bufio.Reader
-	active bool
-	last   time.Time
+// Manager registers the admin-only agent endpoints (schema preflight
+// validation; the terminal bridge registers from terminal.go).
+type Manager struct {
+	app core.App
 }
 
 func New(app core.App) *Manager {
-	m := &Manager{app: app, runtimes: make(map[string]*runtimeSession)}
+	m := &Manager{app: app}
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		se.Router.POST("/api/vanblog/agent/chat", m.handleChat)
-		se.Router.POST("/api/vanblog/agent/validate", m.handleValidate)
+		if Enabled() {
+			se.Router.POST("/api/vanblog/agent/validate", m.handleValidate)
+			se.Router.GET("/api/vanblog/agent/terminal", m.handleTerminal)
+		}
 		return se.Next()
 	})
-	go m.cleanupLoop()
 	return m
-}
-
-type chatRequest struct {
-	SessionID string `json:"sessionId"`
-	Message   string `json:"message"`
-}
-
-func (m *Manager) handleChat(e *core.RequestEvent) error {
-	if !isAdmin(e) {
-		return e.ForbiddenError("admin required", "")
-	}
-
-	var req chatRequest
-	if err := json.NewDecoder(e.Request.Body).Decode(&req); err != nil {
-		return e.BadRequestError("invalid JSON body", "")
-	}
-	if strings.TrimSpace(req.Message) == "" {
-		return e.BadRequestError("message is required", "")
-	}
-
-	session, err := m.getOrCreateSession(e.Auth.Id, req.SessionID)
-	if err != nil {
-		return e.JSON(http.StatusInternalServerError, map[string]string{"message": err.Error()})
-	}
-
-	runtime, err := m.acquireRuntime(session)
-	if err != nil {
-		if errors.Is(err, errSessionBusy) {
-			return writeJSONError(e.Response, http.StatusConflict, "session is busy")
-		}
-		return e.JSON(http.StatusInternalServerError, map[string]string{"message": err.Error()})
-	}
-	defer m.releaseRuntime(runtime)
-
-	w := e.Response
-	w.Header().Set("X-Agent-Session-ID", session.Id)
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("X-Accel-Buffering", "no")
-	w.WriteHeader(http.StatusOK)
-	flush := func() { _ = http.NewResponseController(w).Flush() }
-
-	if err := runtime.sendPrompt(req.Message); err != nil {
-		_ = writeSSE(w, map[string]any{"type": "error", "message": err.Error()})
-		flush()
-		return nil
-	}
-
-	for {
-		line, readErr := runtime.reader.ReadBytes('\n')
-		if len(line) > 0 {
-			var event map[string]any
-			if json.Unmarshal(bytesTrimSpace(line), &event) == nil {
-				if err := writeSSE(w, event); err != nil {
-					return nil
-				}
-				flush()
-				if event["type"] == "agent_settled" {
-					break
-				}
-				if event["type"] == "response" && event["command"] == "prompt" && event["success"] == false {
-					break
-				}
-			}
-		}
-		if readErr != nil {
-			if !errors.Is(readErr, io.EOF) {
-				_ = writeSSE(w, map[string]any{"type": "error", "message": "pi RPC exited: " + readErr.Error()})
-				flush()
-			}
-			m.dropRuntime(runtime.id)
-			break
-		}
-	}
-	return nil
-}
-
-func (m *Manager) getOrCreateSession(ownerID, id string) (*core.Record, error) {
-	col, err := m.app.FindCollectionByNameOrId(sessionCollection)
-	if err != nil {
-		return nil, fmt.Errorf("find agent session collection: %w", err)
-	}
-	if id != "" {
-		record, err := m.app.FindRecordById(col.Id, id)
-		if err != nil {
-			return nil, fmt.Errorf("session not found: %w", err)
-		}
-		if record.GetString("owner") != ownerID {
-			return nil, errors.New("session does not belong to current admin")
-		}
-		return record, nil
-	}
-
-	record := core.NewRecord(col)
-	sessionDir := filepath.Join(m.app.DataDir(), "agent-sessions", record.Id)
-	if err := os.MkdirAll(sessionDir, 0o700); err != nil {
-		return nil, fmt.Errorf("create session directory: %w", err)
-	}
-	now := time.Now()
-	record.Set("owner", ownerID)
-	record.Set("status", "idle")
-	record.Set("sessionDir", sessionDir)
-	record.Set("lastActivityAt", now)
-	record.Set("expiresAt", now.Add(sessionFileTTL))
-	if err := m.app.Save(record); err != nil {
-		return nil, fmt.Errorf("save agent session: %w", err)
-	}
-	return record, nil
-}
-
-var errSessionBusy = errors.New("session busy")
-
-func (m *Manager) acquireRuntime(record *core.Record) (*runtimeSession, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if runtime := m.runtimes[record.Id]; runtime != nil {
-		if runtime.active {
-			return nil, errSessionBusy
-		}
-		runtime.active = true
-		runtime.last = time.Now()
-		return runtime, nil
-	}
-
-	dir := record.GetString("sessionDir")
-	if dir == "" {
-		return nil, errors.New("agent session has no session directory")
-	}
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return nil, fmt.Errorf("create session directory: %w", err)
-	}
-
-	cmd := exec.Command(piBinary, "--mode", "rpc", "--approve", "--session-dir", dir)
-	cmd.Dir = piWorkDir()
-	cmd.Stderr = os.Stderr
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, fmt.Errorf("create pi stdout pipe: %w", err)
-	}
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return nil, fmt.Errorf("create pi stdin pipe: %w", err)
-	}
-	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("start pi RPC: %w", err)
-	}
-
-	runtime := &runtimeSession{
-		id:     record.Id,
-		cmd:    cmd,
-		stdin:  stdin,
-		reader: bufio.NewReader(stdout),
-		active: true,
-		last:   time.Now(),
-	}
-	m.runtimes[record.Id] = runtime
-	go func() { _ = cmd.Wait() }()
-	record.Set("processId", cmd.Process.Pid)
-	record.Set("status", "active")
-	record.Set("lastActivityAt", runtime.last)
-	if err := m.app.Save(record); err != nil {
-		_ = cmd.Process.Kill()
-		delete(m.runtimes, record.Id)
-		return nil, fmt.Errorf("update agent session: %w", err)
-	}
-	return runtime, nil
-}
-
-func (r *runtimeSession) sendPrompt(message string) error {
-	payload, err := json.Marshal(map[string]any{
-		"type":    "prompt",
-		"id":      strconv.FormatInt(time.Now().UnixNano(), 10),
-		"message": message,
-	})
-	if err != nil {
-		return err
-	}
-	if _, err := r.stdin.Write(append(payload, '\n')); err != nil {
-		return fmt.Errorf("write pi RPC prompt: %w", err)
-	}
-	r.last = time.Now()
-	return nil
-}
-
-func (m *Manager) releaseRuntime(runtime *runtimeSession) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if current := m.runtimes[runtime.id]; current == runtime {
-		current.active = false
-		current.last = time.Now()
-		if record, err := m.app.FindRecordById(sessionCollection, runtime.id); err == nil {
-			record.Set("status", "idle")
-			record.Set("lastActivityAt", current.last)
-			_ = m.app.Save(record)
-		}
-	}
-}
-
-func (m *Manager) dropRuntime(id string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.dropRuntimeLocked(id)
-}
-
-func (m *Manager) dropRuntimeLocked(id string) {
-	if runtime := m.runtimes[id]; runtime != nil {
-		_ = runtime.stdin.Close()
-		_ = runtime.cmd.Process.Kill()
-		delete(m.runtimes, id)
-	}
-}
-
-func (m *Manager) cleanupLoop() {
-	ticker := time.NewTicker(time.Minute)
-	defer ticker.Stop()
-	for range ticker.C {
-		m.cleanup()
-	}
-}
-
-func (m *Manager) cleanup() {
-	now := time.Now()
-	m.mu.Lock()
-	for id, runtime := range m.runtimes {
-		if !runtime.active && now.Sub(runtime.last) > sessionIdleTTL {
-			m.dropRuntimeLocked(id)
-		}
-	}
-	m.mu.Unlock()
-
-	filter := "expiresAt < \"" + now.UTC().Format(time.RFC3339) + "\""
-	records, err := m.app.FindRecordsByFilter(sessionCollection, filter, "", 0, 0)
-	if err != nil {
-		return
-	}
-	for _, record := range records {
-		m.dropRuntime(record.Id)
-		if dir := record.GetString("sessionDir"); dir != "" {
-			_ = os.RemoveAll(dir)
-		}
-		_ = m.app.Delete(record)
-	}
 }
 
 type validateRequest struct {
@@ -320,6 +109,8 @@ type validateRequest struct {
 	Payload    any    `json:"payload"`
 }
 
+// handleValidate is the schema preflight endpoint used by tooling before
+// writing schema-shaped payloads to PB (see .agents/skills/vanblog).
 func (m *Manager) handleValidate(e *core.RequestEvent) error {
 	if !isAdmin(e) {
 		return e.ForbiddenError("admin required", "")
@@ -355,29 +146,6 @@ func (m *Manager) handleValidate(e *core.RequestEvent) error {
 	})
 }
 
-func writeSSE(w io.Writer, value any) error {
-	data, err := json.Marshal(value)
-	if err != nil {
-		return err
-	}
-	_, err = fmt.Fprintf(w, "data: %s\n\n", data)
-	return err
-}
-
-func writeJSONError(w http.ResponseWriter, status int, message string) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, err := fmt.Fprintf(w, "%s\n", mustJSON(map[string]string{"message": message}))
-	return err
-}
-
-func bytesTrimSpace(value []byte) []byte { return []byte(strings.TrimSpace(string(value))) }
-
 func isAdmin(e *core.RequestEvent) bool {
 	return e.Auth != nil && e.Auth.GetString("role") == "admin"
-}
-
-func mustJSON(v any) string {
-	b, _ := json.Marshal(v)
-	return string(b)
 }

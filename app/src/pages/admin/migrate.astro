@@ -9,8 +9,15 @@ const isAdmin = getAuthUser(pb)?.role === 'admin';
 
 <AdminLayout title="数据迁移">
   <h1>数据迁移</h1>
-  <p><a href="/admin">← 返回</a></p>
-
+  <p class="flex gap-3 items-center">
+    <a href="/admin">← 返回</a>
+    <a
+      class="text-sm underline"
+      href={`/admin/terminal?name=${encodeURIComponent('AI 迁移助手')}&prompt=${encodeURIComponent(
+        '你是 vanblog 数据迁移助手。先读 docs/reference/backup.md 的迁移协议和 docs/faq.md 的迁移条目,然后帮我完成数据导入:先了解我手上 ZIP 的来源格式(原版 mereithhh 或其他 fork),再给出校验与导入步骤,导入后核对文章数与图片链接改写结果。',
+      )}`}
+    >🤖 AI 迁移助手</a>
+  </p>
   {!isAdmin ? (
     <p>仅管理员可访问。</p>
   ) : (

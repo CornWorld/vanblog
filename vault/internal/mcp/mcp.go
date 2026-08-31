@@ -14,6 +14,8 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/search"
 	"io"
 	"log/slog"
 	"net/http"
@@ -23,8 +25,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/tools/search"
+	"github.com/cornworld/vanblog/internal/agent"
 )
 
 const (
@@ -51,6 +52,10 @@ type Manager struct {
 func New(app core.App) *Manager {
 	m := &Manager{app: app}
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
+		// MCP tooling is a dev-container capability; prod registers nothing.
+		if !agent.Enabled() {
+			return se.Next()
+		}
 		se.Router.POST("/api/vanblog/mcp/read_file", m.handleReadFile)
 		se.Router.POST("/api/vanblog/mcp/list_dir", m.handleListDir)
 		se.Router.POST("/api/vanblog/mcp/write_file", m.handleWriteFile)

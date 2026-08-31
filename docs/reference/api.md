@@ -20,7 +20,9 @@
 | `POST /api/vanblog/migrate/import` | 数据导入（ZIP，限 100MB，事务） |
 | `POST /api/vanblog/themes/reload` | 手动重扫主题 |
 | `GET/POST /api/vanblog/posts/...` | 文章（含回收站 `posts/trash`、恢复 `posts/{id}/restore`） |
-| `POST /api/vanblog/mcp/*` | MCP（admin-only，agent 扩展） |
+| `POST /api/vanblog/mcp/*` | MCP（admin-only，agent 扩展；仅 dev 容器注册，prod 无） |
+| `POST /api/vanblog/agent/validate` | schema 写入前预检（admin-only，仅 dev 容器） |
+| `GET /api/vanblog/agent/terminal` | WebSocket 终端桥：admin「AI 终端」页 → 引擎 TUI（admin-only，仅 dev 容器） |
 
 ## 鉴权
 

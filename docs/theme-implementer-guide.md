@@ -842,7 +842,7 @@ jobs:
 
 ## 11. MCP tools
 
-Phase D 为 agent / 主题作者工具链提供了一组 **admin-only** 的 MCP 风格 HTTP 端点（全部挂在 `/api/vanblog/mcp/*`，非 admin 一律 403）。前端 SDK 封装在 `pb.vanblog.mcp.*`（`sdk/src/services.ts`）。路径锚点为仓库根（`VANBLOG_MCP_ROOT` 环境变量，空则取进程 cwd——dev 容器 cwd=仓库根）。Go 实现在 `vault/internal/mcp/`（`paths.go` 是纯函数白名单，`mcp.go` 是路由）。
+Phase D 为 agent / 主题作者工具链提供了一组 **admin-only** 的 MCP 风格 HTTP 端点（全部挂在 `/api/vanblog/mcp/*`，非 admin 一律 403）。**仅 dev 容器注册**（`VANBLOG_MODE=dev`），prod 镜像不暴露这些端点。前端 SDK 封装在 `pb.vanblog.mcp.*`（`sdk/src/services.ts`）。路径锚点为仓库根（`VANBLOG_MCP_ROOT` 环境变量，空则取进程 cwd——dev 容器 cwd=仓库根）。Go 实现在 `vault/internal/mcp/`（`paths.go` 是纯函数白名单，`mcp.go` 是路由）。
 
 | 端点             | 方法 | 用途                                     | 请求                                  | 响应                                                              |
 | ---------------- | ---- | ---------------------------------------- | ------------------------------------- | ----------------------------------------------------------------- |

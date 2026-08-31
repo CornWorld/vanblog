@@ -10,7 +10,7 @@
  * Called from docker/entrypoint.dev.sh after agent.env is written.
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -26,7 +26,23 @@ const PI_GLOBAL_SETTINGS = join(PI_GLOBAL_DIR, "settings.json");
 
 const RESOLVE_SCRIPT = join(WORKSPACE, "scripts", "runtime", "resolve-zen-free-models.mjs");
 
-// Step 1: Resolve the current free model
+// Step 0: Deployment-provided agent config wins over the zen fallback.
+// <workspace>/agent-config/{models.json,auth.json,settings.json} is the
+// normalized engine config (synced via the workspace tree, gitignored).
+// When present it is copied into the pi global dir verbatim and zen
+// resolution/writing is skipped entirely — zen free is only the
+// zero-config fallback, never an override.
+const EXT_CONFIG_DIR = join(WORKSPACE, "agent-config");
+const extModels = join(EXT_CONFIG_DIR, "models.json");
+if (existsSync(extModels)) {
+  mkdirSync(PI_GLOBAL_DIR, { recursive: true });
+  for (const f of ["models.json", "auth.json", "settings.json"]) {
+    const src = join(EXT_CONFIG_DIR, f);
+    if (existsSync(src)) copyFileSync(src, join(PI_GLOBAL_DIR, f));
+  }
+  console.log(`[pi-init] external agent config found (${EXT_CONFIG_DIR}) — zen fallback skipped`);
+} else {
+
 console.log("[pi-init] resolving OpenCode Zen free models...");
 let resolvedModel;
 try {
@@ -79,6 +95,7 @@ try {
 } catch (err) {
   console.warn("[pi-init] failed to write models.json:", err.message);
 }
+} // end zen-fallback branch (skipped when external agent config present)
 
 // Step 3: Create global pi trust config
 try {

@@ -96,97 +96,111 @@ func main() {
 	// resolution block runs. app.Start() → Execute() will re-parse harmlessly.
 	_ = app.RootCmd.ParseFlags(os.Args[1:])
 
-	// --- Pack resolution and hook staging (before JSVM registration) ---
-	// jsvm.MustRegister calls registerHooks() immediately, which reads HooksDir.
-	// We must resolve and stage hooks BEFORE that call so JSVM sees the files.
-	coreHooksDir := hooksDir
-	if coreHooksDir == "" {
-		coreHooksDir = "pb_hooks"
-		if _, err := os.Stat(coreHooksDir); err != nil {
-			coreHooksDir = "/pb_hooks"
+	// Utility subcommands (seed/superuser) skip pack resolution, hook and
+	// migration staging, and JSVM registration entirely: they must run on
+	// machines without /packs or pb_hooks (e.g. a host running `vanblog seed`).
+	// serve/migrate keep the full staging path.
+	utilityCmd := len(os.Args) > 1 && func() bool {
+		switch os.Args[1] {
+		case "seed", "superuser":
+			return true
 		}
-	}
-	builtins, err := pack.Builtins(os.DirFS(builtinPacksDir))
-	if err != nil {
-		slog.Error("load builtin packs", "err", err)
-		os.Exit(1)
-	}
-	var locals []pack.Pack
-	if packsDir != "" {
-		locals, err = pack.DiscoverLocal(packsDir)
+		return false
+	}()
+	loadablePacks := []pack.Pack{}
+	if !utilityCmd {
+		// --- Pack resolution and hook staging (before JSVM registration) ---
+		// jsvm.MustRegister calls registerHooks() immediately, which reads HooksDir.
+		// We must resolve and stage hooks BEFORE that call so JSVM sees the files.
+		coreHooksDir := hooksDir
+		if coreHooksDir == "" {
+			coreHooksDir = "pb_hooks"
+			if _, err := os.Stat(coreHooksDir); err != nil {
+				coreHooksDir = "/pb_hooks"
+			}
+		}
+		builtins, err := pack.Builtins(os.DirFS(builtinPacksDir))
 		if err != nil {
-			slog.Error("load local packs", "err", err)
+			slog.Error("load builtin packs", "err", err)
 			os.Exit(1)
 		}
-	}
-	// Single resolution pass with diagnostics: surfaces override warnings
-	// (e.g. local pack pinned to an older version than builtin) without
-	// running the whole validate + sort + semver compare twice.
-	resolved, overrideWarnings, err := pack.ResolveWithDiagnostics(builtins, locals)
-	if err != nil {
-		slog.Error("resolve packs", "err", err)
-		os.Exit(1)
-	}
-	for _, warning := range overrideWarnings {
-		slog.Warn("[vanblog] pack local override is older than builtin", "pack", warning.Pack, "local", warning.LocalVersion, "builtin", warning.BuiltinVersion)
-	}
-	if err := pack.ValidateV0(resolved); err != nil {
-		slog.Error("validate packs", "err", err)
-		os.Exit(1)
-	}
-	loadable, warnings, err := pack.RuntimeLoadableV0(resolved)
-	if err != nil {
-		slog.Error("runtime loadability check", "err", err)
-		os.Exit(1)
-	}
-	for _, warning := range warnings {
-		slog.Warn("[vanblog] pack skipped, run vanblog pack build with the dev image", "pack", warning.Pack, "reason", warning.Reason)
-	}
-	startupLines, err := pack.StartupSummary(resolved, loadable, warnings)
-	if err != nil {
-		slog.Error("pack startup summary", "err", err)
-		os.Exit(1)
-	}
-	for _, line := range startupLines {
-		slog.Info("[vanblog]", "line", line)
-	}
-	if packRuntimeDir != "" {
-		staging = filepath.Join(packRuntimeDir, "pb_hooks")
-	}
-	if err := pack.StageHooks(coreHooksDir, loadable, staging); err != nil {
-		slog.Error("stage hooks", "err", err)
-		os.Exit(1)
-	}
-
-	// Resolve and stage the user-defined JS migrations dir (if any) as "core",
-	// then stage every loadable Pack's migrations/*.js into the same flat dir.
-	// jsvm loads JS migrations from MigrationsDir at register time (below), so
-	// staging must complete first. A missing core dir is tolerated (Pack-only).
-	coreMigrationsDir := migrationsDir
-	if coreMigrationsDir == "" {
-		coreMigrationsDir = "pb_migrations"
-		if _, err := os.Stat(coreMigrationsDir); err != nil {
-			coreMigrationsDir = "/pb_migrations"
+		var locals []pack.Pack
+		if packsDir != "" {
+			locals, err = pack.DiscoverLocal(packsDir)
+			if err != nil {
+				slog.Error("load local packs", "err", err)
+				os.Exit(1)
+			}
 		}
-	}
-	stagingMigrations := filepath.Join(privateRuntimeDir, "pb_migrations")
-	if packRuntimeDir != "" {
-		stagingMigrations = filepath.Join(packRuntimeDir, "pb_migrations")
-	}
-	if err := pack.StageMigrations(coreMigrationsDir, loadable, stagingMigrations); err != nil {
-		slog.Error("stage migrations", "err", err)
-		os.Exit(1)
-	}
+		// Single resolution pass with diagnostics: surfaces override warnings
+		// (e.g. local pack pinned to an older version than builtin) without
+		// running the whole validate + sort + semver compare twice.
+		resolved, overrideWarnings, err := pack.ResolveWithDiagnostics(builtins, locals)
+		if err != nil {
+			slog.Error("resolve packs", "err", err)
+			os.Exit(1)
+		}
+		for _, warning := range overrideWarnings {
+			slog.Warn("[vanblog] pack local override is older than builtin", "pack", warning.Pack, "local", warning.LocalVersion, "builtin", warning.BuiltinVersion)
+		}
+		if err := pack.ValidateV0(resolved); err != nil {
+			slog.Error("validate packs", "err", err)
+			os.Exit(1)
+		}
+		loadable, warnings, err := pack.RuntimeLoadableV0(resolved)
+		if err != nil {
+			slog.Error("runtime loadability check", "err", err)
+			os.Exit(1)
+		}
+		for _, warning := range warnings {
+			slog.Warn("[vanblog] pack skipped, run vanblog pack build with the dev image", "pack", warning.Pack, "reason", warning.Reason)
+		}
+		startupLines, err := pack.StartupSummary(resolved, loadable, warnings)
+		if err != nil {
+			slog.Error("pack startup summary", "err", err)
+			os.Exit(1)
+		}
+		for _, line := range startupLines {
+			slog.Info("[vanblog]", "line", line)
+		}
+		if packRuntimeDir != "" {
+			staging = filepath.Join(packRuntimeDir, "pb_hooks")
+		}
+		if err := pack.StageHooks(coreHooksDir, loadable, staging); err != nil {
+			slog.Error("stage hooks", "err", err)
+			os.Exit(1)
+		}
 
-	jsvm.MustRegister(app, jsvm.Config{
-		MigrationsDir: stagingMigrations,
-		HooksDir:      staging,
-		HooksWatch:    hooksWatch,
-		HooksPoolSize: hooksPool,
-	})
+		// Resolve and stage the user-defined JS migrations dir (if any) as "core",
+		// then stage every loadable Pack's migrations/*.js into the same flat dir.
+		// jsvm loads JS migrations from MigrationsDir at register time (below), so
+		// staging must complete first. A missing core dir is tolerated (Pack-only).
+		coreMigrationsDir := migrationsDir
+		if coreMigrationsDir == "" {
+			coreMigrationsDir = "pb_migrations"
+			if _, err := os.Stat(coreMigrationsDir); err != nil {
+				coreMigrationsDir = "/pb_migrations"
+			}
+		}
+		stagingMigrations := filepath.Join(privateRuntimeDir, "pb_migrations")
+		if packRuntimeDir != "" {
+			stagingMigrations = filepath.Join(packRuntimeDir, "pb_migrations")
+		}
+		if err := pack.StageMigrations(coreMigrationsDir, loadable, stagingMigrations); err != nil {
+			slog.Error("stage migrations", "err", err)
+			os.Exit(1)
+		}
 
-	// Loadable packs captured for OnServe schema resolution.
-	loadablePacks := loadable
+		jsvm.MustRegister(app, jsvm.Config{
+			MigrationsDir: stagingMigrations,
+			HooksDir:      staging,
+			HooksWatch:    hooksWatch,
+			HooksPoolSize: hooksPool,
+		})
+
+		// Loadable packs captured for OnServe schema resolution.
+		loadablePacks = loadable
+	}
 
 	app.OnServe().BindFunc(func(event *core.ServeEvent) error {
 		// pprof endpoints for memory/goroutine profiling (dev/debug only).

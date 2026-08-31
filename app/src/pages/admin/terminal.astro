@@ -1,0 +1,196 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getAuthUser } from '@vanblog/sdk';
+
+const pb = Astro.locals.pb;
+const isAdmin = getAuthUser(pb)?.role === 'admin';
+// WS handshake cannot carry an Authorization header and custom routes do
+// not populate server-side auth from cookies — pass the token via query.
+const wsToken = isAdmin ? (pb.authStore?.token ?? '') : '';
+const isDev = process.env.VANBLOG_MODE === 'dev';
+---
+
+<AdminLayout title="AI 终端">
+  <div class="flex items-center justify-between mb-3">
+    <div>
+      <h1 class="text-xl font-bold">🖥️ AI 终端</h1>
+      <p class="text-sm text-[var(--text-muted)] mt-1">
+        平台 agent 的完整交互界面(pi 原生 TUI:流式、工具可见、逐条审批、会话续聊)。
+        与 <code>docker exec</code> 终端共享同一会话目录。
+      </p>
+    </div>
+    <a href="/admin" class="text-sm underline">← 返回</a>
+  </div>
+
+  {!isAdmin ? (
+    <p>仅管理员可访问。</p>
+  ) : !isDev ? (
+    <p>
+      AI 终端仅 dev 容器可用。如需 AI 迁移/主题开发等能力,请用相同数据卷临时启动
+      同版本 dev 容器(见 docs/guide/backup-upgrade.md)。
+    </p>
+  ) : (
+    <>
+      <div id="presets" class="flex gap-2 flex-wrap mb-2">
+        <button class="preset-btn text-xs border border-[var(--border)] rounded px-2 py-1 hover:bg-[var(--surface)]"
+          data-preset="theme">主题结构建议</button>
+        <button class="preset-btn text-xs border border-[var(--border)] rounded px-2 py-1 hover:bg-[var(--surface)]"
+          data-preset="pack">开发一个 Pack</button>
+        <button class="preset-btn text-xs border border-[var(--border)] rounded px-2 py-1 hover:bg-[var(--surface)]"
+          data-preset="upgrade">升级步骤</button>
+        <button class="preset-btn text-xs border border-[var(--border)] rounded px-2 py-1 hover:bg-[var(--surface)]"
+          data-preset="debug">排查问题</button>
+        <button class="preset-btn text-xs border border-[var(--border)] rounded px-2 py-1 hover:bg-[var(--surface)]"
+          data-preset="optimize">优化文章</button>
+        <button class="preset-btn text-xs border border-[var(--border)] rounded px-2 py-1 hover:bg-[var(--surface)]"
+          data-preset="perf">性能分析</button>
+      </div>
+      <div id="pending-bar" class="hidden mb-2 p-3 border border-[var(--border)] rounded bg-[var(--surface)]">
+        <div class="text-xs text-[var(--text-muted)] mb-1">
+          待发送预设:<strong id="pending-name"></strong>
+          <span class="ml-2">(来自其他页面的任务会出现在这里,确认后发送)</span>
+        </div>
+        <pre id="pending-text" class="text-xs whitespace-pre-wrap mb-2 max-h-24 overflow-auto"></pre>
+        <div class="flex gap-2">
+          <button id="pending-send" class="text-xs px-3 py-1 rounded bg-[var(--accent,#2563eb)] text-white">发送到终端</button>
+          <button id="pending-cancel" class="text-xs px-3 py-1 rounded border border-[var(--border)]">取消</button>
+        </div>
+      </div>
+      <div
+        id="terminal"
+        data-ws-token={wsToken}
+        class="border border-[var(--border)] rounded bg-[#1e1e2e] p-2"
+        style="height: calc(100vh - 260px); min-height: 440px"
+      >
+      </div>
+    </>
+  )}
+</AdminLayout>
+
+<script>
+  import { Terminal } from '@xterm/xterm';
+  import { FitAddon } from '@xterm/addon-fit';
+  import '@xterm/xterm/css/xterm.css';
+
+  // Preset tasks: profile 助手的收敛形态 —— 一段带上下文引导的任务描述,
+  // 直接送进 pi TUI(等效用户手输),不注入 system prompt。
+  const PRESETS: Record<string, { name: string; prompt: string }> = {
+    theme: {
+      name: '主题结构建议',
+      prompt:
+        '帮我看看当前站点的主题结构,并给出定制建议。阅读 docs/theme-concepts.md 和 docs/theme-implementer-guide.md 后回答。',
+    },
+    pack: {
+      name: '开发一个 Pack',
+      prompt: '帮我写一个简单的 VanBlog pack,实现一个前端注入脚本。参考 packs/bookmarks/ 的结构。',
+    },
+    upgrade: {
+      name: '升级步骤',
+      prompt:
+        '帮我检查当前 VanBlog 版本,并制定升级到最新版的步骤。阅读 docs/theme-host-design.md 了解主题加载机制后回答。',
+    },
+    debug: {
+      name: '排查问题',
+      prompt: '帮我排查当前博客的一个问题:请先列出你能访问的系统和日志,然后帮我定位。',
+    },
+    optimize: {
+      name: '优化文章',
+      prompt: '帮我优化这篇/这几篇文章:检查内容、语法和 SEO 标题,给出改进建议。',
+    },
+    perf: {
+      name: '性能分析',
+      prompt: '帮我分析当前站点的性能:检查是否有可优化的配置,并给出建议。阅读 docs/reference/deployment.md 后回答。',
+    },
+  };
+
+  const el = document.getElementById('terminal');
+  if (el) {
+    const term = new Terminal({
+      cursorBlink: true,
+      fontSize: 13,
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+      allowProposedApi: true,
+      scrollback: 5000,
+    });
+    const fit = new FitAddon();
+    term.loadAddon(fit);
+    term.open(el);
+    requestAnimationFrame(() => fit.fit());
+
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    const token = el.dataset.wsToken || '';
+    const ws = new WebSocket(`${proto}://${location.host}/api/vanblog/agent/terminal?token=${encodeURIComponent(token)}`);
+    ws.binaryType = 'arraybuffer';
+
+    const encoder = new TextEncoder();
+    let wsOpen = false;
+
+    ws.onopen = () => {
+      wsOpen = true;
+      sendResize();
+      term.focus();
+    };
+    ws.onclose = () => {
+      wsOpen = false;
+      term.write('\r\n\x1b[90m[连接已断开,刷新页面重开]\x1b[0m\r\n');
+    };
+    ws.onmessage = (ev) => {
+      if (typeof ev.data === 'string') {
+        try {
+          const msg = JSON.parse(ev.data);
+          if (msg.type === 'error') term.write(`\r\n\x1b[31m[terminal] ${msg.message}\x1b[0m\r\n`);
+        } catch { /* ignore */ }
+      } else {
+        term.write(new Uint8Array(ev.data));
+      }
+    };
+
+    function sendResize() {
+      ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+    }
+    term.onData((data) => {
+      if (wsOpen) ws.send(encoder.encode(data));
+    });
+
+    // 把一段任务描述作为用户输入送进 TUI(带确认,防误触发 LLM)。
+    function queuePrompt(name: string, prompt: string) {
+      const bar = document.getElementById('pending-bar')!;
+      document.getElementById('pending-name')!.textContent = name;
+      document.getElementById('pending-text')!.textContent = prompt;
+      bar.classList.remove('hidden');
+      const send = () => {
+        bar.classList.add('hidden');
+        const trySend = () => {
+          if (!wsOpen) { setTimeout(trySend, 200); return; }
+          ws.send(encoder.encode(prompt));
+          ws.send(encoder.encode('\r'));
+          term.focus();
+        };
+        trySend();
+      };
+      document.getElementById('pending-send')!.onclick = send;
+      document.getElementById('pending-cancel')!.onclick = () => bar.classList.add('hidden');
+    }
+
+    document.querySelectorAll<HTMLButtonElement>('.preset-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = PRESETS[btn.dataset.preset!];
+        if (p) queuePrompt(p.name, p.prompt);
+      });
+    });
+
+    // 需求方页面跳转:?prompt=<urlencoded>&name=<label>(如迁移页的「AI 迁移助手」)。
+    const qs = new URLSearchParams(location.search);
+    const urlPrompt = qs.get('prompt');
+    if (urlPrompt) queuePrompt(qs.get('name') || '外部任务', urlPrompt);
+
+    const onResize = () => {
+      fit.fit();
+      if (wsOpen) sendResize();
+    };
+    window.addEventListener('resize', onResize);
+    new ResizeObserver(onResize).observe(el);
+  }
+</script>

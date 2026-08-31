@@ -89,6 +89,16 @@ CADDY_PID=$!
 
 # 2. Wait for Caddy admin API to be reachable
 wait_for "http://127.0.0.1:2019/config/" "Caddy admin API" 30 || exit 1
+# Workspace root must be exported before PocketBase starts: the Go agent
+# layer reads it (piWorkDir) when spawning engines, and the entrypoint
+# scripts (init-pi-config / zen-proxy) resolve from it. /app — the live,
+# bind-mounted tree this dev container runs `make dev-go` from — wins over
+# the /workspace image snapshot (source-less fallback).
+if [ -f /app/vault/go.mod ]; then
+  export VANBLOG_WORKSPACE=/app
+else
+  export VANBLOG_WORKSPACE=/workspace
+fi
 
 # 3. Start PocketBase (--hooksWatch for hot reload of JSVM hooks)
 start_pocketbase() {
@@ -96,7 +106,8 @@ start_pocketbase() {
   # hooksPool: pre-warm enough goja Runtime instances to cover peak concurrency.
   # PB jsvm's pool overflows by creating one-off Runtimes when all slots are busy;
   # each Runtime is ~40-50MB and not returned to pool → heap leak under load.
-  # Default 15 is too low for high-traffic sites. 64 covers most burst scenarios.
+  # (workspace root was exported before start_pocketbase — see above.)
+
   HOOKS_POOL="${VANBLOG_HOOKS_POOL:-64}"
   PB_PACKS_FLAG=""
   if [ -n "$VANBLOG_PACKS_DIR" ]; then
@@ -136,17 +147,12 @@ echo "[vanblog] agent.env written to /etc/vanblog/agent.env (see AGENTS.md §环
 # 3.6. Initialize pi coding agent config — resolve live Zen free model + write trust.
 # Fail-open: if init-pi-config fails (network down), pi still starts with
 # the hardcoded fallback model from .pi/settings.json.
-# VANBLOG_WORKSPACE pins the workspace root for source-less container runs
-# (init-pi-config falls back to deriving the repo root from its own path).
+# Workspace root was exported before PB start (see §3 above).
+WS_SCRIPTS="$VANBLOG_WORKSPACE/scripts"
 echo "[vanblog] initializing pi agent config..."
-export VANBLOG_WORKSPACE=/workspace
-node /workspace/scripts/runtime/init-pi-config.mjs || echo "[vanblog] pi config init skipped (will use fallback)"
+node "$WS_SCRIPTS/runtime/init-pi-config.mjs" || echo "[vanblog] pi config init skipped (will use fallback)"
 
 # 3.7. Start the Zen auth-stripping proxy used by pi's OpenCode Zen provider.
-# The Go agent manager starts one native pi RPC process per persisted session.
-echo "[vanblog] starting pi model proxy..."
-node /workspace/scripts/runtime/pi-zen-proxy.mjs &
-PI_PROXY_PID=$!
 
 # 4. Start Theme Host (loads active theme's SSR handler, routes /admin to app)
 DEFAULT_THEME=$(cat /etc/vanblog/default-theme 2>/dev/null || echo "vanblog")
@@ -154,7 +160,7 @@ echo "[vanblog] starting theme host (default theme: ${DEFAULT_THEME})"
 VANBLOG_THEMES_DIR=/var/lib/vanblog/themes \
 VANBLOG_THEMES_BUILTIN_DIR=/build/themes \
 VANBLOG_DEFAULT_THEME=${DEFAULT_THEME} \
-VANBLOG_ADMIN_DIST_DIR=/build/app/dist \
+VANBLOG_ADMIN_DIST_DIR=${VANBLOG_ADMIN_DIST_DIR:-/build/app/dist} \
 PB_URL=http://127.0.0.1:8090 \
   node /workspace/app/src/theme-host/index.mjs &
 THEME_HOST_PID=$!
