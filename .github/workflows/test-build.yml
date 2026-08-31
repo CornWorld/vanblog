@@ -62,6 +62,12 @@ jobs:
       - name: Cache e2e (builds base theme, real HTTP on :4399)
         run: pnpm --filter vanblog-app test:e2e:cache
 
+      - name: ESLint (app, sdk, themes)
+        run: npx eslint app/src sdk/src themes/base/src themes/vanblog/src
+
+      - name: Astro check (app + both themes)
+        run: pnpm -r check
+
   # ── Docs quality gate: duplicate-content check (doc-standard §6) ──
   # 要求 S0=0、S1=0、单文件重复率 < 阈值。失败即拦截（doc-dup-check 退出码 1/2）。
   docs:
@@ -114,37 +120,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64
 
-  # ── Build migrate binaries ──
-  migrate:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [linux, darwin]
-        goarch: [amd64, arm64]
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version: stable
-          cache-dependency-path: vault/go.sum
-
-      - name: Build
-        working-directory: vault
-        env:
-          GOPROXY: direct
-          GONOSUMDB: "*"
-        run: |
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} CGO_ENABLED=0 \
-            go build -ldflags="-s -w" -o bin/migrate-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/migrate
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: migrate-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: vault/bin/migrate-*
-          retention-days: 7
-
   # ── Lint Go backend (go vet -all + golangci-lint gate) ──
   lint:
     runs-on: ubuntu-latest
@@ -163,6 +138,6 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.64.8
+          version: v2.13.2
           working-directory: vault
           args: run ./...

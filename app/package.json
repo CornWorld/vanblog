@@ -10,7 +10,8 @@
     "test:e2e:cache": "node --test test/cache-e2e.test.mjs",
     "test:packs": "node --test integrations/packs/resolver.test.mjs",
     "test:lifecycle": "node --test test/lifecycle.test.mjs",
-    "test:themes": "node --test integrations/themes/index.test.mjs"
+    "test:themes": "node --test integrations/themes/index.test.mjs",
+    "check": "astro check"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^7.2.0",
@@ -25,6 +26,8 @@
     "@jsquash/avif": "^2.1.1",
     "@tailwindcss/vite": "^4.3.2",
     "@vanblog/sdk": "workspace:*",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "astro": "^6.0.0",
     "bytemd": "^1.22.0",
     "emoji-picker-element": "^1.26.0",
