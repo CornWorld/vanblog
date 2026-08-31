@@ -1,10 +1,12 @@
 {
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
+    "types": ["astro/client"],
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "baseUrl": ".",
     "paths": {
       "@vanblog/base/*": ["../../app/src/*"]
     }
-  }
+  },
+  "include": [".astro/types.d.ts", "src/**/*", "astro.config.mjs"]
 }

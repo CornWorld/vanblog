@@ -1,4 +1,3 @@
-/// <reference path="../.astro/types.d.ts" />
 
 // Virtual module declarations for @vanblog/base imports.
 // The themes integration resolves these at build time via Vite aliases.
