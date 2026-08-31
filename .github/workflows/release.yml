@@ -14,36 +14,6 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # ── Build Go binaries (pocketbase + migrate) ──
-  go-binaries:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [linux, darwin]
-        goarch: [amd64, arm64]
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-go@v6
-        with:
-          go-version: stable
-          cache-dependency-path: vault/go.sum
-
-      - name: Build
-        working-directory: vault
-        env:
-          GOPROXY: direct
-          GONOSUMDB: "*"
-        run: |
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} CGO_ENABLED=0 \
-            go build -ldflags="-s -w" -o bin/migrate-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/migrate
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: migrate-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: vault/bin/migrate-*
-
   # ── Build & push Docker images ──
   docker:
     runs-on: ubuntu-latest
@@ -84,26 +54,18 @@ jobs:
 
   # ── Create GitHub Release with migrate binaries ──
   release:
-    needs: [go-binaries, docker]
+    needs: [docker]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v7
 
-      - name: Download all migrate binaries
-        uses: actions/download-artifact@v4
-        with:
-          path: release
-          pattern: migrate-*
-          merge-multiple: true
-
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
-          files: release/migrate-*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
