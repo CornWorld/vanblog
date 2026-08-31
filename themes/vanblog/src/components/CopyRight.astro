@@ -2,7 +2,7 @@
 import type { Site, Post } from '@vanblog/sdk';
 
 export interface Props {
-  site: Site | null;
+  site: Partial<Site> | null;
   post?: Post;
 }
 

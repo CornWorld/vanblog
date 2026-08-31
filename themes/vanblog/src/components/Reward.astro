@@ -2,7 +2,7 @@
 import type { Site } from '@vanblog/sdk';
 
 export interface Props {
-  site: Site | null;
+  site: Partial<Site> | null;
 }
 
 const { site } = Astro.props;

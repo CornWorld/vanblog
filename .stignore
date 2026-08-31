@@ -1,0 +1,14 @@
+node_modules
+.astro
+dist
+.git
+*.log
+.pnpm-store
+.tmp
+/vault/pb_data
+/vault/bin
+/vault/vanblog
+/bench/bin
+/bench/results
+/.snow/artifacts
+/.reasonix

@@ -65,3 +65,7 @@ docker/ocr-review/ocr-config.json
 .pi/*.session
 .pi/*.history
 ~/.pi/
+agent-config/
+
+# Syncthing metadata dir
+/.stfolder/

@@ -362,7 +362,6 @@ else
     scripts/test/evaluate-agent-pack.mjs \
     scripts/lib/common.sh \
     scripts/lib/js/common.mjs \
-    scripts/test/test-agent-rpc.sh \
     scripts/test/test-theme-switch.mjs \
     scripts/dev/dev-verify.sh \
     scripts/dev/dev-up.sh \
@@ -393,8 +392,6 @@ else
     test/test-pi-pack.sh \
     test/evaluate-agent-pack.mjs \
     lib/common.sh \
-    lib/js/common.mjs \
-    test/test-agent-rpc.sh \
     test/test-theme-switch.mjs \
     dev/dev-verify.sh \
     dev/dev-up.sh \

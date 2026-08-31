@@ -26,7 +26,7 @@ For environment, source `. /etc/vanblog/agent.env` for `PB_URL`, `ASTRO_URL`, `V
 When creating or editing a schema-shaped payload (`site`, `pack.json`, theme config, or SDK model data):
 
 1. Treat `sdk/src/models/` as the authority. Do not invent field names or enum values.
-2. Before sending a payload to PB, validate it through the authenticated agent validation endpoint when `PB_TOKEN` is available:
+2. Before sending a payload to PB, validate it through the authenticated agent validation endpoint (dev container only — prod does not register agent routes) when `PB_TOKEN` is available:
    ```bash
    curl -s "$PB_URL/api/vanblog/agent/validate" \
      -H "Authorization: $PB_TOKEN" \

@@ -20,7 +20,7 @@ const server = String(config?.server || '').replace(/\/+$/, '');
       <>
         <link href={`${server}/dist/Artalk.css`} rel="stylesheet" />
         <div id="artalk-container"></div>
-        <script src={`${server}/dist/Artalk.js`}></script>
+        <script is:inline src={`${server}/dist/Artalk.js`}></script>
         <script is:inline data-server={server} data-site={String(config?.site || 'VanBlog')}>
           (() => {
             const server = document.currentScript.dataset.server;

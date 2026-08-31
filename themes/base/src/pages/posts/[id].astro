@@ -24,7 +24,7 @@ function sanitizeHtml(html: string): string {
     .replace(/\s+srcdoc\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
 }
 
-let post: Post | null = null;
+let post: Post | null;
 let html = '';
 try {
   post = await pb.collection('posts').getOne<Post>(id);
