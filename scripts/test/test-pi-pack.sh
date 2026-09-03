@@ -31,7 +31,17 @@
 #   - Vanblog repo at $PROJECT_ROOT (auto-detected)
 # ============================================================================
 
-set -euo pipefail
+# Source shared helpers (colors, step/info/assert_*) from scripts/lib.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../lib/common.sh"
+
+# Locate repo root: caller may export PROJECT_ROOT, else derive from script path.
+if [ -z "${PROJECT_ROOT:-}" ]; then
+  PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+fi
+
+# Load local-dev secrets from a gitignored project .env (LANGFUSE_*, AGENT_API_KEY, etc.)
 
 # Load local-dev secrets from a gitignored project .env (LANGFUSE_*, AGENT_API_KEY, etc.)
 # before reading defaults. Real shell env / CLI overrides always win (set -a + source
@@ -87,11 +97,7 @@ read -r -d '' PI_PROMPT <<'EOF' || true
 Create a vanblog user pack called pow-guard in /workspace/user-packs/pow-guard/.
 (NOT /workspace/packs/ — that is the builtin dir, do not touch it.)
 
-First, understand the pack format:
-1. Run `tree /workspace/docs/` to see the documentation structure
-2. Read docs/reference/packs.md for the pack format specification
-3. Read /workspace/packs/online/ as a working example (pack.json, hooks/, frontend/)
-4. BEFORE writing any hooks/*.pb.js, grep docs/reference/pb-jsvm-types.d.ts for every PB global you plan to use (e.g. `grep -n "namespace $security" docs/reference/pb-jsvm-types.d.ts`, `grep -n "declare function routerAdd" …`) to confirm the API exists and its exact signature. Do not invent globals — the file is the authoritative contract for the exact PB version in this container.
+5. If /pb_data/agent-memory/ exists, read any *.md files there relevant to this task before writing code — they contain lessons from earlier sessions.
 
 Then create the pack with:
 - pack.json — frontend script injection (scope: public)
@@ -111,7 +117,9 @@ RUN_ID_OVERRIDE=""
 AGENT_TIMEOUT_OVERRIDE=""
 AGENT_MODEL_OVERRIDE=""
 AGENT_BASE_URL_OVERRIDE=""
-AGENT_API_KEY_OVERRIDE=""
+MEMORY_DIR_OVERRIDE=""
+HOST_MEMORY_DIR=""
+CONTAINER_MEMORY_DIR="/pb_data/agent-memory"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -122,10 +130,9 @@ while [[ $# -gt 0 ]]; do
     --dry-run)         DRY_RUN=true; shift ;;
     --run-id)          RUN_ID_OVERRIDE="$2"; shift 2 ;;
     --agent-timeout)   AGENT_TIMEOUT_OVERRIDE="$2"; shift 2 ;;
-    --model)           AGENT_MODEL_OVERRIDE="$2"; shift 2 ;;
-    --base-url)        AGENT_BASE_URL_OVERRIDE="$2"; shift 2 ;;
     --api-key)         AGENT_API_KEY_OVERRIDE="$2"; shift 2 ;;
-    --help|-h)         echo "Usage: $0 [--no-build] [--cleanup] [--keep-evidence|--debug] [--skip-eval] [--dry-run] [--run-id <id>] [--agent-timeout <sec>] [--model <id>] [--base-url <url>] [--api-key <key>]"; exit 0 ;;
+    --memory-dir)      MEMORY_DIR_OVERRIDE="$2"; shift 2 ;;
+    --help|-h)         echo "Usage: $0 [--no-build] [--cleanup] [--keep-evidence|--debug] [--skip-eval] [--dry-run] [--run-id <id>] [--agent-timeout <sec>] [--model <id>] [--base-url <url>] [--api-key <key>] [--memory-dir <dir>]"; exit 0 ;;
     *)                 echo "Unknown arg: $1"; exit 1 ;;
   esac
 done
@@ -134,7 +141,7 @@ done
 [[ -n "$AGENT_TIMEOUT_OVERRIDE" ]] && AGENT_TIMEOUT="$AGENT_TIMEOUT_OVERRIDE"
 [[ -n "$AGENT_MODEL_OVERRIDE" ]] && AGENT_MODEL="$AGENT_MODEL_OVERRIDE"
 [[ -n "$AGENT_BASE_URL_OVERRIDE" ]] && AGENT_BASE_URL="$AGENT_BASE_URL_OVERRIDE"
-[[ -n "$AGENT_API_KEY_OVERRIDE" ]] && AGENT_API_KEY="$AGENT_API_KEY_OVERRIDE"
+[[ -n "$MEMORY_DIR_OVERRIDE" ]] && HOST_MEMORY_DIR="$MEMORY_DIR_OVERRIDE"
 
 # Recompute the pi model selector AFTER overrides are applied. It was captured
 # from the default at line 52, so without this a --model override would leave
@@ -220,6 +227,7 @@ else
     -e VANBLOG_HTTP_ONLY=1 \
     -e VANBLOG_PACKS_DIR="$CONTAINER_USER_PACKS" \
     -v "$HOST_USER_PACKS:$CONTAINER_USER_PACKS" \
+    ${HOST_MEMORY_DIR:+-v "$HOST_MEMORY_DIR:$CONTAINER_MEMORY_DIR"} \
     "$IMAGE_TAG" \
     || assert_fail "Failed to start container"
   assert_ok "Container started: $CONTAINER_NAME (port $HTTP_PORT)"
@@ -600,6 +608,11 @@ meta = {
         'keepEvidence': '$KEEP_EVIDENCE' == 'true',
         'skipEval': '$SKIP_EVAL' == 'true',
         'dryRun': '$DRY_RUN' == 'true'
+    },
+    'memory': {
+        'enabled': '${HOST_MEMORY_DIR:+true}' == 'true',
+        'hostDir': '${HOST_MEMORY_DIR:-}',
+        'containerDir': '$CONTAINER_MEMORY_DIR'
     },
     'artifactDir': '$ARTIFACT_DIR',
     'transcriptPath': '$TRANSCRIPT_PATH',
