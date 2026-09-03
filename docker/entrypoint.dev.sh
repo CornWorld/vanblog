@@ -136,8 +136,8 @@ cat > /etc/vanblog/agent.env <<EOF
 # Source this file (\`. /etc/vanblog/agent.env\`) to get SDK-ready env vars.
 export PB_URL=http://127.0.0.1:8090
 export ASTRO_URL=http://127.0.0.1:4321
-export VANBLOG_MODE=dev
-export VANBLOG_EMAIL=$AGENT_EMAIL
+export VANBLOG_DATA_DIR=${VANBLOG_DATA_DIR:-/pb_data}
+# Admin password: NOT stored here. Run first-run setup if VANBLOG_EMAIL is empty
 # Admin password: NOT stored here. Run first-run setup if VANBLOG_EMAIL is empty
 # (check via: curl -s http://127.0.0.1:8090/api/vanblog/setup/status).
 EOF

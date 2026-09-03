@@ -8,7 +8,7 @@
 | [sdk-design.md](../sdk-design.md)                                       | SDK 用户  | SDK 架构与公开 API 设计                      |
 | [architecture-layering.md](../architecture-layering.md)                 | 维护者    | 整体分层原则                                 |
 | [pocketbase-extension-contract.md](../pocketbase-extension-contract.md) | 维护者    | PocketBase 扩展边界                          |
-| [pack-theme-schema-design.md](../pack-theme-schema-design.md)           | Pack 作者 | Pack/主题 schema 设计                        |
+| [agent-memory.md](agent-memory.md)                                      | 维护者    | agent 跨会话记忆机制 + 消融实验结论         |
 
 ## 贡献
 

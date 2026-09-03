@@ -38,13 +38,55 @@ When creating or editing a schema-shaped payload (`site`, `pack.json`, theme con
 
 Do not run this check for ordinary Markdown, CSS, or source-code edits unless the change contains a schema-shaped JSON object.
 
-## Environment Setup
+## Cross-Session Memory
 
-Source the agent env file before any operation:
+Sessions start from zero — pi has no cross-session knowledge. Vanblog keeps
+agent memory as **plain Markdown files** under `<pb_data>/agent-memory/`
+(`$VANBLOG_DATA_DIR` from agent.env, default `/pb_data`), persisted with the
+data volume. **Read before acting, append after finishing.**
+
+### Read (session start)
+
+Before starting any task, read the memory files relevant to the task domain:
 
 ```bash
 . /etc/vanblog/agent.env
+MEM_DIR="${VANBLOG_DATA_DIR:-/pb_data}/agent-memory"
+ls "$MEM_DIR" 2>/dev/null && cat "$MEM_DIR"/*.md 2>/dev/null
 ```
+
+Apply active entries as prior context — they are decisions/lessons from
+earlier sessions, not speculative advice. Ignore `status: superseded` entries.
+
+### Append (after task completion)
+
+Record decisions, lessons, and preferences that will matter in future
+sessions. One entry per file per domain, newest first:
+
+```markdown
+## 2026-09-03 — 主题 override 检查
+- status: active
+- domain: theme
+- 升级后必须逐个 diff themes/*/src/base-overrides/<rel> vs app/src/<rel>,
+  按 L0/L1/L2 判断影响;L0 永远稳定、L1 可加不可减、L2 无保证
+```
+
+Rules:
+
+- **Write only durable knowledge**: decisions, lessons, user preferences,
+  gotchas. Never transient facts (a port that changed this run, a temp fix).
+- **Domain files**: `theme.md`, `migration.md`, `pack.md`, `upgrade.md`,
+  `general.md` — one file per task domain, so future sessions read only what
+  they need. Create a file when a domain first appears.
+- **Status lifecycle**: new entries are `active`. When a later entry
+  supersedes an earlier one, mark the earlier `status: superseded` — do not
+  delete it (history matters, and superseded entries are ignored on read).
+- **Prefer docs over memory**: if a fact belongs in `docs/` (authoritative,
+  versioned), write it there instead — memory is for experience, docs are for
+  reference. Cross-reference the docs path in the entry when relevant.
+- **Never store secrets** in memory files (API keys, passwords, tokens).
+
+## Theme Development Workflow
 
 ## Theme Development Workflow
 
