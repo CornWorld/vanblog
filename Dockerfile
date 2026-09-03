@@ -47,17 +47,20 @@ FROM golang:alpine AS go-build
 ARG GOPROXY
 ENV GOPROXY=${GOPROXY}
 
-# Install git for cloning caddyadmin (replace directive target).
-RUN apk add --no-cache git
+# Install tools for fetching caddyadmin (replace directive target).
+RUN apk add --no-cache curl tar
 
 WORKDIR /build
 
-# vault/go.mod has `replace github.com/CornWorld/caddyadmin => ../../caddyadmin`.
-# In Docker the build workspace is /build, so the replace target resolves to
-# /caddyadmin. Clone it there before go mod download runs.
+# /caddyadmin. Fetch it there before go mod download runs. Use codeload's
+# tarball endpoint: git clone over https is frequently blocked on restricted
+# networks, while codeload (the download endpoint) stays reachable.
 ARG CADDYADMIN_VERSION=v0.3.0
-RUN git clone --depth=1 --branch ${CADDYADMIN_VERSION} https://github.com/CornWorld/caddyadmin.git /caddyadmin
-
+RUN curl -fsSL -o /tmp/caddyadmin.tar.gz \
+      "https://codeload.github.com/CornWorld/caddyadmin/tar.gz/refs/tags/${CADDYADMIN_VERSION}" \
+    && mkdir -p /caddyadmin \
+    && tar xzf /tmp/caddyadmin.tar.gz -C /caddyadmin --strip-components=1 \
+    && rm /tmp/caddyadmin.tar.gz
 COPY vault/go.mod vault/go.sum ./
 RUN go mod download
 COPY vault/ ./
