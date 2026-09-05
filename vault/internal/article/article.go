@@ -140,6 +140,9 @@ type SearchResult struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
 	Path  string `json:"path"`
+	// CreatedAt (YYYY-MM-DD) feeds the theme's search-result list date column
+	// (vendor ArticleList renders dayjs(createdAt)).
+	CreatedAt string `json:"createdAt"`
 }
 
 // GetTimeline returns published articles grouped by year → month.
@@ -233,9 +236,10 @@ func (m *Manager) Search(query string, limit int) ([]SearchResult, error) {
 	results := make([]SearchResult, 0, len(records))
 	for _, r := range records {
 		results = append(results, SearchResult{
-			ID:    r.Id,
-			Title: r.GetString("title"),
-			Path:  r.GetString("pathname"),
+			ID:        r.Id,
+			Title:     r.GetString("title"),
+			Path:      r.GetString("pathname"),
+			CreatedAt: r.GetDateTime("created").Time().Format("2006-01-02"),
 		})
 	}
 	return results, nil
