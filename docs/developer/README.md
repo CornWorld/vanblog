@@ -7,6 +7,7 @@
 | [theme-implementer-guide.md](../theme-implementer-guide.md)             | 主题作者  | L0/L1/L2 契约、组件覆盖、必备文件（950+ 行） |
 | [sdk-design.md](../sdk-design.md)                                       | SDK 用户  | SDK 架构与公开 API 设计                      |
 | [architecture-layering.md](../architecture-layering.md)                 | 维护者    | 整体分层原则                                 |
+| [vendor-islands-design.md](vendor-islands-design.md)                    | 主题作者 / 维护者 | 内置主题对齐上游原版的 vendor-as-islands 决策、seam 契约、上游同步协议 |
 | [pocketbase-extension-contract.md](../pocketbase-extension-contract.md) | 维护者    | PocketBase 扩展边界                          |
 | [agent-memory.md](agent-memory.md)                                      | 维护者    | agent 跨会话记忆机制 + 消融实验结论         |
 
