@@ -6,6 +6,7 @@
  * 上游 fix → 对本文件 apply patch。
  */
 import dayjs from "dayjs";
+import { withBase } from "../lib/base"; // SEAM: 站内链接带主题 base 前缀
 import type { SearchHit } from "./seams/search";
 
 export default function ArticleList(props: {
@@ -18,7 +19,7 @@ export default function ArticleList(props: {
     <div className="space-y-2" onClick={props.onClick}>
       {props.articles.map((article) => (
         <a
-          href={`/posts/${article.id}`}
+          href={withBase(`/posts/${article.id}`)}
           key={article.id}
           target={props.openArticleLinksInNewWindow ? "_blank" : "_self"}
           rel={props.openArticleLinksInNewWindow ? "noreferrer" : undefined}

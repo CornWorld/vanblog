@@ -1,0 +1,56 @@
+---
+// 分页页（原版 pages/page/[p].tsx）：与首页同构，仅页码不同。
+// URL 形态对齐原版 SSG 路由 /page/2…（PageNav 生成的链接）。
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import HomeArticleList from '../../components/HomeArticleList.astro';
+import AuthorCard from '../../components/AuthorCard.astro';
+import PageNav from '../../components/PageNav.astro';
+import { getAuthorCardProps } from '../../lib/viewModel';
+import { loadHomeFeed } from '../../lib/home';
+
+const pb = Astro.locals.pb;
+
+// 原版 getStaticPaths 生成 1..total；这里运行时校验。
+// 非法页码或空列表 → 404（原版 articles 空 → Custom404）。
+const n = Number(Astro.params.p);
+if (!Number.isInteger(n) || n < 1) {
+  return Astro.rewrite('/404');
+}
+const page = n;
+
+const site = await Astro.locals.getSite();
+// 串行：同一 pb client 并发请求会触发 SDK auto-cancel。
+const feed = await loadHomeFeed(pb, page);
+const authorCard = await getAuthorCardProps(pb, site);
+const { loadError, posts, totalPages, overviews, keywords } = feed;
+
+if (!loadError && posts.length === 0) {
+  return Astro.rewrite('/404');
+}
+
+const displayOptions = site?.displayOptions;
+---
+
+<BaseLayout path="/" sideBar keywords={keywords}>
+  <HomeArticleList
+    loadError={loadError}
+    posts={posts}
+    overviews={overviews}
+    showExpirationReminder={displayOptions?.showExpirationReminder !== false}
+    openInNewWindow={!!displayOptions?.openArticleLinksInNewWindow}
+  />
+
+  {!loadError && totalPages > 1 && (
+    <PageNav page={page} totalPages={totalPages} />
+  )}
+
+  <Fragment slot="sideBar">
+    <AuthorCard {...authorCard} />
+  </Fragment>
+</BaseLayout>
+
+<script>
+  import '../../lib/homeMermaid';
+</script>

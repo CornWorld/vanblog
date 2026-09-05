@@ -8,6 +8,7 @@ import { useCallback } from "react";
 // react-burger-menu 为 CJS 包,Vite SSR 下命名导入不可用,经默认导出解构
 const Menu = rbm.slide;
 import type { MenuItem } from "./NavBar";
+import { withBase } from "../lib/base"; // SEAM: 菜单内部链接带主题 base 前缀
 
 export default function NavBarMobile(props: {
   isOpen: boolean;
@@ -26,7 +27,7 @@ export default function NavBarMobile(props: {
           <a
             className={`w-full inline-block  ${isSub ? "px-6" : "px-4"}`}
             target="_blank"
-            href={item.value}
+            href={withBase(item.value)}
           >
             {item.name}
           </a>
@@ -38,7 +39,7 @@ export default function NavBarMobile(props: {
           className="side-bar-item dark:border-dark-2 dark:hover:bg-dark-2"
           key={item.id}
         >
-          <a href={item.value}>
+          <a href={withBase(item.value)}>
             <div className={`w-full inline-block  ${isSub ? "px-8" : "px-4"}`}>
               {item.name}
             </div>

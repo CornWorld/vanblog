@@ -1,6 +1,7 @@
 ---
 // 文章列表行（原版 ArticleList）：日期 + 标题的虚线行，供标签/分类/归档等复用。
 import { parseDate } from '@vanblog/sdk';
+import { withBase } from '../lib/base';
 
 export interface Props {
   items: { id?: string; title: string; created?: string }[];
@@ -24,7 +25,7 @@ function fmt(raw: string | undefined, withYear: boolean): string {
   <div class="space-y-0">
     {items.map((item) =>
       item.id ? (
-        <a href={`/posts/${encodeURIComponent(item.id)}`} class="no-underline group block"
+        <a href={withBase(`/posts/${encodeURIComponent(item.id)}`)} class="no-underline group block"
            target={openInNewWindow ? '_blank' : undefined}
            rel={openInNewWindow ? 'noopener noreferrer' : undefined}>
           <div class="flex items-center border-b border-dashed border-[var(--border)] py-1 group-hover:border-[var(--text-muted)] cursor-pointer transition-colors">

@@ -32,6 +32,7 @@ import { TocCard, default as MarkdownTocBarIsland } from '../../vendor/MarkdownT
 import ViewerIsland from '../../vendor/Viewer';
 import ImageZoom from '../../vendor/ImageZoom';
 import PostLock from '../../vendor/PostLock';
+import { withBase } from '../../lib/base';
 
 const pb = Astro.locals.pb;
 const site = await Astro.locals.getSite();
@@ -241,7 +242,7 @@ if (data?.category) {
         provider={site?.commentsProvider || 'disabled'}
         config={site?.commentsConfig || null}
       />
-      <p><a href="/">← 返回首页</a></p>
+      <p><a href={withBase('/')}>← 返回首页</a></p>
     </Fragment>
   ) : locked && data ? (
     <PostLock client:load id={id} />

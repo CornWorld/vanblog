@@ -5,6 +5,7 @@
 // Props come from the shared view model (src/lib/viewModel.ts → getAuthorCardProps),
 // mirroring the original AuthorCardProps contract.
 import SocialLinks from './SocialLinks.astro';
+import { withBase } from '../lib/base';
 import type { SocialItem } from '@vanblog/sdk';
 
 export interface Props {
@@ -61,15 +62,15 @@ const {
       <div class="mt-2 font-semibold text-[var(--text)] mb-2">{author}</div>
       {desc && <div class="text-sm text-[var(--text-muted)] mb-2">{desc}</div>}
       <div class="flex">
-        <a href="/timeline" class="group flex flex-col justify-center items-center text-sm px-1 no-underline">
+        <a href={withBase('/timeline')} class="group flex flex-col justify-center items-center text-sm px-1 no-underline">
           <div class="font-bold text-[var(--text)] group-hover:text-[var(--accent)]">{postNum}</div>
           <div class="text-[var(--text-muted)] group-hover:text-[var(--accent)]">日志</div>
         </a>
-        <a href="/categories" class="group flex flex-col justify-center items-center text-sm px-1 no-underline">
+        <a href={withBase('/categories')} class="group flex flex-col justify-center items-center text-sm px-1 no-underline">
           <div class="font-bold text-[var(--text)] group-hover:text-[var(--accent)]">{categoryNum}</div>
           <div class="text-[var(--text-muted)] group-hover:text-[var(--accent)]">分类</div>
         </a>
-        <a href="/tags" class="group flex flex-col justify-center items-center text-sm px-1 no-underline">
+        <a href={withBase('/tags')} class="group flex flex-col justify-center items-center text-sm px-1 no-underline">
           <div class="font-bold text-[var(--text)] group-hover:text-[var(--accent)]">{tagNum}</div>
           <div class="text-[var(--text-muted)] group-hover:text-[var(--accent)]">标签</div>
         </a>

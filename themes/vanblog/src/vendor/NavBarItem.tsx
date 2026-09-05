@@ -6,6 +6,7 @@
 import { useMemo, useState } from "react";
 import type { MouseEventHandler } from "react";
 import type { MenuItem } from "./NavBar";
+import { withBase } from "../lib/base"; // SEAM: 菜单内部链接带主题 base 前缀
 
 function LinkItemAtom(props: {
   item: MenuItem;
@@ -28,7 +29,7 @@ function LinkItemAtom(props: {
       >
         <a
           className={props.clsA ? props.clsA : clsA}
-          href={item.value}
+          href={withBase(item.value)}
           target="_blank"
         >
           {item.name}
@@ -44,7 +45,7 @@ function LinkItemAtom(props: {
         key={item.id}
         className={props.cls ? props.cls : cls}
       >
-        <a href={item.value} style={{ height: "100%" }}>
+        <a href={withBase(item.value)} style={{ height: "100%" }}>
           <div className={props.clsA ? props.clsA : clsA}>{item.name}</div>
         </a>
       </li>

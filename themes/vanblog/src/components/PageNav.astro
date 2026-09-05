@@ -1,16 +1,20 @@
 ---
 import { calPageItems } from '../lib/pagination';
 import type { PageItem } from '../lib/pagination';
+import { withBase } from '../lib/base';
 
 export interface Props {
   page: number;
   totalPages: number;
-  baseUrl: string;
+  /** 第 1 页地址（默认首页 "/"） */
+  base?: string;
+  /** 翻页前缀（默认 "/page"，对齐原版 URL 形态） */
+  more?: string;
   class?: string;
 }
 
-const { page, totalPages, baseUrl, class: className } = Astro.props;
-const items = calPageItems({ current: page, totalPages, baseUrl });
+const { page, totalPages, base = '/', more = '/page', class: className } = Astro.props;
+const items = calPageItems({ current: page, totalPages, base, more }).map((it) => ({ ...it, href: withBase(it.href) }));
 
 const baseCls =
   'inline-flex justify-center items-center h-7 w-7 rounded text-sm transition-all no-underline select-none';

@@ -18,6 +18,7 @@ import ErrorState from '../../components/ErrorState.astro';
 import { safe } from '@vanblog/sdk';
 import type { Tag } from '@vanblog/sdk';
 import { getAuthorCardProps } from '../../lib/viewModel';
+import { withBase } from '../../lib/base';
 
 const pb = Astro.locals.pb;
 const { id } = Astro.params;
@@ -55,7 +56,7 @@ const years = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
 ---
 
 <BaseLayout title={`#${tag.name}`} path={`/tags/${id}`} sideBar>
-  <a href="/tags" class="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] mb-4 inline-block">
+  <a href={withBase('/tags')} class="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] mb-4 inline-block">
     ← 所有标签
   </a>
 

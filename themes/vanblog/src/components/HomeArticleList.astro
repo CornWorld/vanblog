@@ -1,0 +1,35 @@
+---
+// 首页 / 分页页共享列表块（原版 index.tsx / page/[p].tsx 的 articles 区）。
+import ArticleCard from './ArticleCard.astro';
+import ErrorState from './ErrorState.astro';
+import type { PostExpand } from '@vanblog/sdk';
+
+export interface Props {
+  loadError: boolean;
+  posts: PostExpand[];
+  overviews: string[];
+  showExpirationReminder: boolean;
+  openInNewWindow: boolean;
+}
+
+const { loadError, posts, overviews, showExpirationReminder, openInNewWindow } = Astro.props;
+---
+
+{
+  loadError ? (
+    <ErrorState />
+  ) : posts.length === 0 ? (
+    <p class="py-12 text-center text-[var(--text-muted)]">暂无文章。</p>
+  ) : (
+    <div class="space-y-2 md:space-y-4">
+      {posts.map((post, i) => (
+        <ArticleCard
+          post={post}
+          overviewHtml={overviews[i] || undefined}
+          showExpirationReminder={showExpirationReminder}
+          openInNewWindow={openInNewWindow}
+        />
+      ))}
+    </div>
+  )
+}

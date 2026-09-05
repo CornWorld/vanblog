@@ -12,85 +12,39 @@ L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-th
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
-import ArticleCard from '../components/ArticleCard.astro';
+import HomeArticleList from '../components/HomeArticleList.astro';
 import AuthorCard from '../components/AuthorCard.astro';
 import PageNav from '../components/PageNav.astro';
-import ErrorState from '../components/ErrorState.astro';
-import { safe, getPage, stripMarkdown } from '@vanblog/sdk';
+import { getPage } from '@vanblog/sdk';
 import { getAuthorCardProps } from '../lib/viewModel';
-import { sanitizeHtml } from '../lib/sanitizeHtml';
-import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
+import { loadHomeFeed } from '../lib/home';
 
 const pb = Astro.locals.pb;
 
 // 每页 5 篇，与原版 getIndexPageProps 的 pageSize: 5 一致。
-const perPage = 5;
 const page = getPage(Astro.url.searchParams);
 
-const { data: result, error: loadError } = await safe(
-  () => pb.vanblog.posts.listPublished(page, perPage, { expand: 'category,tags' }),
-  'index'
-);
-const posts = result?.items ?? [];
-const totalPages = result?.totalPages ?? 1;
-
-// AuthorCard 侧栏 view model（原版 getPageProps → getAuthorCardProps）。
 const site = await Astro.locals.getSite();
+// 串行：同一 pb client 并发请求会触发 SDK auto-cancel。
+const feed = await loadHomeFeed(pb, page);
 const authorCard = await getAuthorCardProps(pb, site);
+const { loadError, posts, totalPages, overviews, keywords } = feed;
 
 // displayOptions（showExpirationReminder / openArticleLinksInNewWindow）
 const displayOptions = site?.displayOptions;
-
-// keywords = 文章 tag + 分类名 去重（原版 getArticlesKeyWord 语义）。
-const keywords = Array.from(
-  new Set(
-    posts.flatMap((p) =>
-      [p.expand?.category?.name, ...(p.expand?.tags ?? []).map((t) => t.name)].filter(Boolean),
-    ) as string[],
-  ),
-).join(',');
-
-// 首页概览：渲染真实 Markdown（原版 PostCard type="overview"，截到 <!-- more -->）。
-const overviews = await Promise.all(
-  posts.map(async (post) => {
-    const md = post.content || '';
-    const parts = md.split('<!-- more -->');
-    // 无 more 标记时先 strip 成纯文本再截断(#410:原始 markdown 截断会切碎链接)
-    const overviewMd = parts.length > 1 ? parts[0] : stripMarkdown(md, 50);
-    if (!overviewMd.trim()) return '';
-    try {
-      const { code } = await renderMarkdown(overviewMd);
-      return sanitizeHtml(code);
-    } catch (e) {
-      console.error('[index] overview render:', e);
-      return '';
-    }
-  })
-);
 ---
 
 <BaseLayout path="/" sideBar keywords={keywords}>
-  {
-    loadError ? (
-      <ErrorState />
-    ) : posts.length === 0 ? (
-      <p class="py-12 text-center text-[var(--text-muted)]">暂无文章。</p>
-    ) : (
-      <div class="space-y-2 md:space-y-4">
-        {posts.map((post, i) => (
-          <ArticleCard
-            post={post}
-            overviewHtml={overviews[i] || undefined}
-            showExpirationReminder={displayOptions?.showExpirationReminder !== false}
-            openInNewWindow={!!displayOptions?.openArticleLinksInNewWindow}
-          />
-        ))}
-      </div>
-    )
-  }
+  <HomeArticleList
+    loadError={loadError}
+    posts={posts}
+    overviews={overviews}
+    showExpirationReminder={displayOptions?.showExpirationReminder !== false}
+    openInNewWindow={!!displayOptions?.openArticleLinksInNewWindow}
+  />
 
   {!loadError && totalPages > 1 && (
-    <PageNav page={page} totalPages={totalPages} baseUrl="/" />
+    <PageNav page={page} totalPages={totalPages} />
   )}
 
   <Fragment slot="sideBar">
@@ -99,21 +53,6 @@ const overviews = await Promise.all(
 </BaseLayout>
 
 <script>
-  // 首页概览也渲染 mermaid(对齐原版 bytemd Viewer 概览行为;导出工具栏仅文章页)
-  import mermaid from 'mermaid';
-
-  mermaid.initialize({
-    startOnLoad: false,
-    theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
-  });
-  const codes = document.querySelectorAll('.post-viewer code.language-mermaid');
-  if (codes.length > 0) {
-    codes.forEach((code) => {
-      const wrapper = document.createElement('pre');
-      wrapper.className = 'mermaid';
-      wrapper.textContent = code.textContent;
-      code.parentElement?.replaceWith(wrapper);
-    });
-    await mermaid.run();
-  }
+  // 首页概览也渲染 mermaid（对齐原版 bytemd Viewer 概览行为）
+  import '../lib/homeMermaid';
 </script>

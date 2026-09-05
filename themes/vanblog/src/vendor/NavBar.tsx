@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import SearchCard from "./SearchCard";
 import ThemeButton from "./ThemeButton";
+import { withBase } from "../lib/base"; // SEAM: 站内链接带主题 base 前缀
 import KeyCard from "./KeyCard";
 import AdminButton from "./AdminButton";
 import { useRealTheme } from "./seams/theme";
@@ -126,7 +127,7 @@ export default function NavBar(props: {
             )}
           </div>
           {props.headerLeftContent == "siteName" && (
-            <a href="/">
+            <a href={withBase("/")}>
               <div className="text-gray-800 cursor-pointer select-none text-lg dark:text-dark lg:text-xl font-medium  mr-4 hidden md:block">
                 {props.siteName}
               </div>
@@ -138,7 +139,7 @@ export default function NavBar(props: {
               style={{ transform: "translateX(30px)" }}
               className="cursor-pointer md:hidden  flex-grow text-center  flex items-center justify-center select-none dark:text-dark"
             >
-              <a href="/">
+              <a href={withBase("/")}>
                 <div>{props.siteName}</div>
               </a>
             </div>
@@ -201,7 +202,7 @@ export default function NavBar(props: {
                     key={catelog.id}
                     className="flex items-center h-full md:px-2 hover:text-gray-900 dark:hover:text-dark-hover transform hover:scale-110 cursor-pointer transition-all"
                   >
-                    <a href={`/categories/${catelog.id}`}>
+                    <a href={withBase(`/categories/${catelog.id}`)}>
                       <div>{catelog.name}</div>
                     </a>
                   </li>

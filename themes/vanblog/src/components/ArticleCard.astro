@@ -1,8 +1,10 @@
 ---
 import { stripMarkdown } from '@vanblog/sdk';
 import { fmtDate } from '../lib/dates';
+import { withBase } from '../lib/base';
 import type { PostExpand } from '@vanblog/sdk';
 import ExpirationNotice from './ExpirationNotice.astro';
+import TopPin from './TopPin.astro';
 
 export interface Props {
   post: PostExpand;
@@ -22,17 +24,15 @@ const { post, showExcerpt = true, overviewHtml, showExpirationReminder = true, o
 const isPinned = (post.top ?? 0) > 0;
 // Plain-text excerpt fallback when no pre-rendered overview is supplied.
 const excerpt = stripMarkdown(post.content, 200);
-const postUrl = `/posts/${encodeURIComponent(post.id ?? '')}`;
+const postUrl = withBase(`/posts/${encodeURIComponent(post.id ?? '')}`);
 const category = post.expand?.category;
 // 原版 SubTitle 的图标尺寸与颜色（用语义 token 自动跟随暗色）
 const iconClass = 'mr-1 text-[var(--text-muted)]';
 ---
 
 <article class="card-post relative">
-  <!-- 📌 置顶图标 -->
-  {isPinned && (
-    <span class="absolute top-2 left-2 text-lg" title="置顶">📌</span>
-  )}
+  <!-- 置顶角标（原版 TopPinIcon：旋转色块 + 铅笔 SVG） -->
+  {isPinned && <TopPin />}
 
   <!-- 过期提醒横幅（原版 AlertCard，创建超 30 天触发） -->
   <ExpirationNotice created={post.created} updated={post.updated} show={showExpirationReminder !== false} />
@@ -69,7 +69,7 @@ const iconClass = 'mr-1 text-[var(--text-muted)]';
     {/* 分类 + 文件夹图标（非 about 类型） */}
     {category && (
       <a
-        href={`/categories/${post.category}`}
+        href={withBase(`/categories/${post.category}`)}
         class="inline-flex px-2 items-center group cursor-pointer hover:text-[var(--text)]"
         target={openInNewWindow ? '_blank' : undefined}
         rel={openInNewWindow ? 'noopener noreferrer' : undefined}

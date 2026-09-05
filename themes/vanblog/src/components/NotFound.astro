@@ -5,9 +5,11 @@ interface Props {
 }
 
 const { name = '页面' } = Astro.props;
+
+import { withBase } from '../lib/base';
 ---
 <div class="card-post py-20 text-center">
   <div class="text-6xl font-bold text-[var(--text-muted)] mb-4">404</div>
   <p class="text-lg text-[var(--text-muted)] mb-8">此{name}不存在。</p>
-  <a href="/" class="ua ua-link text-base text-[var(--text-muted)] hover:text-[var(--text)]">返回主页</a>
+  <a href={withBase('/')} class="ua ua-link text-base text-[var(--text-muted)] hover:text-[var(--text)]">返回主页</a>
 </div>
