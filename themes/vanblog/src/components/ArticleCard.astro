@@ -105,22 +105,10 @@ const iconClass = 'mr-1 text-[var(--text-muted)]';
   </div>
 
   {/* ── 正文（原版 text-sm md:text-base mt-4 mx-2 容器） ── */}
-  {post.private ? (
+  {/* 带密码的文章(private 或 password)概览不渲染正文(上游 PostCard 语义) */}
+  {(post.private || post.password) ? (
     <div class="text-sm md:text-base text-[var(--text-muted)] mt-4 mx-2">
-      <div class="my-4 p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
-        <p class="text-sm text-[var(--text-muted)] mb-2">🔒 此文章需要密码才能访问</p>
-        <form class="flex gap-2" method="post" action={postUrl}>
-          <!-- TODO: Add CSRF token for added security against cross-site form submission -->
-          <input
-            type="password"
-            name="password"
-            placeholder="输入文章密码..."
-            class="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg"
-            required
-          />
-          <button type="submit" class="btn-primary text-sm">解锁</button>
-        </form>
-      </div>
+      <p class="my-4">该文章已加密，点击 <code>阅读全文</code> 并输入密码后方可查看。</p>
     </div>
   ) : (
     <div class="text-sm md:text-base text-[var(--text)] mt-4 mx-2">

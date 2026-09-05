@@ -1,0 +1,20 @@
+/* UPSTREAM: packages/website/styles/back-to-top.module.css@4b488500be8100b19772ec00d8315f343a6ac21e
+ * SEAM: 背景色映射语义 var(--surface)(html.dark 自动翻转);其余原样。
+ * 上游 fix → 对本文件 apply patch。
+ */
+.backToTop {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  right: 1rem;
+  bottom: 2rem;
+  width: 42px;
+  height: 42px;
+  background-color: var(--surface); /* upstream literal: #fff */
+  font-size: 40px;
+  z-index: 90;
+  cursor: pointer;
+  text-align: center;
+  box-shadow: 2px 2px 10px 0 rgba(0, 0, 0, 0.15);
+}

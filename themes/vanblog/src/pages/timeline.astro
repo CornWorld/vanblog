@@ -14,6 +14,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import AuthorCard from '../components/AuthorCard.astro';
 import ErrorState from '../components/ErrorState.astro';
 import { safe } from '@vanblog/sdk';
+import TimeLineItem from '../components/TimeLineItem.astro';
 import { getAuthorCardProps } from '../lib/viewModel';
 const pb = Astro.locals.pb;
 
@@ -45,31 +46,13 @@ const subtitle = `${authorCard.categoryNum} 分类 × ${authorCard.postNum} 文�
       <div class="text-2xl md:text-3xl text-[var(--text)] text-center">时间线</div>
       <div class="text-center text-sm text-[var(--text-muted)] mt-2 mb-4 font-light">{subtitle}</div>
 
-      <div class="flex flex-col mt-2 space-y-6">
-        {entries.map(year => (
-          <section>
-            <h2 class="text-xl font-semibold mb-1">
-              {year.year}
-              <small class="text-[var(--text-muted)] font-normal ml-2">({year.count})</small>
-            </h2>
-            <div class="border-l-2 border-[var(--border)] pl-6 ml-1 space-y-4">
-              {year.months.map(m => (
-                <div>
-                  <h3 class="text-sm text-[var(--text-muted)] mb-2">
-                    {year.year}.{String(m.month).padStart(2, '0')}
-                    <span class="ml-1">({m.count})</span>
-                  </h3>
-                  <ul class="space-y-1">
-                    {m.titles.map(t => (
-                      <li>
-                        <a href={`/posts/${t.id}`} class="hover:text-[var(--accent)]">{t.title}</a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </section>
+      <div class="flex flex-col mt-2">
+        {entries.map((year) => (
+          <TimeLineItem
+            date={String(year.year)}
+            articles={year.months.flatMap((m) => m.titles)}
+            defaultOpen={true}
+          />
         ))}
       </div>
     </div>

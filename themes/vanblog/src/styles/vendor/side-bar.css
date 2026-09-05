@@ -1,0 +1,74 @@
+/* UPSTREAM: packages/website/styles/side-bar.css@4b488500be8100b19772ec00d8315f343a6ac21e
+ * SEAM: react-burger-menu 抽屉样式。bm-menu 背景 #fff/#26282c(暗) 映射 var(--surface)
+ * (html.dark 自动翻转,故合并上游两条规则);其余阴影/遮罩为上游 literal。
+ * 上游 fix → 对本文件 apply patch。
+ */
+
+/* Position and sizing of burger button */
+.bm-burger-button {
+  position: fixed;
+  width: 36px;
+  height: 30px;
+  left: 36px;
+  top: 36px;
+}
+
+/* Color/shape of burger icon bars */
+.bm-burger-bars {
+  background: #373a47; /* upstream literal */
+}
+
+/* Color/shape of burger icon bars on hover*/
+.bm-burger-bars-hover {
+  background: #a90000; /* upstream literal */
+}
+
+/* Position and sizing of clickable cross button */
+.bm-cross-button {
+  height: 24px;
+  width: 24px;
+}
+
+/* Color/shape of close button cross */
+.bm-cross {
+  background: #bdc3c7; /* upstream literal */
+}
+
+/*
+Sidebar wrapper styles
+Note: Beware of modifying this element as it can break the animations - you should not need to touch it in most cases
+*/
+.bm-menu-wrap {
+  position: fixed;
+  height: 100%;
+}
+
+/* General sidebar styles */
+.bm-menu {
+  background: var(--surface); /* upstream literal: #fff / .dark #26282c */
+  padding: 0.5em 0;
+  font-size: 1.15em;
+  width: 250px;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15); /* upstream literal */
+  z-index: 110;
+}
+
+/* Morph shape necessary with bubble or elastic */
+.bm-morph-shape {
+  fill: #373a47; /* upstream literal */
+}
+
+/* Wrapper for item list */
+.bm-item-list {
+  color: #b8b7ad; /* upstream literal */
+}
+
+/* Individual item */
+.bm-item {
+  display: inline-block;
+}
+
+/* Styling of overlay */
+.bm-overlay {
+  background: #00000026 !important; /* upstream literal */
+}

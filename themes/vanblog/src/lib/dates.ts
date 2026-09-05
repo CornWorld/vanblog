@@ -7,7 +7,8 @@ export function daysSince(raw: string | undefined | null): number {
   if (!raw) return 0;
   const d = new Date(raw.replace(" ", "T"));
   if (Number.isNaN(d.getTime())) return 0;
-  return Math.floor((Date.now() - d.getTime()) / 86_400_000);
+  // 钳制非负(#369 同类:时钟偏差/未来日期导致「-N 天前」)
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86_400_000));
 }
 
 /**

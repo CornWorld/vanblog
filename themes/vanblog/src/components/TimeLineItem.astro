@@ -1,0 +1,56 @@
+---
+// 上游 components/TimeLineItem/index.tsx 的 Astro 等价移植(年份折叠)。
+// 上游用 React state + maxHeight 动画;此处用原生 <details> + CSS 标记切换,
+// 行为等价(默认展开/点击收放)。上游按钮文案恒为 "+",此处按计划描述切换 +/-。
+interface PostSummary {
+  id: string;
+  title: string;
+  pathname?: string;
+  createdAt: string;
+}
+
+export interface Props {
+  date: string;
+  articles: PostSummary[];
+  defaultOpen?: boolean;
+  /** true = 行内日期含年份(YYYY-MM-DD),false = 仅 MM-DD */
+  showYear?: boolean;
+}
+
+const { date, articles, defaultOpen = true, showYear = false } = Astro.props;
+const rowDate = (raw: string) => (showYear ? raw : raw.slice(5, 10));
+---
+
+<details class="mb-4 group" open={defaultOpen}>
+  <summary class="flex items-center mb-4 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+    <div class="text-xl md:text-2xl font-bold text-[var(--text)]">{date}</div>
+    <div class="ml-2 text-sm md:text-base text-[var(--text-muted)] font-normal">{`${articles.length}篇`}</div>
+    <div
+      class="fold-btn ml-2 w-[22.5px] inline-block text-center leading-tight font-normal text-lg bg-[var(--border)] text-[var(--text-muted)] rounded transition-all hover:bg-[var(--text-muted)] hover:text-[var(--surface)]"
+    ></div>
+  </summary>
+  <div class="space-y-2 pb-1">
+    {articles.map((a) => (
+      <a
+        href={`/posts/${a.id}`}
+        class="flex items-center border-b border-dashed border-[var(--border)] hover:border-[var(--text-muted)] pb-1 group/row cursor-pointer"
+      >
+        <div class="text-[var(--text-muted)] flex-grow-0 flex-shrink-0 text-sm group-hover/row:text-[var(--text)]">
+          {rowDate(a.createdAt || '')}
+        </div>
+        <div class="ml-2 md:ml-4 text-base flex-grow flex-shrink overflow-hidden text-[var(--text-muted)] group-hover/row:text-[var(--text)]">
+          {a.title}
+        </div>
+      </a>
+    ))}
+  </div>
+</details>
+
+<style>
+  .fold-btn::before {
+    content: '+';
+  }
+  details[open] .fold-btn::before {
+    content: '−';
+  }
+</style>

@@ -1,0 +1,46 @@
+/* UPSTREAM: packages/website/styles/globals.css@4b488500be8100b19772ec00d8315f343a6ac21e
+ *          (仅 vendor islands 需要且主题 global.css 尚未提供的类)
+ * SEAM: 颜色映射语义 var;@apply 改写为等价普通 CSS(v4 @import 链内不依赖 tailwind
+ * 处理顺序)。上游 fix → 对本文件 apply patch。
+ */
+
+/* ── 侧栏(TocCard headroom / NavBarMobile 抽屉项)— 上游 globals.css 126-148 + 29-31 ── */
+.side-bar {
+  will-change: top;
+  transition: top 200ms linear;
+}
+.side-bar-top {
+  top: 112px;
+}
+.side-bar-top.no-submenu {
+  top: 72px;
+}
+.side-bar-not-top {
+  top: 56px;
+}
+.side-bar-not-top.no-submenu {
+  top: 16px;
+}
+.side-bar-not-top.side-bar-pinned {
+  top: 112px;
+}
+.side-bar-not-top.side-bar-pinned.no-submenu {
+  top: 72px;
+}
+
+/* 上游 .side-bar-item @apply text-base leading-9 w-full hover:bg-gray-100 cursor-pointer */
+.side-bar-item {
+  width: 100%;
+  font-size: 1rem;
+  line-height: 2.25rem;
+  cursor: pointer;
+}
+.side-bar-item:hover {
+  background: var(--border); /* upstream literal: gray-100 */
+}
+
+/* ── toast(react-hot-toast className="toast")— 上游 globals.css 172-175 ── */
+.dark .toast {
+  background-color: var(--surface); /* upstream literal: #232428 */
+  color: var(--text-muted); /* upstream literal: #9e9e9e */
+}

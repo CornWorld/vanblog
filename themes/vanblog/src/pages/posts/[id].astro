@@ -15,8 +15,6 @@ export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostViewer from '../../components/PostViewer.astro';
-import Toc from '../../components/Toc.astro';
-import TocMobile from '../../components/TocMobile.astro';
 import ExpirationNotice from '../../components/ExpirationNotice.astro';
 import CopyRight from '../../components/CopyRight.astro';
 import ErrorNotice from '@vanblog/base/components/ErrorNotice.astro';
@@ -29,78 +27,53 @@ import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
 import { normalizeMathDelimiters } from '@vanblog/base/lib/markdown/normalizeMathDelimiters';
 import type { Post } from '@vanblog/sdk';
 import { sanitizeHtml } from '../../lib/sanitizeHtml';
-import { hasHeadings } from '../../lib/toc';
+import { extractHeadings, hasHeadings } from '../../lib/toc';
+import { TocCard, default as MarkdownTocBarIsland } from '../../vendor/MarkdownTocBar';
+import ViewerIsland from '../../vendor/Viewer';
+import ImageZoom from '../../vendor/ImageZoom';
+import PostLock from '../../vendor/PostLock';
 
 const pb = Astro.locals.pb;
 const site = await Astro.locals.getSite();
 
 const { id } = Astro.params;
 if (!id) return Astro.redirect('/404');
-
-// ── POST: password verification ──
-const url = new URL(Astro.request.url);
-let passwordError = url.searchParams.get('error') === 'invalid_password';
-if (Astro.request.method === 'POST') {
-  const formData = await Astro.request.formData();
-  const password = formData.get('password')?.toString();
-  if (password) {
-    try {
-      const raw = await pb.collection('posts').getOne<Post>(id);
-      if (raw.password && raw.password === password) {
-        Astro.cookies.set(`vb-unlock-${id}`, 'true', {
-          path: `/posts/${id}`,
-          maxAge: 86400 * 7,
-          sameSite: 'lax',
-        });
-        return Astro.redirect(`/posts/${id}`);
-      }
-    } catch {
-      // Cannot fetch post (e.g. blocked by ViewRule) → fall through
-    }
-  }
-  return Astro.redirect(`/posts/${id}?error=invalid_password`);
-}
-
-// Theme ships empty live collections (see live.config.ts), so the anonymous
-// ViewRule-protected read is handled by the pb fallback below: non-public
-// posts redirect to login (or 404), while authenticated authors/admins can
-// preview their own private/draft work.
+// 密码解锁走 vendor UnLockCard → POST /api/unlock(服务端渲染+消毒+下发
+// path 限定 cookie);本页不再接收表单 POST。
 let data: Post | null = null;
 let html: string | null = null;
-
-if (!data) {
-  // Password-protected: check unlock cookie before redirecting to login
-  const unlockCookie = Astro.cookies.get(`vb-unlock-${id}`);
-  if (!isAuthenticated(pb) && unlockCookie?.value === 'true') {
-    try {
-      const raw = await pb.collection('posts').getOne<Post>(id);
-      if (raw) {
-        const content = normalizeMathDelimiters(raw.content || '');
+// 密码锁(原版 UnLockCard 流程):匿名无解锁 cookie → 渲染解锁卡,不重定向登录
+let locked = false;
+// 取数语义:匿名命中未公开/草稿(受 ViewRule 保护)→ 登录页(原语义);
+// 匿名命中密码锁文章(published+password)→ 渲染 UnLockCard;有效解锁 cookie
+// 或登录作者直接渲染;getOne 失败且已登录 → 404。
+try {
+  const raw = await pb.collection('posts').getOne<Post>(id);
+  if (raw) {
+    data = raw;
+    const content = normalizeMathDelimiters(raw.content || '');
+    if (raw.password) {
+      const unlocked =
+        Astro.cookies.get(`vb-unlock-${id}`)?.value === 'true' ||
+        isAuthenticated(pb);
+      if (unlocked) {
         html = (await renderMarkdown(content)).code;
-        data = raw;
-        passwordError = false;
+      } else {
+        locked = true;
       }
-    } catch {
-      // Cookie present but expired/invalid → fall through
+    } else {
+      html = (await renderMarkdown(content)).code;
     }
   }
-
-  if (!data) {
+} catch {
+  if (isAuthenticated(pb)) {
+    // Not found OR blocked by ViewRule even when authenticated.
+    Astro.response.status = 404;
+  } else {
     // Anonymous visitor hitting a private/draft post → send to login so they
     // can come back as the author/admin. Returning a bare 404 here would
     // confuse authors who just toggled "private" in the editor.
-    if (!isAuthenticated(pb)) {
-      return Astro.redirect(`/login?back=${encodeURIComponent(`/posts/${id}`)}`);
-    }
-    try {
-      const raw = await pb.collection('posts').getOne<Post>(id);
-      const content = normalizeMathDelimiters(raw.content || '');
-      html = (await renderMarkdown(content)).code;
-      data = raw;
-    } catch {
-      // Not found OR blocked by ViewRule even when authenticated.
-      Astro.response.status = 404;
-    }
+    return Astro.redirect(`/login?back=${encodeURIComponent(`/posts/${id}`)}`);
   }
 }
 // Sanitize the rendered HTML before injecting it into the page.
@@ -108,8 +81,7 @@ const safeHtml = html !== null ? sanitizeHtml(html) : null;
 
 // 文章含 h2/h3 标题 → 侧栏渲染 Toc（原版 hasToc ? <Toc/> : null）。
 const hasToc = !!safeHtml && hasHeadings(safeHtml);
-
-// 上下篇（原版 PostBottom pre/next）：按 created 前后各取 1 条，全库精确（无 100 篇上限）。
+const tocItems = safeHtml ? extractHeadings(safeHtml) : [];
 let prePost: { id: string; title: string } | null = null;
 let nextPost: { id: string; title: string } | null = null;
 if (data?.created) {
@@ -162,7 +134,7 @@ if (data?.category) {
 }
 ---
 
-<BaseLayout title={data?.title || '文章不存在'} post={data || undefined} path={`/posts/${id}`} sideBar={hasToc} keywords={data ? [data.title, categoryName, ...Object.values(tagMap)].filter(Boolean).join(',') : undefined}>
+<BaseLayout title={data?.title || '文章不存在'} post={data && safeHtml !== null ? data : undefined} path={`/posts/${id}`} sideBar={hasToc} keywords={data && safeHtml !== null ? [data.title, categoryName, ...Object.values(tagMap)].filter(Boolean).join(',') : undefined}>
   {data && safeHtml !== null ? (
     <Fragment>
       <div class="card-post relative">
@@ -201,7 +173,7 @@ if (data?.category) {
                   <path d="M942.2 486.2C847.4 286.5 704.1 186 512 186c-192.2 0-335.4 100.5-430.2 300.3-7.7 16.2-7.7 35.2 0 51.5C176.6 737.5 319.9 838 512 838c192.2 0 335.4-100.5 430.2-300.3 7.7-16.2 7.7-35 0-51.5zM512 766c-161.3 0-279.4-81.8-362.7-254C232.6 339.8 350.7 258 512 258c161.3 0 279.4 81.8 362.7 254C791.5 684.2 673.4 766 512 766z"></path>
                   <path d="M508 336c-97.2 0-176 78.8-176 176s78.8 176 176 176 176-78.8 176-176-78.8-176-176-176z m0 288c-61.9 0-112-50.1-112-112s50.1-112 112-112 112 50.1 112 112-50.1 112-112 112z"></path>
                 </svg>
-                {data.viewCount}
+                <ViewerIsland client:load id={id} shouldAddViewer={true} initial={data.viewCount} />
               </span>
             )}
             {data.private && (
@@ -223,8 +195,11 @@ if (data?.category) {
             updated={data.updated}
             show={site?.displayOptions?.showExpirationReminder !== false}
           />
-          <div class="lg:hidden"><TocMobile html={safeHtml} /></div>
+          {hasToc && (
+            <div class="lg:hidden"><MarkdownTocBarIsland client:load items={tocItems} mobile headingOffset={56} /></div>
+          )}
           <PostViewer html={safeHtml} />
+          <ImageZoom client:load />
           {site?.displayOptions?.showCopyRight !== false && <CopyRight site={site} post={data} />}
 
           {/* 标签 + 上下篇（原版 PostBottom） */}
@@ -268,32 +243,30 @@ if (data?.category) {
       />
       <p><a href="/">← 返回首页</a></p>
     </Fragment>
-  ) : passwordError ? (
-    <div role="alert" class="my-8 p-4 rounded-lg border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20">
-      <p class="text-red-700 dark:text-red-300 text-sm">🔒 密码错误，请重试。</p>
-      <p class="mt-2"><a href="/" class="text-[var(--accent)] text-sm">← 返回首页</a></p>
-    </div>
+  ) : locked && data ? (
+    <PostLock client:load id={id} />
   ) : (
     <ErrorNotice code="404" title="文章不存在" message="该文章可能已被删除、未发布，或你没有访问权限。" />
   )}
 
   {hasToc && (
     <Fragment slot="sideBar">
-      <Toc html={safeHtml} />
+      <TocCard client:load items={tocItems} showSubMenu={site?.displayOptions?.showSubMenu !== false ? "true" : "false"} />
     </Fragment>
   )}
 </BaseLayout>
 
-<script is:inline>
+<script is:inline define:vars={{ postId: id, path: `/posts/${id}` }}>
   // 文章浏览计数：平台 Go 层 /api/vanblog/visits/record（原子 viewCount+1）。
   // 仅当文章真正渲染（<article> 存在）时触发，避免 404/密码错误页误计数。
+  // postId/path 由 define:vars 注入（Astro 不插值 is:inline 脚本文本）。
   if (document.querySelector('article')) {
     ;(async () => {
       try {
         await fetch('/api/vanblog/visits/record', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: '/posts/{id}', postId: '{id}' }),
+          body: JSON.stringify({ path, postId }),
         });
       } catch { /* silent */ }
     })();
@@ -446,6 +419,18 @@ if (data?.category) {
       });
       header.appendChild(toggleBtn);
     }
+  });
+
+  // ── Code copy buttons（模式照抄 app/src/components/ByteMdEditor.astro bindCopyBtns）──
+  document.querySelectorAll<HTMLElement>('.code-copy-btn').forEach((btn) => {
+    btn.onclick = () => {
+      const code = btn.closest('.code-block-wrapper')?.querySelector('code')?.textContent;
+      if (!code) return;
+      navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = '✓';
+        setTimeout(() => (btn.textContent = '复制'), 1500);
+      });
+    };
   });
 </script>
 

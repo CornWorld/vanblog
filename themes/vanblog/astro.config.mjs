@@ -1,3 +1,5 @@
+import react from '@astrojs/react';
+
 import { fileURLToPath } from 'node:url';
 import { resolveThemeName, sharedAstroConfig } from '../shared-config.mjs';
 
@@ -7,4 +9,10 @@ const themePackPage = fileURLToPath(new URL('./src/layouts/PackPage.astro', impo
 
 const themeName = resolveThemeName(new URL('./theme.json', import.meta.url));
 
-export default sharedAstroConfig({ themeName, themeSrcDir, mainAppSrcDir, themePackPage });
+export default sharedAstroConfig({
+  themeName,
+  themeSrcDir,
+  mainAppSrcDir,
+  themePackPage,
+  extraIntegrations: [react()],
+});

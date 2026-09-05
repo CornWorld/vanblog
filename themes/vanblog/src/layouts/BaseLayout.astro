@@ -11,9 +11,10 @@ import { contributions as packContributions } from 'virtual:vanblog/pack-fronten
 import type { Site, Post } from '@vanblog/sdk';
 import themeMeta from '../../theme.json';
 
-import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
-import BackToTop from '../components/BackToTop.astro';
+import NavChrome from '../vendor/NavChrome';
+import ToastProviderIsland from '../vendor/ToastProvider';
+import BackToTopIsland from '../vendor/BackToTop';
 
 interface Props {
   title?: string;
@@ -40,8 +41,6 @@ const effectivePalette = site?.palette || recommendedPalette;
 // Default favicon: site.favicon or a minimal inline SVG (avoids /favicon.ico 404).
 const DEFAULT_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231772b4'/%3E%3Ctext x='16' y='23' font-size='20' font-weight='bold' text-anchor='middle' fill='white' font-family='sans-serif'%3EV%3C/text%3E%3C/svg%3E";
 
-// Auth state for nav
-const isLoggedIn = pb.authStore.isValid;
 
 const siteName = site?.siteName || 'Vanblog';
 const siteDesc = description || site?.siteDesc || '';
@@ -88,6 +87,22 @@ const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
 
 // Categories for the nav sub-menu (migrated from original NavBar showSubMenu).
 const navCategories = await safe(() => pb.collection('categories').getFullList<{ id: string; name: string }>(), 'nav-categories');
+
+// 导航菜单:site.nav 自定义优先,否则默认集(自原手搓 Nav.astro 迁移)。
+interface NavEntry { label: string; href: string }
+const customNav: NavEntry[] = (site?.nav ?? []).map((n) => ({ label: n.name, href: n.value }));
+const defaultNav: NavEntry[] = [
+  { label: '首页', href: '/' },
+  { label: '归档', href: '/archive' },
+  { label: '时间轴', href: '/timeline' },
+  { label: '标签', href: '/tags' },
+  { label: '分类', href: '/categories' },
+  ...packNavItems.map((p) => ({ label: p.label, href: p.href })),
+  ...((site?.links?.length ?? 0) > 0 ? [{ label: '友链', href: '/link' }] : []),
+  ...(site?.aboutContent && site.aboutContent.trim() ? [{ label: '关于', href: '/about' }] : []),
+];
+const navEntries = customNav.length > 0 ? customNav : defaultNav;
+const navMenus = navEntries.map((e, i) => ({ id: i, name: e.label, value: e.href, level: 0 }));
 
 // Palette name→type map for theme init. Light/dark is decided by the active
 // palette's `type` (atomic palette model, VSCode-style), not by a user theme
@@ -171,12 +186,24 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     {site?.customScript && <script is:inline set:html={site.customScript} />}
   </head>
   <body class="min-h-screen flex flex-col">
-    <Nav
-      site={site}
-      isLoggedIn={isLoggedIn}
-      packNavItems={packNavItems}
+    <NavChrome
+      client:load
+      siteName={siteName}
+      logo={site?.siteLogo || ''}
+      logoDark={site?.siteLogoDark || ''}
       categories={navCategories.data ?? []}
+      menus={navMenus}
+      showSubMenu={site?.displayOptions?.showSubMenu !== false ? "true" : "false"}
+      showAdminButton={site?.displayOptions?.showAdminButton !== false ? "true" : "false"}
+      showFriends={site?.displayOptions?.showFriends !== false ? "true" : "false"}
+      showRSS={site?.displayOptions?.showRSS !== false ? "true" : "false"}
+      headerLeftContent={site?.displayOptions?.headerLeftContent || 'siteName'}
+      defaultTheme="auto"
+      subMenuOffset={site?.displayOptions?.subMenuOffset || 0}
+      openArticleLinksInNewWindow={site?.displayOptions?.openArticleLinksInNewWindow === true}
+      sitePalette={site?.palette || ''}
     />
+    <ToastProviderIsland client:load />
     {sideBar ? (
       <main class="flex-1 py-8">
         <div class="mx-auto max-w-5xl px-4 sm:px-6">
@@ -196,7 +223,7 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
       </main>
     )}
     <Footer site={site} />
-    <BackToTop />
+    <BackToTopIsland client:load />
 
     {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (
       <script is:inline type="module" src={src} data-vanblog-pack-script></script>

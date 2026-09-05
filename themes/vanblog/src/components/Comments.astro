@@ -1,10 +1,13 @@
 ---
 // Multi-provider comment system component.
-// Renders the appropriate comment widget based on site.commentsProvider.
+// artalk 分支已换 vendor CommentArtalk island(上游 Waline/core.tsx 的刻意分叉);
+// external 分支保持站点后台自定义脚本注入。
 //
 // Props:
 //   provider: 'disabled' | 'artalk' | 'external'
 //   config:  provider-specific configuration from site.commentsConfig
+
+import CommentArtalk from '../vendor/CommentArtalk';
 
 export interface Props {
   provider: string;
@@ -16,32 +19,12 @@ const server = String(config?.server || '').replace(/\/+$/, '');
 
 {provider === 'disabled' || !provider ? null : (
   <div id="vanblog-comments" class="mt-8 pt-6 border-t border-[var(--border)]">
-    {provider === 'artalk' && (
-      <>
-        <link href={`${server}/dist/Artalk.css`} rel="stylesheet" />
-        <div id="artalk-container"></div>
-        <script is:inline src={`${server}/dist/Artalk.js`}></script>
-        <script is:inline data-server={server} data-site={String(config?.site || 'VanBlog')}>
-          (() => {
-            const server = document.currentScript.dataset.server;
-            const site = document.currentScript.dataset.site;
-            const el = document.getElementById('artalk-container');
-            if (!el || typeof Artalk === 'undefined') return;
-            const getDark = () => document.documentElement.classList.contains('dark');
-            Artalk.init({
-              el: '#artalk-container',
-              server,
-              site,
-              pageKey: window.location.pathname,
-              darkMode: getDark() ? 'dark' : false,
-            });
-            // Sync with global dark mode toggle
-            document.documentElement.addEventListener('darkmodechange', (e) => {
-              Artalk.ui?.setDarkMode(e.detail?.dark ?? getDark());
-            });
-          })();
-        </script>
-      </>
+    {provider === 'artalk' && server && (
+      <CommentArtalk
+        client:visible
+        server={server}
+        site={String(config?.site || 'VanBlog')}
+      />
     )}
 
     {provider === 'external' && (

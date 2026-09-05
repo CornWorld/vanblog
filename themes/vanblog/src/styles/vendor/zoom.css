@@ -1,0 +1,15 @@
+/* UPSTREAM: packages/website/styles/zoom.css@4b48850
+ * 适配:遮罩底色映射 var(--bg)(html.dark 自动翻转)。上游 fix → 对本文件 apply patch。
+ */
+.medium-zoom-overlay {
+  z-index: 200;
+  background: var(--bg) !important;
+}
+
+.dark .medium-zoom-overlay {
+  background: var(--bg) !important;
+}
+
+.medium-zoom-image--opened {
+  z-index: 210;
+}

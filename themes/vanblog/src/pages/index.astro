@@ -16,7 +16,7 @@ import ArticleCard from '../components/ArticleCard.astro';
 import AuthorCard from '../components/AuthorCard.astro';
 import PageNav from '../components/PageNav.astro';
 import ErrorState from '../components/ErrorState.astro';
-import { safe, getPage } from '@vanblog/sdk';
+import { safe, getPage, stripMarkdown } from '@vanblog/sdk';
 import { getAuthorCardProps } from '../lib/viewModel';
 import { sanitizeHtml } from '../lib/sanitizeHtml';
 import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
@@ -55,7 +55,8 @@ const overviews = await Promise.all(
   posts.map(async (post) => {
     const md = post.content || '';
     const parts = md.split('<!-- more -->');
-    const overviewMd = parts.length > 1 ? parts[0] : md.substring(0, 50);
+    // 无 more 标记时先 strip 成纯文本再截断(#410:原始 markdown 截断会切碎链接)
+    const overviewMd = parts.length > 1 ? parts[0] : stripMarkdown(md, 50);
     if (!overviewMd.trim()) return '';
     try {
       const { code } = await renderMarkdown(overviewMd);
@@ -96,3 +97,23 @@ const overviews = await Promise.all(
     <AuthorCard {...authorCard} />
   </Fragment>
 </BaseLayout>
+
+<script>
+  // 首页概览也渲染 mermaid(对齐原版 bytemd Viewer 概览行为;导出工具栏仅文章页)
+  import mermaid from 'mermaid';
+
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+  });
+  const codes = document.querySelectorAll('.post-viewer code.language-mermaid');
+  if (codes.length > 0) {
+    codes.forEach((code) => {
+      const wrapper = document.createElement('pre');
+      wrapper.className = 'mermaid';
+      wrapper.textContent = code.textContent;
+      code.parentElement?.replaceWith(wrapper);
+    });
+    await mermaid.run();
+  }
+</script>

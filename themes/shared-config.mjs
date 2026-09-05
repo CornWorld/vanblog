@@ -41,8 +41,18 @@ export function resolveThemeName(themeJsonUrl) {
 /**
  * Base Astro config shared by every theme. Theme-specific pieces (source
  * directories, builtin pack page layout) are passed in as parameters.
+ *
+ * @param {object} opts
+ * @param {string} opts.themeName
+ * @param {string} opts.themeSrcDir
+ * @param {string} opts.mainAppSrcDir
+ * @param {string} opts.themePackPage
+ * @param {import('astro').AstroIntegration[]} [opts.extraIntegrations] - Theme-owned
+ *   Astro integrations appended after the shared ones (e.g. `react()` from
+ *   `@astrojs/react` for themes that mount React islands).
+ * @returns {import('astro').AstroUserConfig}
  */
-export function sharedAstroConfig({ themeName, themeSrcDir, mainAppSrcDir, themePackPage }) {
+export function sharedAstroConfig({ themeName, themeSrcDir, mainAppSrcDir, themePackPage, extraIntegrations = [] }) {
   return defineConfig({
     output: 'server',
     base: `/themes/${themeName}/`,
@@ -70,6 +80,31 @@ export function sharedAstroConfig({ themeName, themeSrcDir, mainAppSrcDir, theme
     },
     vite: {
       plugins: [tailwindcss()],
+      // Dev-only: mirror the production Caddy topology by proxying same-origin
+      // /api/* (search, visits, palette.css, pack endpoints) to PocketBase.
+      // The theme's client code always fetches /api/* relative to its origin.
+      server: {
+        proxy: {
+          // 平台 PB 端点前缀(搜索/统计/调色盘/pack);Astro 自有路由(如
+          // themes/*/src/pages/api/unlock.ts)不代理,仍由 Astro 处理。
+          '/api/vanblog': {
+            target: process.env.PB_URL || 'http://127.0.0.1:8090',
+            changeOrigin: true,
+          },
+          '/api/palette.css': {
+            target: process.env.PB_URL || 'http://127.0.0.1:8090',
+            changeOrigin: true,
+          },
+          '/api/palettes': {
+            target: process.env.PB_URL || 'http://127.0.0.1:8090',
+            changeOrigin: true,
+          },
+          '/api/packs': {
+            target: process.env.PB_URL || 'http://127.0.0.1:8090',
+            changeOrigin: true,
+          },
+        },
+      },
       ssr: {
         noExternal: ['@vanblog/sdk'],
       },
@@ -92,6 +127,7 @@ export function sharedAstroConfig({ themeName, themeSrcDir, mainAppSrcDir, theme
       mdx(),
       themes({ themeSrcDir, mainAppSrcDir }),
       packs({ themePage: themePackPage }),
+      ...extraIntegrations,
     ],
   });
 }
