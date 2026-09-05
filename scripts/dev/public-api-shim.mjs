@@ -129,7 +129,7 @@ async function buildMeta() {
         favicon: site.favicon ?? "",
         siteName: site.siteName ?? "VanBlog",
         siteDesc: site.siteDesc ?? "",
-        copyrightAggreement: site.copyrightAggreement ?? "BY-NC-SA",
+        copyrightAgreement: site.copyrightAgreement ?? "BY-NC-SA",
         beianNumber: site.beianNumber ?? "",
         beianUrl: site.beianUrl ?? "",
         gaBeianNumber: site.gaBeianNumber ?? "",

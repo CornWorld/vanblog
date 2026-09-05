@@ -2,7 +2,9 @@ package media
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	_ "github.com/cornworld/vanblog/pb_migrations"
@@ -159,5 +161,58 @@ func TestReadFileContent_AfterUpload(t *testing.T) {
 	}
 	if !bytes.Equal(got, content) {
 		t.Errorf("ReadFileContent returned %q, want %q", got, content)
+	}
+}
+
+func TestHealSiteSecrets_MovesResidualPublicSecrets(t *testing.T) {
+	app := setupApp(t)
+
+	// Simulate a pre-isolation backup restore: the public site row still
+	// carries s3Config/syncConfig. HealSiteSecrets (called at startup) must
+	// move them into site_secrets and null them on site, idempotently.
+	site, err := app.FindFirstRecordByFilter("site", "")
+	if err != nil || site == nil {
+		t.Fatalf("find site: %v", err)
+	}
+	site.Set("s3Config", json.RawMessage(`{"enabled":true,"bucket":"b","secret":"S"}`))
+	site.Set("syncConfig", json.RawMessage(`{"branch":"main","sshKey":"KEY"}`))
+	if err := app.Save(site); err != nil {
+		t.Fatalf("save site: %v", err)
+	}
+
+	if err := HealSiteSecrets(app); err != nil {
+		t.Fatalf("HealSiteSecrets: %v", err)
+	}
+
+	// Public site row is clean.
+	reloaded, err := app.FindRecordById("site", site.Id)
+	if err != nil {
+		t.Fatalf("reload site: %v", err)
+	}
+	for _, f := range []string{"s3Config", "syncConfig"} {
+		if raw := reloaded.GetString(f); raw != "" && raw != "null" {
+			t.Errorf("site.%s should be null after heal, got %q", f, raw)
+		}
+	}
+
+	// Secrets live in the admin-only row under key "main".
+	secrets, err := app.FindFirstRecordByFilter("site_secrets", "key={:k}", map[string]any{"k": "main"})
+	if err != nil || secrets == nil {
+		t.Fatalf("find site_secrets/main: %v", err)
+	}
+	if got := secrets.GetString("syncConfig"); !strings.Contains(got, "sshKey") {
+		t.Errorf("site_secrets.syncConfig missing sshKey, got %q", got)
+	}
+	if got := secrets.GetString("s3Config"); !strings.Contains(got, "S") {
+		t.Errorf("site_secrets.s3Config missing secret, got %q", got)
+	}
+
+	// Idempotent: a second heal is a no-op and keeps the secrets row.
+	if err := HealSiteSecrets(app); err != nil {
+		t.Fatalf("second HealSiteSecrets: %v", err)
+	}
+	again := reloaded
+	if raw := again.GetString("s3Config"); raw != "" && raw != "null" {
+		t.Errorf("second heal re-dirtied site.s3Config: %q", raw)
 	}
 }

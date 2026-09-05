@@ -11,7 +11,7 @@ import (
 func TestApplyS3BackendToSettings_DisabledByDefault(t *testing.T) {
 	app := setupApp(t)
 
-	// Fresh install: site.s3Config = {"enabled":false} (set by migration).
+	// Fresh install: no secrets row, settings default zero value.
 	// Sync should be a no-op (settings already match default zero value).
 	before := app.Settings().S3
 	if err := ApplyS3BackendToSettings(app); err != nil {
@@ -23,15 +23,32 @@ func TestApplyS3BackendToSettings_DisabledByDefault(t *testing.T) {
 	}
 }
 
-func TestApplyS3BackendToSettings_AppliesEnabledConfig(t *testing.T) {
-	app := setupApp(t)
-
-	// Write a complete S3 config to site.s3Config (simulating admin UI save).
+// seedSiteS3Config writes an S3 config through the real path: a site payload
+// carrying s3Config passes through MoveSiteSecretsFromRecord (bound to the
+// site create/update request hooks), which parks the value in site_secrets
+// and nulls it on the public site row.
+func seedSiteS3Config(t *testing.T, app core.App, cfg core.S3Config) {
+	t.Helper()
 	site, err := app.FindFirstRecordByFilter("site", "")
 	if err != nil || site == nil {
 		t.Fatalf("find site: %v", err)
 	}
-	cfg := core.S3Config{
+	raw, _ := json.Marshal(cfg)
+	site.Set("s3Config", json.RawMessage(raw))
+	if err := MoveSiteSecretsFromRecord(app, site); err != nil {
+		t.Fatalf("move to site_secrets: %v", err)
+	}
+	if got := site.GetString("s3Config"); got != "" && got != "null" {
+		t.Fatalf("site.s3Config not stripped, got %q", got)
+	}
+}
+
+func TestApplyS3BackendToSettings_AppliesEnabledConfig(t *testing.T) {
+	app := setupApp(t)
+
+	// Simulate an admin UI save: the site payload carries s3Config, which the
+	// request hook routes into site_secrets (never landing on the public row).
+	seedSiteS3Config(t, app, core.S3Config{
 		Enabled:        true,
 		Bucket:         "vanblog-test",
 		Region:         "us-east-1",
@@ -39,12 +56,7 @@ func TestApplyS3BackendToSettings_AppliesEnabledConfig(t *testing.T) {
 		AccessKey:      "AKIAFAKE",
 		Secret:         "FAKESECRET",
 		ForcePathStyle: true,
-	}
-	raw, _ := json.Marshal(cfg)
-	site.Set("s3Config", json.RawMessage(raw))
-	if err := app.Save(site); err != nil {
-		t.Fatalf("save site: %v", err)
-	}
+	})
 
 	if err := ApplyS3BackendToSettings(app); err != nil {
 		t.Fatalf("ApplyS3BackendToSettings: %v", err)
@@ -60,11 +72,7 @@ func TestApplyS3BackendToSettings_Idempotent(t *testing.T) {
 	app := setupApp(t)
 
 	// Seed an enabled config so the first sync actually writes settings.
-	site, err := app.FindFirstRecordByFilter("site", "")
-	if err != nil || site == nil {
-		t.Fatalf("find site: %v", err)
-	}
-	cfg := core.S3Config{
+	seedSiteS3Config(t, app, core.S3Config{
 		Enabled:        true,
 		Bucket:         "vanblog-test",
 		Region:         "us-east-1",
@@ -72,12 +80,7 @@ func TestApplyS3BackendToSettings_Idempotent(t *testing.T) {
 		AccessKey:      "AKIAFAKE",
 		Secret:         "FAKESECRET",
 		ForcePathStyle: true,
-	}
-	raw, _ := json.Marshal(cfg)
-	site.Set("s3Config", json.RawMessage(raw))
-	if err := app.Save(site); err != nil {
-		t.Fatalf("save site: %v", err)
-	}
+	})
 
 	if err := ApplyS3BackendToSettings(app); err != nil {
 		t.Fatalf("first sync: %v", err)
@@ -99,16 +102,7 @@ func TestApplyS3BackendToSettings_RejectsIncomplete(t *testing.T) {
 
 	// Enabled=true but missing required fields → pb's S3Config.Validate
 	// should reject, and ApplyS3BackendToSettings should surface that error.
-	site, err := app.FindFirstRecordByFilter("site", "")
-	if err != nil || site == nil {
-		t.Fatalf("find site: %v", err)
-	}
-	cfg := core.S3Config{Enabled: true, Bucket: "", Region: "", Endpoint: "", AccessKey: "", Secret: ""}
-	raw, _ := json.Marshal(cfg)
-	site.Set("s3Config", json.RawMessage(raw))
-	if err := app.Save(site); err != nil {
-		t.Fatalf("save site: %v", err)
-	}
+	seedSiteS3Config(t, app, core.S3Config{Enabled: true, Bucket: "", Region: "", Endpoint: "", AccessKey: "", Secret: ""})
 
 	if err := ApplyS3BackendToSettings(app); err == nil {
 		t.Error("expected validation error for incomplete S3 config, got nil")
@@ -118,14 +112,8 @@ func TestApplyS3BackendToSettings_RejectsIncomplete(t *testing.T) {
 func TestApplyS3BackendToSettings_ToggleOff(t *testing.T) {
 	app := setupApp(t)
 
-	// Turn on.
-	site, _ := app.FindFirstRecordByFilter("site", "")
-	onCfg := core.S3Config{Enabled: true, Bucket: "b", Region: "r", Endpoint: "https://e", AccessKey: "a", Secret: "s"}
-	raw, _ := json.Marshal(onCfg)
-	site.Set("s3Config", json.RawMessage(raw))
-	if err := app.Save(site); err != nil {
-		t.Fatal(err)
-	}
+	// Turn on via the real storage path.
+	seedSiteS3Config(t, app, core.S3Config{Enabled: true, Bucket: "b", Region: "r", Endpoint: "https://e", AccessKey: "a", Secret: "s"})
 	if err := ApplyS3BackendToSettings(app); err != nil {
 		t.Fatalf("enable: %v", err)
 	}
@@ -133,11 +121,9 @@ func TestApplyS3BackendToSettings_ToggleOff(t *testing.T) {
 		t.Fatal("expected enabled after first sync")
 	}
 
-	// Turn off.
-	site.Set("s3Config", json.RawMessage(`{"enabled":false}`))
-	if err := app.Save(site); err != nil {
-		t.Fatal(err)
-	}
+	// Turn off (disabled config replaces the secrets row; note the site row
+	// itself never carries the value).
+	seedSiteS3Config(t, app, core.S3Config{})
 	if err := ApplyS3BackendToSettings(app); err != nil {
 		t.Fatalf("disable: %v", err)
 	}
