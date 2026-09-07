@@ -2,6 +2,7 @@
 // 上游 components/TimeLineItem/index.tsx 的 Astro 等价移植(年份折叠)。
 // 上游用 React state + maxHeight 动画;此处用原生 <details> + CSS 标记切换,
 // 行为等价(默认展开/点击收放)。上游按钮文案恒为 "+",此处按计划描述切换 +/-。
+import { withBase } from '../lib/base';
 interface PostSummary {
   id: string;
   title: string;
@@ -32,7 +33,7 @@ const rowDate = (raw: string) => (showYear ? raw : raw.slice(5, 10));
   <div class="space-y-2 pb-1">
     {articles.map((a) => (
       <a
-        href={`/post/${a.id}`}
+        href={withBase(`/post${a.pathname || `/${a.id}`}`)}
         class="flex items-center border-b border-dashed border-[var(--border)] hover:border-[var(--text-muted)] pb-1 group/row cursor-pointer"
       >
         <div class="text-[var(--text-muted)] flex-grow-0 flex-shrink-0 text-sm group-hover/row:text-[var(--text)]">

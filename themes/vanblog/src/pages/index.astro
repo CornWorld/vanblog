@@ -30,7 +30,7 @@ const feed = await loadHomeFeed(pb, page);
 const authorCard = await getAuthorCardProps(pb, site);
 const { loadError, posts, totalPages, overviews, keywords } = feed;
 
-// displayOptions（showExpirationReminder / openArticleLinksInNewWindow）
+// displayOptions(openArticleLinksInNewWindow);过期提醒仅文章详情页(原版语义)
 const displayOptions = site?.displayOptions;
 ---
 
@@ -39,7 +39,6 @@ const displayOptions = site?.displayOptions;
     loadError={loadError}
     posts={posts}
     overviews={overviews}
-    showExpirationReminder={displayOptions?.showExpirationReminder !== false}
     openInNewWindow={!!displayOptions?.openArticleLinksInNewWindow}
   />
 

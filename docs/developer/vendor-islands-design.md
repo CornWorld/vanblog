@@ -25,6 +25,9 @@
 | --- | --- | --- | --- |
 | 路由形态 | `/post/[id]`(id 或 permalink 双解析)、`/category`+`/category/[name]`、`/tag`+`/tag/[name]`、`/page/[p]` | 同形态迁移;`/posts/[id]` 留 301 兼容桩(admin 面板可能拼旧复数形态);Astro params 不自动解码,补 `decodeURIComponent` 对齐 Next | URL 逐形态一致;非法 name/slug → 404 同原版 |
 | 顶栏站点名 | `getLayoutProps`:siteLogo 为空时强制回落 siteName | BaseLayout 同语义守卫 | 配置了 siteLogo 模式但未传图时两站都显示站名,不留空白 |
+| 正文内嵌元素 | sanitize 放行 script/iframe/object/center | **iframe 放行**(B 站/YouTube 嵌入全走 iframe,srcdoc/on*/js-scheme 已防);script/object/embed 仍剥离 | 有意安全分叉:嵌入场景 iframe 全覆盖;script 执行面无正当内容需求(站点级注入走 customScript) |
+| 微信二维码 | 点击弹 Popover(dark 变体) | 纯 Astro+事件委托,双 img CSS 切 dark | 点击展开/点击外部关闭逐行为一致 |
+| 过期提醒范围 | 仅文章详情页(AlertCard type=article) | 同(移除首页/分页卡误挂载) | 修正范围漂移,与原版一致 |
 | 分页 URL | `page/[p].tsx` 路由,无 query 分页 | `pages/page/[p].astro` + `/?page=N` 兼容入口 | 第 1 页=`/`,N≥2=`/page/N` 形态一致;非法页 rewrite 404 同原版 |
 | 列表排序 | 服务端默认 `-top,-created` | SDK `sort: '-top,-created'` | 置顶优先 + 创建时间倒序,逐项一致 |
 | 发布可见性 | getStaticProps + ISR 时间窗重建 | SSR 缓存(`routeRules` SWR)+ Go 写钩子 `POST /api/revalidate` 主动失效 | 主动失效比 ISR 窗口更即时;e2e:`app/test/cache-e2e.test.mjs` |

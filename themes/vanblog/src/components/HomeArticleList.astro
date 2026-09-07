@@ -8,11 +8,10 @@ export interface Props {
   loadError: boolean;
   posts: PostExpand[];
   overviews: string[];
-  showExpirationReminder: boolean;
   openInNewWindow: boolean;
 }
 
-const { loadError, posts, overviews, showExpirationReminder, openInNewWindow } = Astro.props;
+const { loadError, posts, overviews, openInNewWindow } = Astro.props;
 ---
 
 {
@@ -26,7 +25,6 @@ const { loadError, posts, overviews, showExpirationReminder, openInNewWindow } =
         <ArticleCard
           post={post}
           overviewHtml={overviews[i] || undefined}
-          showExpirationReminder={showExpirationReminder}
           openInNewWindow={openInNewWindow}
         />
       ))}

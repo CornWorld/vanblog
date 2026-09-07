@@ -26,6 +26,24 @@ for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
         {[0, 1].map((idx) => {
           const s = row[idx];
           if (!s) return <div class="w-1/2 mb-1 mx-1"></div>;
+          // 微信:点击弹二维码(原版 react-tiny-popover;dark 用 wechat-dark 变体图),
+          // 点击外部关闭(下方事件委托);email/mailto;其余外链新窗。
+          if (s.type === 'wechat') {
+            return (
+              <div
+                class="wechat-qr-trigger relative w-1/2 mb-1 mx-1 flex items-center rounded-sm transition-all text-xs text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)] no-underline select-none cursor-pointer px-2 py-0.5"
+                role="button"
+                tabindex="0"
+                title="wechat"
+              >
+                <SocialIcon type="wechat" size={16} />
+                <div class="wechat-qr-popover hidden absolute bottom-full left-0 mb-2 z-50 bg-[var(--surface)] border border-[var(--border)] rounded-lg card-shadow p-2">
+                  <img src={s.value} alt="WeChat QR" width="180" height="180" class="w-[180px] h-[180px] block dark:hidden" loading="lazy" />
+                  {s.dark && <img src={s.dark} alt="WeChat QR" width="180" height="180" class="w-[180px] h-[180px] hidden dark:block" loading="lazy" />}
+                </div>
+              </div>
+            );
+          }
           const href = s.type === 'email' ? `mailto:${s.value}` : s.value;
           const target = s.type === 'email' ? undefined : '_blank';
           return (
@@ -44,3 +62,12 @@ for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
     ))}
   </div>
 )}
+
+<script>
+  // 微信二维码弹层:点击行 toggle,点击任意处先全部收起(委托,单监听)。
+  document.addEventListener('click', (ev) => {
+    const trigger = (ev.target as HTMLElement).closest<HTMLElement>('.wechat-qr-trigger');
+    document.querySelectorAll('.wechat-qr-popover').forEach((p) => p.classList.add('hidden'));
+    if (trigger) trigger.querySelector('.wechat-qr-popover')?.classList.remove('hidden');
+  });
+</script>

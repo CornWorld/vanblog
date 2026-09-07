@@ -14,6 +14,7 @@ export const prerender = false;
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ErrorState from '../components/ErrorState.astro';
 import { safe } from '@vanblog/sdk';
+import { withBase } from '../lib/base';
 const pb = Astro.locals.pb;
 
 const q = (Astro.url.searchParams.get('q') || '').trim();
@@ -49,7 +50,7 @@ const { data: results = [], error } = searched
     <ul class="space-y-3">
       {results.map(r => (
         <li class="card-post">
-          <a href={`/post/${r.id}`} class="font-medium text-[var(--text)] hover:text-[var(--accent)] no-underline">
+          <a href={withBase(`/post${r.path || `/${r.id}`}`)} class="font-medium text-[var(--text)] hover:text-[var(--accent)] no-underline">
             {r.title}
           </a>
           {r.path && (

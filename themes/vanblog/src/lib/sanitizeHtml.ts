@@ -8,11 +8,12 @@
  */
 export function sanitizeHtml(html: string): string {
   return html
-    // Remove executable/embedding elements (and their content).
+    // Remove executable elements (and their content). <iframe> is allowed
+    // (对齐原版:B 站/YouTube 等视频嵌入全走 iframe);其上的 srcdoc、on* 事件
+    // 与 javascript: src 由下方规则剥离,残余风险面即可控。
+    // script/object/embed 仍剥离——有意安全分叉,见决策文档对照表。
     .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
     .replace(/<script\b[^>]*\/?>/gi, '')
-    .replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe\s*>/gi, '')
-    .replace(/<iframe\b[^>]*\/?>/gi, '')
     .replace(/<object\b[^>]*>[\s\S]*?<\/object\s*>/gi, '')
     .replace(/<object\b[^>]*\/?>/gi, '')
     .replace(/<embed\b[^>]*\/?>/gi, '')
