@@ -51,11 +51,16 @@ const donateTable =
 
 const content = `${raw}${donateTable}`;
 
+import PostCard from '../vendor/PostCard';
+import { upstreamCodeBlocks } from '../lib/upstreamMarkdown';
+import { getPostCardLayoutProps } from '../lib/layoutProps';
+const lp = getPostCardLayoutProps(site);
+
 let html = '';
 if (content.trim()) {
   try {
     const { code } = await renderMarkdown(content);
-    html = sanitizeHtml(code);
+    html = upstreamCodeBlocks(sanitizeHtml(code));
   } catch (e) {
     console.error('[about] render:', e);
   }
@@ -63,26 +68,28 @@ if (content.trim()) {
 ---
 
 <BaseLayout title="关于我" path="/about" sideBar>
-  <article class="card-post relative">
-    {/* 原版 PostCard type="about"：居中标题 + 副标题（更新时间）+ 正文 */}
-    <div class="flex justify-center post-card-title mb-2 mt-2">
-      <div class="text-lg md:text-2xl font-medium text-[var(--text)] select-none">关于我</div>
-    </div>
-    <div class="text-center text-xs md:text-sm divide-x divide-[var(--border)] text-[var(--text-muted)] post-card-sub-title flex justify-center items-center">
-      {updatedAt && (
-        <span class="inline-flex px-2 items-center">
-          <time datetime={updatedAt}>更新于 {new Date(updatedAt).toLocaleDateString('zh-CN')}</time>
-        </span>
-      )}
-    </div>
-    <div class="text-sm md:text-base text-[var(--text)] mt-4 mx-2">
-      {html ? (
-        <div class="post-viewer" set:html={html} />
-      ) : (
-        <p class="text-[var(--text-muted)]">暂无内容。</p>
-      )}
-    </div>
-  </article>
+  {/* 卡片本体 = vendor PostCard type="about"(标题/副标题/正文/打赏与上游同构) */}
+  <PostCard
+    client:load
+    type="about"
+    id="about"
+    title="关于我"
+    createdAt={updatedAt ? new Date(updatedAt) : new Date()}
+    updatedAt={updatedAt ? new Date(updatedAt) : new Date()}
+    catelog="about"
+    contentHtml={html}
+    private={false}
+    top={0}
+    enableComment={lp.enableComment}
+    showExpirationReminder={lp.showExpirationReminder === 'true'}
+    showEditButton={false}
+    openArticleLinksInNewWindow={false}
+    copyrightAggreement={lp.copyrightAggreement}
+    customCopyRight={null}
+    showDonateInAbout={showDonateInfo}
+    commentsServer={lp.commentsServer}
+    setContent={() => {}}
+  />
 
   <Fragment slot="sideBar">
     <AuthorCard {...authorCard} />

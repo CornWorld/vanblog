@@ -123,7 +123,7 @@ async function buildMeta() {
       layout: {},
       siteInfo: {
         author: site.author ?? "",
-        authorDesc: site.authorDesc ?? "",
+        authorDesc: site.authDesc ?? site.authorDesc ?? "", // 平台字段名 authDesc
         authorLogo: site.authorLogo ?? "",
         authorLogoDark: site.authorLogoDark ?? "",
         siteLogo: site.siteLogo ?? "",
@@ -131,7 +131,9 @@ async function buildMeta() {
         favicon: site.favicon ?? "",
         siteName: site.siteName ?? "VanBlog",
         siteDesc: site.siteDesc ?? "",
-        copyrightAgreement: site.copyrightAgreement ?? "BY-NC-SA",
+        // 遗留契约保持上游拼写(原版消费方读 copyrightAggreement);
+        // 存储字段已在 1783600100 迁移改为 copyrightAgreement。
+        copyrightAggreement: site.copyrightAgreement ?? "BY-NC-SA",
         beianNumber: site.beianNumber ?? "",
         beianUrl: site.beianUrl ?? "",
         gaBeianNumber: site.gaBeianNumber ?? "",
@@ -139,7 +141,7 @@ async function buildMeta() {
         gaBeianLogoUrl: site.gaBeianLogoUrl ?? "",
         payAliPay: "", payWechat: "", payAliPayDark: "", payWechatDark: "",
         since: site.created || "",
-        enableComment: boolStr(site.enableComment ?? true),
+        enableComment: site.commentsProvider === 'artalk' ? 'true' : 'false', // 平台 commentsProvider → 原版开关
         baseUrl: site.baseUrl ?? "",
         showSubMenu: boolStr(site.displayOptions?.showSubMenu ?? true),
         subMenuOffset: site.displayOptions?.subMenuOffset ?? 0,

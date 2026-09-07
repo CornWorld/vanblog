@@ -29,7 +29,8 @@ export function extractHeadings(html: string): TocItem[] {
   // 用 \bid= 词边界避免误匹配 data-id（属性顺序变化时仍可靠）。
   // 覆盖 h1–h4（原版 parseNavStructure 支持 h1–h6，h5/h6 极罕见，取前四级）。
   const re = /<(h[1-4])[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/h[1-4]>/gi;
-  const levelMap: Record<string, number> = { h1: 0, h2: 1, h3: 2, h4: 3 };
+  // 上游 TOC 行 title-level{N} 用真实标题层级(h2→2)
+  const levelMap: Record<string, number> = { h1: 1, h2: 2, h3: 3, h4: 4 };
   let match: RegExpExecArray | null;
 
   while ((match = re.exec(html)) !== null) {

@@ -17,3 +17,13 @@ export const withBase = (path: string): string => {
   if (base && (path === base || path.startsWith(base + '/'))) return path;
   return base + path;
 };
+
+/**
+ * 文章路径(上游 utils/getArticlePath 语义 + 前导斜杠归一):
+ * 平台 pathname 存储混用 "/slug"/"slug" 两种形态(种子/导入来源不一),
+ * 链接与查询统一取无前导斜杠形态;无 pathname 回落 id。
+ */
+export function articlePath(pathname?: string | null, id?: string | null): string {
+  const p = pathname ? pathname.replace(/^\/+/, '') : '';
+  return p || (id ?? '');
+}

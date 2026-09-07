@@ -11,9 +11,9 @@ L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-th
 export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
-import LinkCard from '../components/LinkCard.astro';
+import LinkCard from '../vendor/LinkCard';
 import AuthorCard from '../components/AuthorCard.astro';
-import Comments from '../components/Comments.astro';
+import CommentArtalk from '../vendor/CommentArtalk';
 import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
 import { getAuthorCardProps } from '../lib/viewModel';
 import { sanitizeHtml } from '../lib/sanitizeHtml';
@@ -56,35 +56,35 @@ if (requireContent.trim()) {
 ---
 
 <BaseLayout title="友情链接" path="/link" sideBar>
-  <div class="card-post py-4 px-8 md:py-6 md:px-8">
-    <div class="text-2xl md:text-3xl text-[var(--text)] text-center">友情链接</div>
-    <p class="mt-6 mb-4 text-[var(--text)]">以下是本站的友情链接，排名不分先后：</p>
+  <div class="bg-white card-shadow dark:bg-dark dark:card-shadow-dark dark:text-dark md:px-8 md:py-6 px-8 py-4">
+    <div>
+      <div class="text-2xl md:text-3xl text-gray-700 text-center dark:text-dark">友情链接</div>
+    </div>
+    <div class="flex flex-col mb-2 mt-6">
+      <p class="mb-6">以下是本站的友情链接，排名不分先后：</p>
 
-    {links.length === 0 ? (
-      <p class="py-12 text-center text-[var(--text-muted)]">暂无友链。</p>
-    ) : (
       <div class="grid gap-2 sm:gap-4 grid-cols-2 lg:grid-cols-3">
         {links.map((link) => (
-          <LinkCard link={link} />
+          <LinkCard client:load link={link} />
         ))}
       </div>
-    )}
+    </div>
 
-    <hr class="mt-8 border-[var(--border)]" />
+    <hr class="mt-8 dark:border-hr-dark" />
     <div class="mt-4 text-sm md:text-base">
-      {requireHtml ? (
-        <div class="post-viewer" set:html={requireHtml} />
-      ) : (
-        <p class="text-[var(--text-muted)]">暂无站点信息。</p>
-      )}
+      <div class="markdown-body">
+        <div class="markdown-body" set:html={requireHtml} />
+      </div>
     </div>
   </div>
 
   {/* 原版 link.tsx 底部 WaLine 留言板（enable = 全局评论开关） */}
-  {site?.commentsProvider && site.commentsProvider !== 'disabled' && (
-    <div class="mt-4">
-      <Comments provider={site.commentsProvider} config={site?.commentsConfig || null} />
-    </div>
+  {site?.commentsProvider === 'artalk' && (
+    <CommentArtalk
+      client:visible
+      server={String((site?.commentsConfig as Record<string, unknown> | null)?.server || '').replace(/\/+$/, '')}
+      site={String((site?.commentsConfig as Record<string, unknown> | null)?.site || 'VanBlog')}
+    />
   )}
 
   <Fragment slot="sideBar">

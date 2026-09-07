@@ -185,7 +185,10 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     {site?.customCss && <style is:inline set:html={site.customCss} />}
     {site?.customScript && <script is:inline set:html={site.customScript} />}
   </head>
-  <body class="min-h-screen flex flex-col">
+  <!-- 壳层 = 上游 Layout/index.tsx + LayoutBody/index.tsx 逐式(类名 upstream literal):
+       body 裸;内容与 Footer 同包一个 mx-auto lg:px-6 md:py-4 py-2 px-2 md:px-4
+       text-gray-700 容器;LayoutBody 双列 flex,vanblog-sider 无侧栏时仅去 w-52。 -->
+  <body>
     <NavChrome
       client:load
       siteName={siteName}
@@ -204,25 +207,17 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
       sitePalette={site?.palette || ''}
     />
     <ToastProviderIsland client:load />
-    {sideBar ? (
-      <main class="flex-1 py-8">
-        <div class="mx-auto max-w-5xl px-4 sm:px-6">
-          <div class="flex justify-center">
-            <div class="flex-shrink flex-grow min-w-0 w-full md:max-w-3xl xl:max-w-4xl vanblog-main">
-              <slot />
-            </div>
-            <div class="hidden lg:block flex-shrink-0 flex-grow-0 w-52 vanblog-sider">
-              <slot name="sideBar" />
-            </div>
-          </div>
+    <div class="mx-auto lg:px-6 md:py-4 py-2 px-2 md:px-4 text-gray-700">
+      <div class="flex mx-auto justify-center">
+        <div class="flex-shrink flex-grow md:max-w-3xl xl:max-w-4xl w-full vanblog-main">
+          <slot />
         </div>
-      </main>
-    ) : (
-      <main class="flex-1 container-page py-8">
-        <slot />
-      </main>
-    )}
-    <Footer site={site} />
+        <div class={`hidden lg:block flex-shrink-0 flex-grow-0 vanblog-sider ${sideBar ? 'w-52' : ''}`}>
+          <slot name="sideBar" />
+        </div>
+      </div>
+      <Footer site={site} />
+    </div>
     <BackToTopIsland client:load />
 
     {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (

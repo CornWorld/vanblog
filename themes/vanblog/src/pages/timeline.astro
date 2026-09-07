@@ -10,12 +10,12 @@ L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-th
 ---
 export const prerender = false;
 
+import { articlePath } from '../lib/base';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import AuthorCard from '../components/AuthorCard.astro';
 import ErrorState from '../components/ErrorState.astro';
 import { safe } from '@vanblog/sdk';
-import TimeLineItem from '../components/TimeLineItem.astro';
-import { withBase } from '../lib/base';
+import TimeLineItem from '../vendor/TimeLineItem';
 import { getAuthorCardProps } from '../lib/viewModel';
 const pb = Astro.locals.pb;
 
@@ -25,6 +25,7 @@ const { data: entries = [], error } = await safe(
 );
 const site = await Astro.locals.getSite();
 const authorCard = await getAuthorCardProps(pb, site);
+const openInNewWindow = site?.displayOptions?.openArticleLinksInNewWindow === true;
 // 原版 wordTotal：全站已发布文章字数合计（platform 无 totalWordCount 字段，需现算）。
 // getFullList 受 ViewRule 约束，匿名仅能取到已发布+公开文章，与 listPublished 一致。
 const { data: wordPosts } = await safe(
@@ -43,16 +44,18 @@ const subtitle = `${authorCard.categoryNum} 分类 × ${authorCard.postNum} 文�
     </div>
   ) : (
     /* 原版时间线：白卡包裹 + 居中标题 + 统计副标题 */
-    <div class="card-post py-4 px-8 md:py-6 md:px-8">
-      <div class="text-2xl md:text-3xl text-[var(--text)] text-center">时间线</div>
-      <div class="text-center text-sm text-[var(--text-muted)] mt-2 mb-4 font-light">{subtitle}</div>
+    <div class="bg-white card-shadow dark:bg-dark dark:card-shadow-dark py-4 px-8 md:py-6 md:px-8">
+      <div class="text-2xl md:text-3xl text-gray-700 text-center dark:text-dark">时间线</div>
+      <div class="text-center text-gray-600 text-sm mt-2 mb-4 font-light dark:text-dark">{subtitle}</div>
 
       <div class="flex flex-col mt-2">
         {entries.map((year) => (
           <TimeLineItem
+            client:load
             date={String(year.year)}
-            articles={year.months.flatMap((m) => m.titles)}
+            articles={year.months.flatMap((m) => m.titles).map((t) => ({ id: t.id, title: t.title, createdAt: t.createdAt, path: t.pathname ? t.pathname.replace(/^\//, '') : '' })).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))}
             defaultOpen={true}
+            openArticleLinksInNewWindow={openInNewWindow}
           />
         ))}
       </div>

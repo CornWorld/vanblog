@@ -12,8 +12,8 @@ export interface SearchHit {
   title: string;
   /** permalink slug(带前导 /,可空);空则回退 id */
   path?: string;
-  summary: string;
-  createdAt: string;
+  summary?: string;
+  createdAt?: string;
 }
 
 interface RawHit {

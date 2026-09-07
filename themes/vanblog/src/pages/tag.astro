@@ -20,10 +20,11 @@ import { withBase } from '../lib/base';
 const pb = Astro.locals.pb;
 
 const { data: tags = [], error } = await safe(
-  () => pb.collection('tags').getFullList<Tag>({ sort: 'name' }),
+  () => pb.collection('tags').getFullList<Tag>(), // 顺序与原版 meta.tags(平台默认序)一致
   'tags'
 );
 const site = await Astro.locals.getSite();
+const openInNewWindow = site?.displayOptions?.openArticleLinksInNewWindow === true;
 const authorCard = await getAuthorCardProps(pb, site);
 ---
 <BaseLayout title="标签" path="/tag" sideBar>
@@ -35,15 +36,15 @@ const authorCard = await getAuthorCardProps(pb, site);
     </div>
   ) : (
     /* 原版 tag.tsx：白卡 card-shadow py-4 px-8 md:py-6 md:px-8 + 居中标题 + 纯文本标签云 */
-    <div class="card-post py-4 px-8 md:py-6 md:px-8">
-      <div class="text-lg md:text-xl text-[var(--text)]">标签</div>
+    <div class="bg-white card-shadow dark:bg-dark dark:card-shadow-dark py-4 px-8 md:py-6 md:px-8">
+      <div class="text-lg md:text-xl text-gray-700 dark:text-dark">标签</div>
       <div class="flex flex-wrap mt-2">
         {tags.map(t => (
           <a
             href={withBase(`/tag/${encodeURIComponent(t.name)}`)}
-            class="my-2 text-[var(--text-muted)] block hover:text-[var(--text)] transform hover:scale-110 transition-all mr-5"
+            target={openInNewWindow ? '_blank' : '_self'}
           >
-            {t.name}
+            <div class="my-2 text-gray-500 block hover:text-gray-900 dark:hover:text-dark-hover dark:text-dark-400 transform hover:scale-110 transition-all mr-5">{t.name}</div>
           </a>
         ))}
       </div>

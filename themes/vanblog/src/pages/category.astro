@@ -11,10 +11,9 @@ export const prerender = false;
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 import AuthorCard from '../components/AuthorCard.astro';
-import ArticleList from '../components/ArticleList.astro';
+import TimeLineItem from '../vendor/TimeLineItem';
 import ErrorState from '../components/ErrorState.astro';
 import { safe } from '@vanblog/sdk';
-import type { PostExpand } from '@vanblog/sdk';
 import { getAuthorCardProps } from '../lib/viewModel';
 const pb = Astro.locals.pb;
 
@@ -27,20 +26,24 @@ const posts = result?.items ?? [];
 const site = await Astro.locals.getSite();
 const authorCard = await getAuthorCardProps(pb, site);
 
-// 原版 category.tsx：全站文章按分类归档（washArticlesByKey 按 category 分组）。
-const byCategory: Record<string, PostExpand[]> = {};
+// 原版 category.tsx:getCategoryPageProps → /api/public/category
+// (Record<分类名, 文章[]>),TimeLineItem(date=分类名, defaultOpen=false,
+// showYear=true)逐分类渲染。
+const openInNewWindow = site?.displayOptions?.openArticleLinksInNewWindow === true;
+const wordTotal = posts.reduce((sum, p) => sum + (p.content?.length || 0), 0);
+const byCategory: Record<string, { id: string; title: string; createdAt?: string; path?: string }[]> = {};
 for (const post of posts) {
+  if (!post.id) continue;
   const name = post.expand?.category?.name || '未分类';
-  if (!byCategory[name]) byCategory[name] = [];
-  byCategory[name].push(post);
+  (byCategory[name] ||= []).push({ id: post.id, title: post.title, createdAt: post.created, path: post.pathname });
 }
 const categoryNames = Object.keys(byCategory).sort((a, b) => a.localeCompare(b));
 ---
 <BaseLayout title="分类" path="/category" sideBar>
-  <div class="card-post py-4 px-8 md:py-6 md:px-8">
-    <div class="text-2xl md:text-3xl text-[var(--text)] text-center">分类</div>
-    <div class="text-center text-sm text-[var(--text-muted)] mt-2 mb-4 font-light">
-      {authorCard.categoryNum} 分类 × {authorCard.postNum} 文章 × {authorCard.tagNum} 标签
+  <div class="bg-white card-shadow dark:bg-dark dark:card-shadow-dark py-4 px-8 md:py-6 md:px-8">
+    <div class="text-2xl md:text-3xl text-gray-700 text-center dark:text-dark">分类</div>
+    <div class="text-center text-gray-600 text-sm mt-2 mb-4 font-light dark:text-dark">
+      {authorCard.categoryNum} 分类 × {authorCard.postNum} 文章 × {authorCard.tagNum} 标签 × {wordTotal} 字
     </div>
 
     {
@@ -49,15 +52,16 @@ const categoryNames = Object.keys(byCategory).sort((a, b) => a.localeCompare(b))
       ) : posts.length === 0 ? (
         <p class="py-8 text-center text-[var(--text-muted)]">暂无分类。</p>
       ) : (
-        <div class="space-y-6">
+        <div class="flex flex-col mt-2">
           {categoryNames.map((name) => (
-            <section>
-              <h2 class="text-xl font-semibold mb-2">
-                {name}
-                <small class="text-[var(--text-muted)] font-normal ml-2">({byCategory[name].length})</small>
-              </h2>
-              <ArticleList items={byCategory[name].map(p => ({ id: p.id, title: p.title, created: p.created }))} showYear />
-            </section>
+            <TimeLineItem
+              client:load
+              date={name}
+              articles={byCategory[name]}
+              defaultOpen={false}
+              showYear={true}
+              openArticleLinksInNewWindow={openInNewWindow}
+            />
           ))}
         </div>
       )

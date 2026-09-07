@@ -1,17 +1,26 @@
 ---
 // 首页 / 分页页共享列表块（原版 index.tsx / page/[p].tsx 的 articles 区）。
-import ArticleCard from './ArticleCard.astro';
+// 卡片本体 = vendor PostCard island(UPSTREAM PostCard/index.tsx),Astro 只供数据。
+import PostCard from '../vendor/PostCard';
+import { articlePath } from '../lib/base';
 import ErrorState from './ErrorState.astro';
+import { getPostCardLayoutProps } from '../lib/layoutProps';
 import type { PostExpand } from '@vanblog/sdk';
 
 export interface Props {
   loadError: boolean;
   posts: PostExpand[];
+  /** 每篇概览 HTML(与 posts 下标对齐;加密文为加密卡提示 HTML) */
   overviews: string[];
+  /** 加密卡提示 HTML(未加密文不取) */
+  encryptedHtml: string;
   openInNewWindow: boolean;
 }
 
-const { loadError, posts, overviews, openInNewWindow } = Astro.props;
+const { loadError, posts, overviews, encryptedHtml, openInNewWindow } = Astro.props;
+const site = await Astro.locals.getSite();
+const lp = getPostCardLayoutProps(site);
+const isPrivate = (p: PostExpand) => !!p.private || !!p.hasPassword;
 ---
 
 {
@@ -21,13 +30,36 @@ const { loadError, posts, overviews, openInNewWindow } = Astro.props;
     <p class="py-12 text-center text-[var(--text-muted)]">暂无文章。</p>
   ) : (
     <div class="space-y-2 md:space-y-4">
-      {posts.map((post, i) => (
-        <ArticleCard
-          post={post}
-          overviewHtml={overviews[i] || undefined}
-          openInNewWindow={openInNewWindow}
-        />
-      ))}
+      {posts.map((post) => {
+        const priv = isPrivate(post);
+        const overviewHtml = overviews[posts.indexOf(post)] || '';
+        return (
+          <PostCard
+            client:load
+            id={articlePath(post.pathname, post.id)}
+            title={post.title}
+            createdAt={new Date(post.created || Date.now())}
+            updatedAt={new Date(post.updated || Date.now())}
+            catelog={post.expand?.category?.name ?? ''}
+            type="overview"
+            private={priv}
+            top={post.top ?? 0}
+            encryptedHtml={priv ? encryptedHtml : ''}
+            excerptHtml={priv ? '' : overviewHtml}
+            contentHtml=""
+            showToc={false}
+            enableComment={lp.enableComment}
+            showExpirationReminder={lp.showExpirationReminder === 'true'}
+            showEditButton={lp.showEditButton === 'true'}
+            openArticleLinksInNewWindow={openInNewWindow}
+            copyrightAggreement={lp.copyrightAggreement}
+            customCopyRight={null}
+            commentsServer={lp.commentsServer}
+            views={post.viewCount ?? 0}
+            setContent={() => {}}
+          />
+        );
+      })}
     </div>
   )
 }

@@ -26,16 +26,18 @@
 | 路由形态 | `/post/[id]`(id 或 permalink 双解析)、`/category`+`/category/[name]`、`/tag`+`/tag/[name]`、`/page/[p]` | 同形态迁移;`/posts/[id]` 留 301 兼容桩(admin 面板可能拼旧复数形态);Astro params 不自动解码,补 `decodeURIComponent` 对齐 Next | URL 逐形态一致;非法 name/slug → 404 同原版 |
 | 顶栏站点名 | `getLayoutProps`:siteLogo 为空时强制回落 siteName | BaseLayout 同语义守卫 | 配置了 siteLogo 模式但未传图时两站都显示站名,不留空白 |
 | 正文内嵌元素 | sanitize 放行 script/iframe/object/center | **iframe 放行**(B 站/YouTube 嵌入全走 iframe,srcdoc/on*/js-scheme 已防);script/object/embed 仍剥离 | 有意安全分叉:嵌入场景 iframe 全覆盖;script 执行面无正当内容需求(站点级注入走 customScript) |
-| 微信二维码 | 点击弹 Popover(dark 变体) | 纯 Astro+事件委托,双 img CSS 切 dark | 点击展开/点击外部关闭逐行为一致 |
-| 过期提醒范围 | 仅文章详情页(AlertCard type=article) | 同(移除首页/分页卡误挂载) | 修正范围漂移,与原版一致 |
+| 微信二维码 | SocialIcon 点击弹 Popover(dark 用 wechat-dark 变体) | vendor `SocialIcon.tsx` 逐字(dark 态走 html.dark 桥) | 与原版同一 React 组件,逐行为一致 |
+| 过期提醒范围 | 仅 PostCard 内 AlertCard(type=article/about) | PostCard island 原样(移除首页/分页卡误挂载) | 修正范围漂移,与原版一致 |
 | 分页 URL | `page/[p].tsx` 路由,无 query 分页 | `pages/page/[p].astro` + `/?page=N` 兼容入口 | 第 1 页=`/`,N≥2=`/page/N` 形态一致;非法页 rewrite 404 同原版 |
 | 列表排序 | 服务端默认 `-top,-created` | SDK `sort: '-top,-created'` | 置顶优先 + 创建时间倒序,逐项一致 |
 | 发布可见性 | getStaticProps + ISR 时间窗重建 | SSR 缓存(`routeRules` SWR)+ Go 写钩子 `POST /api/revalidate` 主动失效 | 主动失效比 ISR 窗口更即时;e2e:`app/test/cache-e2e.test.mjs` |
 | `/?page=N` 缓存隔离 | 原版无此入口(兼容层自有) | Astro cache 键含 query(`x-astro-cache` 实测 `/` 与 `/?page=2` 各自 MISS/HIT) | 兼容入口不污染首页缓存 |
 | 站内链接 | 裸根路径(站点根=`/`) | `withBase()` 统一加 `/themes/<name>/`(站点根=主题前缀) | 语义等价:都是"站内路由根";平台 `/admin`、`/api/*` 除外 |
 | 数据获取 | SWR + legacy `/api/public/*` | SDK 串行取数(同 client 并发触发 auto-cancel) | 渲染输入同源(parity 垫片保证);串行是实现约束非行为差异 |
-| Markdown 渲染 | bytemd 客户端 | 平台 remark/rehype 构建期 SSR + viewerEffect 挂载 | 最终 HTML 一致;客户端行为(TOC/复制/mermaid)由 island 原样保留 |
-| 静态展示件 | React(PostCard/PageNav 等) | Astro 组件,视觉/交互逐项对齐 | 无状态件换框架不换行为;TopPin 角标、PageNav 省略号特判逐分支对齐 |
+| Markdown 渲染 | bytemd 客户端 | 平台 remark/rehype SSR + `lib/upstreamMarkdown.ts` 后处理对齐 DOM | 代码块/标题/TOC 行 DOM 同构;语法高亮保持平台 shiki 内联色(见下行) |
+| 语法高亮 | highlight.js(`hljs` 类,code-light/dark.css) | 平台管线 shiki 内联色 + `--shiki-dark` 暗色变量 | **有意分叉**:暗色即开即用;换行符/Token 粒度不同,文本内容一致 |
+| 静态展示件 | React | 已全量 vendor(2026-09-07 二批:PostCard 系/AuthorCard 系/Footer/TimeLineItem/LinkCard/PageNav/ImageBox 等) | 换框架不换行为;删除早期 Astro 手写版 |
+| 评论数角标 | SubTitle 内 `span.waline-comment-count[data-path]` 初始 0,WaLine commentCount 客户端填充(仅文章页;首页保持静态 0) | 同 DOM;CommentArtalk 挂载时按 Artalk `/api/v2/stats` 填充 `data-path` | **修正此前误登记**:上游确有评论数角标;enableComment 由 commentsProvider 映射 |
 
 ## 背景(2026-09 量化)
 
@@ -68,7 +70,8 @@
 ## 附带决策
 
 - **ThemeContext 砍掉**:多 island 无共享 context;主题态走 `html.dark` + localStorage(原版 `applyTheme` 本就操作这两个),`seams/theme.ts` 提供 `useThemeMode()` 替身。
-- **静态展示件保持 Astro**:ArticleCard/PageNav/Reward/CopyRight/时间轴展示面无状态,换 React 只增水合成本。
+- **静态展示件二批全量 vendor(2026-09-07)**:PostCard(index/title/bottom+AlertCard/TopPinIcon/CopyRight/Reward/UnLockCard/CommentArtalk)、AuthorCard(SocialCard/SocialIcon/ImageBox/getIcon)、Footer(RunningTime/SiteViewer)、TimeLineItem、LinkCard、PageNav、404。早期 Astro 手写版(ArticleCard/PostViewer/ExpirationNotice/CopyRight/Reward/TopPin/Comments/PostLock)已删——原「静态件保持 Astro」决议废止,比对成本优先。
+- **壳层对齐上游 Layout/LayoutBody**:body 裸、内容+Footer 同包 `mx-auto lg:px-6 md:py-4 py-2 px-2 md:px-4 text-gray-700` 容器;类名 upstream literal(不走语义变量)。
 - **依赖 pin `react@^18.3`**:上游 18.2 系,勿升 19。
 - **CSS 语义变量**:vendor CSS 里的硬编码色改 `var(--text|--bg|--surface|--border|--accent|--text-muted)`;无语义对应保留原值并注 `/* upstream literal */`。
 - **props 类型内联各 vendor 文件**(与上游一致),不建共享 types。

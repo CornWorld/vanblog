@@ -1,22 +1,29 @@
-<!--
-⛔ AGENT: DO NOT EDIT THIS BLOCK
-L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
-页面: 404
-路径: themes/vanblog/src/pages/404.astro
-契约变量: (无)
--->
 ---
+// 404 — 上游 pages/404.tsx 逐式移植:无 Layout 壳,绝对定位居中 logo+文案+返回主页。
+// 服务端渲染以返回真实 404 状态码(爬虫/WAF 语义)。
 export const prerender = false;
+import { withBase } from '../lib/base';
 
-import BaseLayout from '../layouts/BaseLayout.astro';
-import NotFound from '../components/NotFound.astro';
-
-// Server-render so we can return a real 404 status code. The previous
-// prerender=true produced HTTP 200 with a 404 body — fine for humans but
-// wrong for crawlers, WAFs, and any client checking res.ok.
 Astro.response.status = 404;
 Astro.response.headers.set('Cache-Control', 'no-store');
 ---
-<BaseLayout title="404 - 页面不存在">
-  <NotFound name="页面" />
-</BaseLayout>
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>此页面不存在</title>
+    <link rel="icon" href={withBase('/logo.svg')} />
+  </head>
+  <body>
+    <div class="flex items-center justify-center" style="position:absolute;top:0;left:0;bottom:0;right:0;">
+      <div class="flex flex-col items-center justify-center select-none" style="transform:translateY(-30%);">
+        <img alt="logo" src={withBase('/logo.svg')} width="200" height="200" />
+        <div class="mt-4 text-gray-600 font-base text-xl dark:text-dark">此页面不存在</div>
+        <a href={withBase('/')}>
+          <div class="mt-4 ua ua-link text-base text-gray-600 dark:text-dark">返回主页</div>
+        </a>
+      </div>
+    </div>
+  </body>
+</html>

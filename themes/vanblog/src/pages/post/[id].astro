@@ -14,25 +14,19 @@ L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-th
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import PostViewer from '../../components/PostViewer.astro';
-import ExpirationNotice from '../../components/ExpirationNotice.astro';
-import CopyRight from '../../components/CopyRight.astro';
 import ErrorNotice from '@vanblog/base/components/ErrorNotice.astro';
-import Comments from '../../components/Comments.astro';
-import Reward from '../../components/Reward.astro';
-import TopPin from '../../components/TopPin.astro';
+import PostCard from '../../vendor/PostCard';
+import { TocCard } from '../../vendor/MarkdownTocBar';
+import ImageZoom from '../../vendor/ImageZoom';
 import { isAuthenticated, safe } from '@vanblog/sdk';
-import { fmtDate } from '../../lib/dates';
 import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
 import { normalizeMathDelimiters } from '@vanblog/base/lib/markdown/normalizeMathDelimiters';
 import type { Post } from '@vanblog/sdk';
 import { sanitizeHtml } from '../../lib/sanitizeHtml';
 import { extractHeadings, hasHeadings } from '../../lib/toc';
-import { TocCard, default as MarkdownTocBarIsland } from '../../vendor/MarkdownTocBar';
-import ViewerIsland from '../../vendor/Viewer';
-import ImageZoom from '../../vendor/ImageZoom';
-import PostLock from '../../vendor/PostLock';
-import { withBase } from '../../lib/base';
+import { getPostCardLayoutProps } from '../../lib/layoutProps';
+import { articlePath } from '../../lib/base';
+import { upstreamCodeBlocks, upstreamHeadings } from '../../lib/upstreamMarkdown';
 
 const pb = Astro.locals.pb;
 const site = await Astro.locals.getSite();
@@ -55,8 +49,10 @@ try {
   } catch {
     // id 未命中 → 按 permalink(pathname)直接渲染,对齐原版
     // getArticleByIdOrPathname 双解析语义(URL 保持 slug 形态,无重定向)。
+    // pathname 存储混用 "/slug"/"slug",双形态匹配
+    const esc = id.replace(/"/g, '\\"');
     raw = await pb.collection('posts').getFirstListItem<Post>(
-      `pathname="/${id.replace(/"/g, '\\"')}" && deleted=false`,
+      `(pathname="/${esc}" || pathname="${esc}") && deleted=false`,
     );
   }
   if (raw) {
@@ -101,11 +97,13 @@ try {
   }
 }
 // Sanitize the rendered HTML before injecting it into the page.
-const safeHtml = html !== null ? sanitizeHtml(html) : null;
+// DOM 对齐层:消毒后按上游 bytemd 插件形态重排代码块/标题
+const safeHtml = html !== null ? upstreamHeadings(upstreamCodeBlocks(sanitizeHtml(html))) : null;
 
 // 文章含 h2/h3 标题 → 侧栏渲染 Toc（原版 hasToc ? <Toc/> : null）。
 const hasToc = !!safeHtml && hasHeadings(safeHtml);
 const tocItems = safeHtml ? extractHeadings(safeHtml) : [];
+// PostBottom 链接走 getArticlePath 语义(id 已是 slug||id)
 let prePost: { id: string; title: string } | null = null;
 let nextPost: { id: string; title: string } | null = null;
 if (data?.created) {
@@ -115,7 +113,7 @@ if (data?.created) {
     () => pb.collection('posts').getList<Post>(1, 1, {
       filter: `${baseFilter} && created < "${data.created}"`,
       sort: '-created',
-      fields: 'id,title',
+      fields: 'id,title,pathname',
     }),
     'post-prev'
   );
@@ -124,14 +122,14 @@ if (data?.created) {
     () => pb.collection('posts').getList<Post>(1, 1, {
       filter: `${baseFilter} && created > "${data.created}"`,
       sort: 'created',
-      fields: 'id,title',
+      fields: 'id,title,pathname',
     }),
     'post-next'
   );
   const prev = older?.items?.[0];
   const next = newer?.items?.[0];
-  if (prev?.id) prePost = { id: prev.id, title: prev.title };
-  if (next?.id) nextPost = { id: next.id, title: next.title };
+  if (prev?.id) prePost = { id: articlePath(prev.pathname, prev.id), title: prev.title };
+  if (next?.id) nextPost = { id: articlePath(next.pathname, next.id), title: next.title };
 }
 
 // 标签名映射（data.tags 是 record id，需查 name 渲染）。
@@ -156,119 +154,58 @@ if (data?.category) {
   );
   categoryName = cat?.name || '';
 }
+
+// 作者名(CopyRight 用;上游 props.author = 文章作者名字符串)
+let authorName = '';
+if (data?.author) {
+  const authorId = data.author;
+  const { data: u } = await safe(
+    () => pb.collection('users').getOne<{ name?: string }>(authorId),
+    'post-author',
+  );
+  authorName = u?.name || '';
+}
+
+const tagNames = tagIds.map((tid) => tagMap[tid]).filter(Boolean);
+const lp = getPostCardLayoutProps(site);
 ---
 
 <BaseLayout title={data?.title || '文章不存在'} post={data && safeHtml !== null ? data : undefined} path={`/post/${id}`} sideBar={hasToc} keywords={data && safeHtml !== null ? [data.title, categoryName, ...Object.values(tagMap)].filter(Boolean).join(',') : undefined}>
   {data && safeHtml !== null ? (
     <Fragment>
-      <div class="card-post relative">
-        {data.top != 0 && <TopPin />}
-        <article>
-          <h1>
-            {data.title}
-            {isAuthenticated(pb) && site?.displayOptions?.showEditButton !== false && (
-              <a
-                href={`/admin/edit/${id}`}
-                class="ml-3 text-sm font-normal text-[var(--text-muted)] hover:text-[var(--accent)] no-underline align-middle"
-                title="编辑文章"
-              >
-                ✏️ 编辑
-              </a>
-            )}
-          </h1>
-          <div class="text-center text-xs md:text-sm divide-x divide-[var(--border)] text-[var(--text-muted)] post-card-sub-title">
-            <span class="inline-flex px-2 items-center">
-              <svg class="mr-1 text-[var(--text-muted)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d="M832 128H704V96a32 32 0 0 0-64 0v32H384V96a32 32 0 0 0-64 0v32H192a64 64 0 0 0-64 64v640a64 64 0 0 0 64 64h640a64 64 0 0 0 64-64V192a64 64 0 0 0-64-64z m0 704H192V384h640v448zM192 320V192h128v32a32 32 0 0 0 64 0V192h256v32a32 32 0 0 0 64 0V192h128v128H192z"></path>
-              </svg>
-              {fmtDate(data.created)}
-            </span>
-            {categoryName && (
-              <span class="inline-flex px-2 items-center">
-                <svg class="mr-1 text-[var(--text-muted)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M810.666667 85.333333a85.333333 85.333333 0 0 1 85.333333 85.333334v152.021333c36.821333 9.493333 64 42.88 64 82.645333v405.333334a128 128 0 0 1-128 128H192a128 128 0 0 1-128-128V298.666667a85.376 85.376 0 0 1 64-82.645334V170.666667a85.333333 85.333333 0 0 1 85.333333-85.333334h597.333334zM128.149333 296.170667L128 298.666667v512a64 64 0 0 0 60.245333 63.893333L192 874.666667h640a64 64 0 0 0 63.893333-60.245334L896 810.666667V405.333333a21.333333 21.333333 0 0 0-18.837333-21.184L874.666667 384H638.165333l-122.069333-101.717333a21.333333 21.333333 0 0 0-10.688-4.736l-2.986667-0.213334H149.333333a21.333333 21.333333 0 0 0-21.184 18.837334zM535.189333 213.333333l127.978667 106.666667H832V170.666667a21.333333 21.333333 0 0 0-18.837333-21.184L810.666667 149.333333H213.333333a21.333333 21.333333 0 0 0-21.184 18.837334L192 170.666667v42.666666h343.168z"></path>
-                </svg>
-                <a href={withBase(`/category/${encodeURIComponent(categoryName)}`)} class="text-inherit no-underline hover:text-[var(--text)]">{categoryName}</a>
-              </span>
-            )}
-            {data.viewCount != null && (
-              <span class="inline-flex px-2 items-center">
-                <svg class="mr-1 text-[var(--text-muted)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M942.2 486.2C847.4 286.5 704.1 186 512 186c-192.2 0-335.4 100.5-430.2 300.3-7.7 16.2-7.7 35.2 0 51.5C176.6 737.5 319.9 838 512 838c192.2 0 335.4-100.5 430.2-300.3 7.7-16.2 7.7-35 0-51.5zM512 766c-161.3 0-279.4-81.8-362.7-254C232.6 339.8 350.7 258 512 258c161.3 0 279.4 81.8 362.7 254C791.5 684.2 673.4 766 512 766z"></path>
-                  <path d="M508 336c-97.2 0-176 78.8-176 176s78.8 176 176 176 176-78.8 176-176-78.8-176-176-176z m0 288c-61.9 0-112-50.1-112-112s50.1-112 112-112 112 50.1 112 112-50.1 112-112 112z"></path>
-                </svg>
-                <ViewerIsland client:load id={id} shouldAddViewer={true} initial={data.viewCount} />
-              </span>
-            )}
-            {data.private && (
-              <span class="inline-flex px-2 items-center">
-                <svg class="mr-1 text-[var(--text-muted)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M800 384h-32V288C768 164.288 667.712 64 544 64h-64C356.288 64 256 164.288 256 288v96h-32a64 64 0 0 0-64 64v448a64 64 0 0 0 64 64h576a64 64 0 0 0 64-64V448a64 64 0 0 0-64-64zM320 288a160 160 0 0 1 160-160h64a160 160 0 0 1 160 160v96H320V288z m480 512H224V448h576v352zM480 640v96a32 32 0 0 0 64 0v-96a64 64 0 1 0-64 0z"></path>
-                </svg>
-                私有
-              </span>
-            )}
-          </div>
-          {data.status !== 'published' && (
-            <div class="text-center mt-1">
-              <span class="inline-block px-2 py-0.5 text-xs rounded bg-[var(--border)] text-[var(--text-muted)]">{data.status}</span>
-            </div>
-          )}
-          <ExpirationNotice
-            created={data.created}
-            updated={data.updated}
-            show={site?.displayOptions?.showExpirationReminder !== false}
-          />
-          {hasToc && (
-            <div class="lg:hidden"><MarkdownTocBarIsland client:load items={tocItems} mobile headingOffset={56} /></div>
-          )}
-          <PostViewer html={safeHtml} />
-          <ImageZoom client:load />
-          {site?.displayOptions?.showCopyRight !== false && <CopyRight site={site} post={data} />}
-
-          {/* 标签 + 上下篇（原版 PostBottom） */}
-          <div class="mt-6">
-            {tagIds.length > 0 && (
-              <div class="flex flex-wrap justify-center gap-x-3 gap-y-1 text-sm text-[var(--text-muted)] select-none mb-2">
-                {tagIds.map((tid) => tagMap[tid] && (
-                  <a href={withBase(`/tag/${encodeURIComponent(tagMap[tid])}`)} class="text-inherit no-underline border-b border-transparent hover:border-[var(--text-muted)]">
-                    {tagMap[tid]}
-                  </a>
-                ))}
-              </div>
-            )}
-            <hr class="border-[var(--border)]" />
-            <div class="flex justify-between text-sm mt-3 whitespace-nowrap overflow-hidden gap-4">
-              <div class="min-w-0 max-w-[50%] overflow-hidden text-ellipsis">
-                {prePost && (
-                  <a href={withBase(`/post/${prePost.id}`)} class="text-[var(--text-muted)] hover:text-[var(--text)] no-underline border-b border-dashed border-[var(--border)]">
-                    {`< ${prePost.title}`}
-                  </a>
-                )}
-              </div>
-              <div class="min-w-0 max-w-[50%] overflow-hidden text-ellipsis text-right">
-                {nextPost && (
-                  <a href={withBase(`/post/${nextPost.id}`)} class="text-[var(--text-muted)] hover:text-[var(--text)] no-underline border-b border-dashed border-[var(--border)]">
-                    {`${nextPost.title} >`}
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
-        </article>
-      </div>
-      {site?.displayOptions?.showDonateButton !== false && data && <Reward site={site} />}
-
-      {/* 评论区 + 返回首页仅在文章加载成功时渲染（错误态不显示） */}
-      <hr />
-      <Comments
-        provider={site?.commentsProvider || 'disabled'}
-        config={site?.commentsConfig || null}
+      {/* 卡片本体 = UPSTREAM PostCard(index/title/bottom + AlertCard/TocMobile/
+          Reward/CopyRight/UnLockCard/CommentArtalk 子件);锁态由服务端 resolved
+          locked 驱动(匿名+密码 → UnLockCard;管理员/已解锁 → 正文)。 */}
+      <PostCard
+        client:load
+        showEditButton={isAuthenticated(pb) && site?.displayOptions?.showEditButton !== false}
+        showExpirationReminder={site?.displayOptions?.showExpirationReminder !== false}
+        copyrightAggreement={lp.copyrightAggreement}
+        openArticleLinksInNewWindow={site?.displayOptions?.openArticleLinksInNewWindow === true}
+        customCopyRight={data.copyright || null}
+        top={data.top || 0}
+        id={articlePath(data.pathname, id)}
+        title={data.title}
+        updatedAt={new Date(data.updated || Date.now())}
+        createdAt={new Date(data.created || Date.now())}
+        catelog={categoryName}
+        contentHtml={locked ? '' : (safeHtml ?? '')}
+        showToc={hasToc}
+        tocItems={tocItems}
+        type="article"
+        private={locked}
+        author={authorName}
+        tags={tagNames}
+        pre={prePost ?? undefined}
+        next={nextPost ?? undefined}
+        enableComment={lp.enableComment}
+        hideDonate={site?.displayOptions?.showDonateButton === false}
+        hideCopyRight={site?.displayOptions?.showCopyRight === false}
+        commentsServer={lp.commentsServer}
+        setContent={() => {}}
       />
-      <p><a href={withBase('/')}>← 返回首页</a></p>
+      <ImageZoom client:load />
     </Fragment>
-  ) : locked && data ? (
-    <PostLock client:load id={id} />
   ) : (
     <ErrorNotice code="404" title="文章不存在" message="该文章可能已被删除、未发布，或你没有访问权限。" />
   )}
@@ -410,51 +347,24 @@ if (data?.category) {
     });
   }
 
-  // ── Code block enhancements: wrap toggle + collapse ──
-  const MAX_LINES = 15;
-  document.querySelectorAll<HTMLElement>('.code-block-wrapper').forEach((wrapper) => {
-    const code = wrapper.querySelector('code');
-    const header = wrapper.querySelector('.code-header');
-    if (!code || !header) return;
-
-    // --- wrap toggle ---
-    const wrapBtn = document.createElement('span');
-    wrapBtn.className = 'code-wrap-btn';
-    wrapBtn.textContent = '换行';
-    wrapBtn.style.cssText = 'cursor:pointer;margin-left:8px;font-size:12px;color:#6f7177';
-    wrapBtn.addEventListener('click', () => {
-      const enabled = code.classList.toggle('code-wrap-enabled');
-      wrapBtn.textContent = enabled ? '不换行' : '换行';
-    });
-    header.appendChild(wrapBtn);
-
-    // --- collapse long blocks ---
-    const lines = (code.textContent || '').trim().split('\n');
-    const nonEmpty = lines.filter((l) => l.trim());
-    if (lines.length > MAX_LINES || nonEmpty.length > MAX_LINES - 3) {
-      code.classList.add('code-collapsed');
-      const toggleBtn = document.createElement('span');
-      toggleBtn.className = 'code-toggle-btn';
-      toggleBtn.textContent = '展开';
-      toggleBtn.style.cssText = 'cursor:pointer;margin-left:8px;font-size:12px;color:#6f7177';
-      toggleBtn.addEventListener('click', () => {
-        const collapsed = code.classList.toggle('code-collapsed');
-        toggleBtn.textContent = collapsed ? '展开' : '收起';
-      });
-      header.appendChild(toggleBtn);
-    }
-  });
-
-  // ── Code copy buttons（模式照抄 app/src/components/ByteMdEditor.astro bindCopyBtns）──
+  // ── Code copy(上游 customCodeBlock 语义:btn → 最近 code,toast 反馈)──
   document.querySelectorAll<HTMLElement>('.code-copy-btn').forEach((btn) => {
     btn.onclick = () => {
       const code = btn.closest('.code-block-wrapper')?.querySelector('code')?.textContent;
       if (!code) return;
       navigator.clipboard.writeText(code).then(() => {
         btn.textContent = '✓';
-        setTimeout(() => (btn.textContent = '复制'), 1500);
+        setTimeout(() => (btn.textContent = ''), 1200);
       });
     };
+  });
+
+  // ── 标题点击改 hash(上游 heading viewerEffect 语义)──
+  document.querySelectorAll<HTMLElement>('.markdown-heading').forEach((h) => {
+    h.addEventListener('click', () => {
+      const id = h.getAttribute('data-id');
+      if (id) window.location.hash = `#${id}`;
+    });
   });
 </script>
 

@@ -6,6 +6,7 @@ import { safe, stripMarkdown } from '@vanblog/sdk';
 import type { VanblogClient, PostExpand } from '@vanblog/sdk';
 import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
 import { sanitizeHtml } from './sanitizeHtml';
+import { upstreamCodeBlocks } from './upstreamMarkdown';
 
 export interface HomeFeed {
   loadError: boolean;
@@ -13,6 +14,8 @@ export interface HomeFeed {
   totalPages: number;
   /** 每篇文章的概览 HTML（与 posts 按下标对齐） */
   overviews: string[];
+  /** 加密卡提示 HTML（上游 PostCard calContent 内联字符串过 Markdown 渲染） */
+  encryptedHtml: string;
   /** keywords = 分类名 + 标签名去重（原版 getArticlesKeyWord） */
   keywords: string;
 }
@@ -48,7 +51,7 @@ export async function loadHomeFeed(
       if (!overviewMd.trim()) return '';
       try {
         const { code } = await renderMarkdown(overviewMd);
-        return sanitizeHtml(code);
+        return upstreamCodeBlocks(sanitizeHtml(code));
       } catch (e) {
         console.error('[home] overview render:', e);
         return '';
@@ -56,5 +59,12 @@ export async function loadHomeFeed(
     }),
   );
 
-  return { loadError: !!error, posts, totalPages, overviews, keywords };
+  // 上游加密提示字符串逐字(含反引号 → <code>)
+  let encryptedHtml = '';
+  try {
+    const enc = await renderMarkdown('该文章已加密，点击 `阅读全文` 并输入密码后方可查看。');
+    encryptedHtml = sanitizeHtml(enc.code);
+  } catch { /* 渲染失败回落空串 */ }
+
+  return { loadError: !!error, posts, totalPages, overviews, encryptedHtml, keywords };
 }

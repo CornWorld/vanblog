@@ -1,11 +1,7 @@
 ---
-// Author card sidebar (migrated from mereithhh vanblog website/components/AuthorCard).
-// Sticky right-sidebar card: avatar + name + description + stats (日志/分类/标签)
-// + social links + RSS. Rendered inside BaseLayout's `sideBar` slot (vanblog-sider).
-// Props come from the shared view model (src/lib/viewModel.ts → getAuthorCardProps),
-// mirroring the original AuthorCardProps contract.
-import SocialLinks from './SocialLinks.astro';
-import { withBase } from '../lib/base';
+// Author card sidebar = vendor AuthorCard island(UPSTREAM AuthorCard/index.tsx)。
+// 本文件仅做 props 适配:viewModel 的 categoryNum → 上游拼写 catelogNum。
+import AuthorCardIsland from '../vendor/AuthorCard';
 import type { SocialItem } from '@vanblog/sdk';
 
 export interface Props {
@@ -20,102 +16,9 @@ export interface Props {
   showRSS?: boolean;
 }
 
-const {
-  author,
-  desc,
-  logo,
-  logoDark,
-  postNum,
-  categoryNum,
-  tagNum,
-  socials,
-} = Astro.props;
+const { categoryNum, showRSS = true, ...rest } = Astro.props;
+const site = await Astro.locals.getSite();
+const showSubMenu = site?.displayOptions?.showSubMenu !== false;
 ---
 
-<div id="author-card" class="sticky top-20 transition-transform duration-300 will-change-transform">
-  <div class="flex flex-col items-center bg-[var(--surface)] pt-6 pb-4 card-shadow ml-2">
-    <div class="px-6 flex flex-col justify-center items-center text-center">
-      {logo && (
-        <div class="relative">
-          {logo && (
-            <img
-              src={logo}
-              alt={author}
-              width={120}
-              height={120}
-              loading="lazy"
-              class="rounded-full w-[120px] h-[120px] object-cover dark:hidden"
-            />
-          )}
-          {logoDark && (
-            <img
-              src={logoDark}
-              alt={author}
-              width={120}
-              height={120}
-              loading="lazy"
-              class="rounded-full w-[120px] h-[120px] object-cover hidden dark:block"
-            />
-          )}
-        </div>
-      )}
-      <div class="mt-2 font-semibold text-[var(--text)] mb-2">{author}</div>
-      {desc && <div class="text-sm text-[var(--text-muted)] mb-2">{desc}</div>}
-      <div class="flex">
-        <a href={withBase('/timeline')} class="group flex flex-col justify-center items-center text-sm px-1 no-underline">
-          <div class="font-bold text-[var(--text)] group-hover:text-[var(--accent)]">{postNum}</div>
-          <div class="text-[var(--text-muted)] group-hover:text-[var(--accent)]">日志</div>
-        </a>
-        <a href={withBase('/category')} class="group flex flex-col justify-center items-center text-sm px-1 no-underline">
-          <div class="font-bold text-[var(--text)] group-hover:text-[var(--accent)]">{categoryNum}</div>
-          <div class="text-[var(--text-muted)] group-hover:text-[var(--accent)]">分类</div>
-        </a>
-        <a href={withBase('/tag')} class="group flex flex-col justify-center items-center text-sm px-1 no-underline">
-          <div class="font-bold text-[var(--text)] group-hover:text-[var(--accent)]">{tagNum}</div>
-          <div class="text-[var(--text-muted)] group-hover:text-[var(--accent)]">标签</div>
-        </a>
-      </div>
-    </div>
-
-    {/* RSS 已在导航 RssButton 提供，此处不渲染（原版 AuthorCard 的 RSS 块也是注释掉的） */}
-    {socials.length > 0 && <div class="w-full"><SocialLinks socials={socials} /></div>}
-  </div>
-</div>
-
-<style>
-  /* 原版 AuthorCard headroom：向下滚动时侧栏整体上移隐藏，向上恢复 */
-  #author-card.author-card-hide {
-    transform: translateY(-110%);
-  }
-</style>
-
-<script is:inline>
-  (() => {
-    const el = document.getElementById('author-card');
-    if (!el) return;
-    let lastY = window.scrollY;
-    let hidden = false;
-    const onScroll = () => {
-      const y = window.scrollY;
-      const delta = y - lastY;
-      lastY = y;
-      // 页面顶部始终显示
-      if (y < 160) {
-        if (hidden) {
-          el.classList.remove('author-card-hide');
-          hidden = false;
-        }
-        return;
-      }
-      if (delta > 4 && !hidden) {
-        el.classList.add('author-card-hide');
-        hidden = true;
-      } else if (delta < -4 && hidden) {
-        el.classList.remove('author-card-hide');
-        hidden = false;
-      }
-    };
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-  })();
-</script>
+<AuthorCardIsland client:load option={{ ...rest, catelogNum: categoryNum, showSubMenu: showSubMenu ? 'true' : 'false', showRSS: showRSS ? 'true' : 'false' }} />

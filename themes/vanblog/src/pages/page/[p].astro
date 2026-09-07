@@ -6,7 +6,7 @@ export const prerender = false;
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import HomeArticleList from '../../components/HomeArticleList.astro';
 import AuthorCard from '../../components/AuthorCard.astro';
-import PageNav from '../../components/PageNav.astro';
+import PageNav from '../../vendor/PageNav';
 import { getAuthorCardProps } from '../../lib/viewModel';
 import { loadHomeFeed } from '../../lib/home';
 
@@ -38,11 +38,12 @@ const displayOptions = site?.displayOptions;
     loadError={loadError}
     posts={posts}
     overviews={overviews}
+    encryptedHtml={feed.encryptedHtml}
     openInNewWindow={!!displayOptions?.openArticleLinksInNewWindow}
   />
 
   {!loadError && totalPages > 1 && (
-    <PageNav page={page} totalPages={totalPages} />
+    <PageNav total={authorCard.postNum} current={page} base="/" more="/page" />
   )}
 
   <Fragment slot="sideBar">

@@ -1,103 +1,24 @@
 ---
-import SocialLinks from './SocialLinks.astro';
-import type { Site } from '@vanblog/sdk';
+// Footer = vendor Footer island(UPSTREAM Footer/index.tsx:ICP/公安备案/
+// RunningTime/Powered By/©/全站访客)。本文件做平台 site 字段映射:
+// beianNumber→ipcNumber(原版语义即 ICP),since 取站点创建时间。
+import FooterIsland from '../vendor/Footer';
 
 interface Props {
-  site: Partial<Site> | null;
+  site: Record<string, any> | null;
 }
 
 const { site } = Astro.props;
-const siteName = site?.siteName || 'Vanblog';
-const beian = site?.beianNumber;
-const beianUrl = site?.beianUrl || 'https://beian.miit.gov.cn/';
-const gaBeian = site?.gaBeianNumber;
-const gaBeianUrl = site?.gaBeianUrl;
-const gaBeianLogoUrl = site?.gaBeianLogoUrl;
-const socials = site?.socials ?? [];
-const since = site?.since;
+const since = site?.created || '';
 ---
 
-<!-- 原版 mereithhh Footer：居中堆叠，text-center text-sm，ICP 编号 / 公安备案 / 运行时间 / Powered By / © 区间 -->
-<footer class="border-t border-[var(--border)] text-center text-sm space-y-1 mt-8 md:mt-12 py-8 text-[var(--text-muted)]">
-  <div class="mx-auto max-w-5xl px-4 sm:px-6 space-y-1">
-    {socials.length > 0 && <div class="mb-2"><SocialLinks socials={socials} /></div>}
-
-    {beian && (
-      <p>
-        ICP 编号:&nbsp;
-        <a href={beianUrl} target="_blank" rel="noopener noreferrer"
-           class="hover:text-[var(--text)] underline-offset-2 hover:underline transition">
-          {beian}
-        </a>
-      </p>
-    )}
-
-    {gaBeian && (
-      <p class="flex justify-center items-center gap-1">
-        公安备案:&nbsp;
-        {gaBeianLogoUrl && (
-          <img src={gaBeianLogoUrl} alt="公安备案 logo" width={20} height={20} loading="lazy" class="inline" />
-        )}
-        <a href={gaBeianUrl || '#'} target="_blank" rel="noopener noreferrer"
-           class="hover:text-[var(--text)] underline-offset-2 hover:underline transition">
-          {gaBeian}
-        </a>
-      </p>
-    )}
-
-    {since && (
-      <p>
-        本站居然运行了 <span id="running-time" data-since={since}>--</span>
-      </p>
-    )}
-
-    <p>
-      Powered By&nbsp;
-      <a href="https://github.com/CornWorld/vanblog" target="_blank" rel="noopener noreferrer"
-         class="hover:text-[var(--text)] transition ua ua-link">
-        VanBlog
-      </a>
-    </p>
-
-    {since && <p class="select-none">&copy; {new Date(since).getFullYear()} - {new Date().getFullYear()} {siteName}</p>}
-
-    {/* 全站总访问（平台 Go 层 /api/vanblog/visits/summary，SUM per-path 计数） */}
-    <p id="site-total-views" class="select-none text-sm"></p>
-    {/* 当前在线：由 online pack 前端注入渲染 */}
-    <div id="pack-online" class="mt-1"></div>
-  </div>
-</footer>
-
-<script>
-  const runningEl = document.getElementById('running-time');
-  if (runningEl?.dataset.since) {
-    const since = new Date(runningEl.dataset.since).getTime();
-    if (!Number.isNaN(since)) {
-      const update = () => {
-        const diff = Math.max(0, Date.now() - since);
-        const days = Math.floor(diff / 86400000);
-        const hours = Math.floor((diff % 86400000) / 3600000);
-        const mins = Math.floor((diff % 3600000) / 60000);
-        const secs = Math.floor((diff % 60000) / 1000);
-        runningEl.textContent = `${days}天${hours}小时${mins}分${secs}秒`;
-      };
-      update();
-      setInterval(update, 1000);
-    }
-  }
-
-  // 全站总访问（平台 Go /api/vanblog/visits/summary）
-  (async () => {
-    try {
-      const res = await fetch('/api/vanblog/visits/summary', { headers: { Accept: 'application/json' } });
-      if (!res.ok) return;
-      const data = await res.json();
-      const el = document.getElementById('site-total-views');
-      if (el && typeof data.totalViews === 'number' && data.totalViews > 0) {
-        el.textContent = `📊 总访问 ${data.totalViews}`;
-      }
-    } catch {
-      /* silent */
-    }
-  })();
-</script>
+<FooterIsland
+  client:load
+  ipcNumber={site?.beianNumber || ''}
+  ipcHref={site?.beianUrl || 'https://beian.miit.gov.cn/'}
+  gaBeianNumber={site?.gaBeianNumber || ''}
+  gaBeianUrl={site?.gaBeianUrl || ''}
+  gaBeianLogoUrl={site?.gaBeianLogoUrl || ''}
+  since={since}
+  version=""
+/>

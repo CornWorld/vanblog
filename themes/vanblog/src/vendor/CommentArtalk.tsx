@@ -35,6 +35,18 @@ export default function CommentArtalk(props: {
     ensureAsset("link", "href");
     const jsUrl = ensureAsset("script", "src");
 
+    // 评论数填充(上游 Waline commentCount({el}) 对应物):填充页内所有
+    // .waline-comment-count[data-path](SubTitle 渲染,首页静态 0,文章页实填)。
+    document.querySelectorAll<HTMLElement>('.waline-comment-count[data-path]').forEach((node) => {
+      const p = node.getAttribute('data-path') || '';
+      fetch(`${server}/api/v2/stats?site=${encodeURIComponent(site)}&path=${encodeURIComponent(p)}`)
+        .then((r) => r.json())
+        .then((j: { comments?: number }) => {
+          if (typeof j.comments === 'number') node.textContent = String(j.comments);
+        })
+        .catch(() => {});
+    });
+
     const init = () => {
       const Artalk = (window as { Artalk?: unknown }).Artalk; // 外部脚本全局,无类型声明
       if (!el || typeof Artalk === "undefined") return;

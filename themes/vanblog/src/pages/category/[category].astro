@@ -11,14 +11,13 @@ L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-th
 ---
 export const prerender = false;
 
+import { articlePath } from '../../lib/base';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import AuthorCard from '../../components/AuthorCard.astro';
-import ArticleList from '../../components/ArticleList.astro';
-import ErrorState from '../../components/ErrorState.astro';
+import TimeLineItem from '../../vendor/TimeLineItem';
 import { safe } from '@vanblog/sdk';
 import type { Category } from '@vanblog/sdk';
 import { getAuthorCardProps } from '../../lib/viewModel';
-import { withBase } from '../../lib/base';
 
 const pb = Astro.locals.pb;
 const { category: name } = Astro.params;
@@ -39,54 +38,42 @@ const { data: result } = await safe(
   'category',
 );
 const posts = result?.items ?? [];
-const error = !result;
 const wordTotal = posts.reduce((sum, p) => sum + (p.content?.length || 0), 0);
 const site = await Astro.locals.getSite();
 const authorCard = await getAuthorCardProps(pb, site);
 const openInNewWindow = site?.displayOptions?.openArticleLinksInNewWindow === true;
 
 // 原版 washArticlesByKey：按年份分组，年份倒序，组内日期倒序（已按 -created 排序）
-const grouped = posts.reduce<Record<string, { id: string; title: string; created?: string }[]>>((acc, p) => {
+const grouped = posts.reduce<Record<string, { id: string; title: string; createdAt?: string; path?: string }[]>>((acc, p) => {
   if (!p.id) return acc;
   const d = p.created ? new Date(p.created) : null;
   if (!d || Number.isNaN(d.getTime())) return acc;
   const year = String(d.getFullYear());
-  (acc[year] ||= []).push({ id: p.id, title: p.title, created: p.created });
+  (acc[year] ||= []).push({ id: p.id, title: p.title, createdAt: p.created, path: articlePath(p.pathname) });
   return acc;
 }, {});
 const years = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
 ---
 
 <BaseLayout title={cat.name} path={`/category/${encodeURIComponent(name)}`} sideBar>
-  <a href={withBase('/category')} class="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] mb-4 inline-block">
-    ← 所有分类
-  </a>
-
-  <div class="card-post py-4 px-8 md:py-6 md:px-8">
-    <div class="text-2xl text-[var(--text)] text-center">
-      {cat.name}
-      <span class="text-sm font-normal text-[var(--text-muted)] ml-2">[{cat.type}]</span>
-    </div>
-    <div class="text-center text-sm text-[var(--text-muted)] mt-2 mb-4 font-light">
-      {posts.length} 文章 × {wordTotal} 字
-    </div>
-
-    {error ? (
-      <ErrorState />
-    ) : posts.length === 0 ? (
-      <p class="py-8 text-center text-[var(--text-muted)]">该分类下暂无文章。</p>
-    ) : (
-      <div class="space-y-3">
-        {years.map((year) => (
-          <details open>
-            <summary class="cursor-pointer text-sm font-semibold text-[var(--text-muted)] select-none list-none py-1">
-              {year}
-            </summary>
-            <ArticleList items={grouped[year]} showYear openInNewWindow={openInNewWindow} />
-          </details>
-        ))}
+  <div class="bg-white card-shadow dark:bg-dark dark:card-shadow-dark py-4 px-8 md:py-6 md:px-8">
+    <div>
+      <div class="text-2xl md:text-3xl text-gray-700 text-center dark:text-dark">
+        {cat.name}
       </div>
-    )}
+      <div class="text-center text-gray-600 text-sm mt-2 mb-4 font-light dark:text-dark">{`${posts.length} 文章 × ${wordTotal} 字`}</div>
+    </div>
+    <div class="flex flex-col mt-2">
+      {years.map((year) => (
+        <TimeLineItem
+          client:load
+          date={year}
+          articles={grouped[year]}
+          defaultOpen={true}
+          openArticleLinksInNewWindow={openInNewWindow}
+        />
+      ))}
+    </div>
   </div>
 
   <Fragment slot="sideBar">

@@ -1,0 +1,72 @@
+/* UPSTREAM: packages/website/components/Reward/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+ * SEAM: ThemeContext → html.dark + darkmodechange 事件桥;其余逐字。上游 fix → apply patch。
+ */
+import { useEffect, useMemo, useState } from "react";
+
+export default function (props: {
+  aliPay: string;
+  weChatPay: string;
+  aliPayDark: string;
+  weChatPayDark: string;
+  author: string;
+  id: number | string;
+}) {
+  const [show, setShow] = useState(false);
+  // SEAM: ThemeContext → html.dark + 平台 darkmodechange 事件桥(与 CommentArtalk 同法)。
+  const [theme, setTheme] = useState(
+    typeof document !== "undefined" && document.documentElement.classList.contains("dark") ? "dark" : "light"
+  );
+  useEffect(() => {
+    const onChange = () => setTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
+    document.addEventListener("darkmodechange", onChange);
+    return () => document.removeEventListener("darkmodechange", onChange);
+  }, []);
+
+  const payUrl = useMemo(() => {
+    const r = [];
+    if (theme.includes("dark") && props.aliPayDark != "") {
+      r.push(props.aliPayDark);
+    } else {
+      r.push(props.aliPay);
+    }
+    if (theme.includes("dark") && props.weChatPayDark != "") {
+      r.push(props.weChatPayDark);
+    } else {
+      r.push(props.weChatPay);
+    }
+    return r;
+  }, [theme, props]);
+
+  return (
+    <div className="mt-8">
+      {props.aliPay != "" && (
+        <>
+          <div className="text-center  select-none text-sm md:text-base mb-2 dark:text-dark">
+            如果对你有用的话，可以打赏哦
+          </div>
+          <div className="flex justify-center mb-6 ">
+            <div
+              onClick={() => [setShow(!show)]}
+              className="text-sm md:text-base   text-gray-100 bg-red-600 rounded px-4 select-none cursor-pointer hover:bg-red-400 py-1"
+            >
+              打赏
+            </div>
+          </div>
+          <div
+            className=" justify-center overflow-hidden transition-all"
+            style={{
+              maxHeight: show ? "3000px" : "0px",
+              marginBottom: show ? "16px" : "0",
+            }}
+          >
+            <div className="flex justify-center">
+              <img alt="ali pay" src={payUrl[0]} width={180} height={250} />
+              <div className="w-4 inline-block"></div>
+              <img alt="wechat pay" src={payUrl[1]} width={180} height={250} />
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
