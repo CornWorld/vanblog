@@ -35,7 +35,7 @@
 
 ### S3 secret 是明文存的吗
 
-- 是。`site.s3Config` 存 `/pb_data` SQLite，明文。生产建议加密卷。见 [SECURITY](../SECURITY.md)。
+- 是。`site_secrets.s3Config` 存 `/pb_data` SQLite，明文。`site_secrets` 是 admin-only 集合，匿名 API 读不到；生产仍建议加密卷。见 [SECURITY](../SECURITY.md)。
 
 ### 从原版 vanblog 迁移数据
 

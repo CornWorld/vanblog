@@ -37,7 +37,7 @@ Vanblog 是自托管博客系统，直接暴露于公网。本项目对安全问
 
 自托管系统把安全责任的一部分交给了运维者。请务必阅读：
 
-- **S3 secret 明文存储**：`site.s3Config.secret` 在 `pb_data` 的 SQLite 中明文存储。生产环境建议对 `/pb_data` 卷启用 LUKS / BitLocker，或使用 KMS 加密。见 [配置参考](docs/reference/configuration.md)。
+- **S3 secret 明文存储**：`site_secrets.s3Config.secret`（admin-only 集合，公开 API 不可读）在 `pb_data` 的 SQLite 中明文存储。生产环境建议对 `/pb_data` 卷启用 LUKS / BitLocker，或使用 KMS 加密。见 [配置参考](docs/reference/configuration.md)。
 - **HTTPS**：默认容器内 Caddy 自动申请 Let's Encrypt 证书。若用 `VANBLOG_HTTP_ONLY` 外置反代，反代必须终止 TLS 并传递 `X-Forwarded-Proto: https`。见 [反代](docs/guide/reverse-proxy.md)。
 - **管理端口**：`8080` 管理端口绕过 TLS，仅应急使用，默认不暴露。用完务必关闭。见 [部署指南](docs/reference/deployment.md)。
 - **依赖**：保持最新版本以获得依赖安全修复。

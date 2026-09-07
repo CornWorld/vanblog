@@ -19,7 +19,7 @@ chmod +x vanblog.sh
 
 ## S3 / 对象存储配置
 
-容器启动后,通过 pb Admin UI (`/_/`) 编辑 `site` 集合的 `s3Config` JSON 字段即可启用 S3 上传:
+容器启动后,通过 pb Admin UI (`/_/`) 编辑 **`site_secrets`** 集合（admin-only）的 `s3Config` JSON 字段即可启用 S3 上传。`site` 集合公开可读,密钥一律不放那里;对 `site` 行误写入的密钥字段会被平台钩子自动剥离并移入 `site_secrets`:
 
 ```json
 {

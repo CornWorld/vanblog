@@ -30,7 +30,7 @@ Request → Caddy (:80/:443)
 ## 数据
 
 - SQLite 于 `/pb_data`。核心集合：`tags, categories, users, posts, revisions, media, site, visits, audits`。
-- 上传可落 S3（`site.s3Config` 同步到 pb settings）。
+- 上传可落 S3（`site_secrets.s3Config` 同步到 pb settings；`site` 集合公开可读，凭据类配置全在 admin-only 的 `site_secrets`）。
 - 软删除：`posts.deleted` + 回收站。
 
 ## 缓存 / 发布
