@@ -253,7 +253,9 @@ export function runWithTransition(
     doc as Document & { startViewTransition?: (cb: () => void) => unknown }
   ).startViewTransition;
   if (!reduceMotion && vt) {
-    vt(fn);
+    // 必须以 doc 为 receiver — 拆出裸调用会抛 Illegal invocation,
+    // 视图过渡回调(切 dark 类 + 换 palette.css link)将永远不执行。
+    vt.call(doc, fn);
     return;
   }
   const root = doc.documentElement;

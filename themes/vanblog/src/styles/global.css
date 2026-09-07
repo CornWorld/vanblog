@@ -58,19 +58,9 @@
   --color-border-dark: #334155;
   --color-accent-dark: #60a5fa;
 
-  /* ── 上游 mereithhh 暗色面板 token(styles/globals.css 手写类)──
-     vendor islands JSX 原样引用 dark:bg-dark / text-dark-400 等类,值即上游
-     literal;仅经 dark: 变体消费,不影响亮色。上游 fix → 同步此处值。 */
-  --color-dark: #26282c;
-  --color-dark-1: #232428;
-  --color-dark-2: #1b1c1f;
-  --color-dark-400: rgb(110 110 110);
-  --color-dark-light: rgb(153 153 153);
-  --color-dark-hover: rgb(200 200 200);
-  --color-dark-r: #26282c;
-  --color-nav-dark: #26282c;
-  --color-nav-dark-light: rgb(158 158 158);
-  --color-hr-dark: rgb(50 50 50);
+  /* 上游手写暗色类(bg-dark=#26282c 与 text-dark=灰158 同名不同值,单一
+     token 无法表达)— 由 vendor/upstream-globals.css 手写规则全量接管
+     (2026-09-07 修正暗色文字被涂成 #26282c 的根因)。 */
 }
 
 /* ── Semantic aliases ──
@@ -121,10 +111,6 @@ html.dark {
 
   body {
     @apply min-h-screen leading-relaxed;
-  }
-
-  a {
-    @apply text-[var(--accent)] no-underline hover:underline;
   }
 
   h1,

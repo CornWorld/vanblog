@@ -45,7 +45,7 @@
   color: var(--text-muted); /* upstream literal: #9e9e9e */
 }
 
-/* ── 以下为 2026-09-07 CSS 对齐批补齐:上游 globals.css 其余全部内容 ── */
+/* ── 2026-09-07 CSS 对齐批:上游 globals.css 全量移植 ── */
 
 /* @layer base(html 底色/pre 换行/列表/链接断行)— 上游 globals.css 5-25 */
 html {
@@ -67,7 +67,10 @@ a {
   word-break: break-all;
 }
 
-/* @layer components 上游手写工具类(@apply 已展开为等价 CSS) */
+/* @layer components 手写工具类 — 无条件(字面类名消费),值 = 上游原样。
+   同名类不同值:text-dark=灰158 / bg-dark=#26282c,单一 Tailwind token
+   不可表达(此前的 @theme --color-dark* 映射是暗色文字被涂成 #26282c
+   的根因,已删)。 */
 .nav-item {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -78,11 +81,17 @@ a {
   height: 100%;
 }
 .dark-border-hover:hover {
-  color: #d1d5db; /* upstream literal: dark:hover:text-gray-300 */
-  border-color: #d1d5db; /* upstream literal: dark:hover:border-gray-300 */
+  color: #d1d5db;
+  border-color: #d1d5db;
 }
 .right-xs {
   right: 2px;
+}
+.card-shadow {
+  box-shadow: 0 2px 8px rgb(0, 0, 0, 0.15);
+}
+.card-shadow-dark {
+  box-shadow: 0 2px 8px rgb(0, 0, 0, 0.3);
 }
 .border-hr-dark {
   border-color: rgb(50, 50, 50);
@@ -99,26 +108,62 @@ a {
 .bg-dark-hover {
   background-color: #9e9e9e;
 }
+.bg-dark {
+  background-color: #26282c;
+}
+.bg-dark-1 {
+  background-color: #232428;
+}
 .fill-dark {
   fill: #333333;
 }
-/* .text-dark/.text-dark-400/.text-dark-r 的 color 已由 @theme token 生成,
-   上游手写类还设置 svg fill — 只补 fill 半边 */
+.text-dark-hover {
+  color: rgb(200, 200, 200);
+}
 .text-dark {
   fill: rgb(158, 158, 158);
-}
-.text-dark-400 {
-  fill: rgb(110, 110, 110);
+  color: rgb(158, 158, 158);
 }
 .text-dark-r {
   color: #26282c;
   fill: #26282c;
 }
-.text-dark-hover {
-  fill: rgb(200, 200, 200);
+.text-dark-400 {
+  color: rgb(110, 110, 110);
+  fill: rgb(110, 110, 110);
+}
+.bg-dark-light {
+  background-color: rgb(158, 158, 158);
+}
+.text-dark-light {
+  color: rgb(153, 153, 153);
+}
+.border-nav-dark-light {
+  border-color: rgb(158, 158, 158);
+}
+.border-nav-dark {
+  border-color: #26282c;
+}
+.border-dark-2 {
+  border-color: #1b1c1f;
+}
+.bg-dark-2 {
+  background-color: #1b1c1f;
+}
+.border-dark {
+  border-color: rgb(158, 158, 158);
+}
+.nav-shadow {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.nav-shadow-dark {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.svg-gray {
+  color: rgb(30, 30, 30);
 }
 
-/* ── headroom:导航收放动画(上游 globals.css 120-131)── */
+/* ── headroom:导航收放动画 ── */
 .headroom {
   will-change: transform;
   transition: transform 200ms linear;
@@ -131,20 +176,47 @@ a {
   transform: translateY(-56px);
 }
 
-/* ── react-tiny-popover 箭头(SocialIcon 二维码弹层,上游 globals.css 185-188)── */
+/* ── react-tiny-popover 箭头(SocialIcon 二维码弹层)── */
 .popover-arrow {
   opacity: 1 !important;
   bottom: 2px !important;
 }
 
-.svg-gray {
-  color: rgb(30, 30, 30);
-}
-
-/* .ua-link 下划线动画的位移(上游 globals.css 156-158) */
+/* .ua-link 下划线动画位移 */
 body .ua-link::before {
   bottom: -3px;
 }
+
+/* ── dark: 变体规则 — 从上游构建产物逐字移植(27 条自定义类;gray-*、
+   transition-all 标准件由 Tailwind v4 自行生成)。上游 v3.3.5 会对
+   @layer components 手写类生成变体(color+fill 成对),v4 不会 — 必须手写。 */
+.dark .dark\:bg-dark { background-color: rgb(38, 40, 44); }
+.dark .dark\:bg-dark-1 { background-color: rgb(35, 36, 40); }
+.dark .dark\:bg-dark-2 { background-color: rgb(27, 28, 31); }
+.dark .dark\:bg-dark-hover { background-color: rgb(158, 158, 158); }
+.dark .dark\:border-dark { border-color: rgb(158, 158, 158); }
+.dark .dark\:border-dark-2 { border-color: rgb(27, 28, 31); }
+.dark .dark\:border-hr-dark { border-color: rgb(50, 50, 50); }
+.dark .dark\:border-nav-dark { border-color: rgb(38, 40, 44); }
+.dark .dark\:card-shadow-dark { box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 8px; }
+.dark .dark\:filter-dark { filter: grayscale(0.2); }
+.dark .dark\:nav-shadow-dark { box-shadow: rgba(0, 0, 0, 0.3) 0px 2px 8px; }
+.dark .dark\:pg-text-dark { color: rgb(158, 158, 158); }
+.dark .dark\:pg-text-dark-hover { color: rgb(35, 36, 40); }
+.dark .dark\:text-dark { fill: rgb(158, 158, 158); color: rgb(158, 158, 158); }
+.dark .dark\:text-dark-400 { color: rgb(110, 110, 110); fill: rgb(110, 110, 110); }
+.dark .dark\:text-dark-light { color: rgb(153, 153, 153); }
+.dark .dark\:hover\:bg-dark-2:hover { background-color: rgb(27, 28, 31); }
+.dark .dark\:hover\:bg-dark-hover:hover { background-color: rgb(158, 158, 158); }
+.dark .dark\:hover\:bg-dark-light:hover { background-color: rgb(158, 158, 158); }
+.dark .dark\:hover\:border-nav-dark-light:hover { border-color: rgb(158, 158, 158); }
+.dark .dark\:hover\:pg-text-dark-hover:hover { color: rgb(35, 36, 40); }
+.dark .dark\:hover\:text-dark-hover:hover { color: rgb(200, 200, 200); }
+.dark .dark\:hover\:text-dark-r:hover { color: rgb(38, 40, 44); fill: rgb(38, 40, 44); }
+.dark .group:hover .dark\:group-hover\:text-dark { fill: rgb(158, 158, 158); color: rgb(158, 158, 158); }
+.dark .group:hover .dark\:group-hover\:text-dark-hover { color: rgb(200, 200, 200); }
+.dark .group:hover .dark\:group-hover\:text-dark-light { color: rgb(153, 153, 153); }
+.dark .group:hover .dark\:group-hover\:text-dark-r { color: rgb(38, 40, 44); fill: rgb(38, 40, 44); }
 
 /* ── code-light/code-dark.css 共有段:代码块包裹内边距与横向滚动 ──
    (hljs token 色不搬 — 高亮为有意分叉,平台 shiki 内联色) */
