@@ -10,6 +10,28 @@
 - 上游 React 组件逐文件复制,行为级 1:1;每个文件头记 `UPSTREAM: packages/website/components/<Path>@<sha>`,上游 fix 可直接对本文件 apply patch。
 - 不手搓复刻交互,也不整站迁移 Next.js。
 
+## 兼容层原则(2026-09-07 裁定)
+
+**努力对齐行为;实现完全允许不一样——只要保证可解释、可与原版 compare。**
+
+- **行为**指用户可见面:URL 形态、渲染结果、交互响应、时序可见性(如发布即可见)。
+- **实现**指框架机制与内部结构:Astro/React、渲染时机、取数路径、组件拆分。
+- 每处实现偏离必须**可解释**:vendor 文件头 `SEAM` 注释,或下方对照表登记;不允许无记录的静默分叉。
+- 每处行为等价必须**可 compare**:用验证基线一节的手段(同源数据垫片、URL 探活、截图)可重复检验,不靠"看起来像"。
+
+### 实现偏离对照表
+
+| 行为(对齐目标) | 原版实现 | 本主题实现 | 等价性说明 |
+| --- | --- | --- | --- |
+| 分页 URL | `page/[p].tsx` 路由,无 query 分页 | `pages/page/[p].astro` + `/?page=N` 兼容入口 | 第 1 页=`/`,N≥2=`/page/N` 形态一致;非法页 rewrite 404 同原版 |
+| 列表排序 | 服务端默认 `-top,-created` | SDK `sort: '-top,-created'` | 置顶优先 + 创建时间倒序,逐项一致 |
+| 发布可见性 | getStaticProps + ISR 时间窗重建 | SSR 缓存(`routeRules` SWR)+ Go 写钩子 `POST /api/revalidate` 主动失效 | 主动失效比 ISR 窗口更即时;e2e:`app/test/cache-e2e.test.mjs` |
+| `/?page=N` 缓存隔离 | 原版无此入口(兼容层自有) | Astro cache 键含 query(`x-astro-cache` 实测 `/` 与 `/?page=2` 各自 MISS/HIT) | 兼容入口不污染首页缓存 |
+| 站内链接 | 裸根路径(站点根=`/`) | `withBase()` 统一加 `/themes/<name>/`(站点根=主题前缀) | 语义等价:都是"站内路由根";平台 `/admin`、`/api/*` 除外 |
+| 数据获取 | SWR + legacy `/api/public/*` | SDK 串行取数(同 client 并发触发 auto-cancel) | 渲染输入同源(parity 垫片保证);串行是实现约束非行为差异 |
+| Markdown 渲染 | bytemd 客户端 | 平台 remark/rehype 构建期 SSR + viewerEffect 挂载 | 最终 HTML 一致;客户端行为(TOC/复制/mermaid)由 island 原样保留 |
+| 静态展示件 | React(PostCard/PageNav 等) | Astro 组件,视觉/交互逐项对齐 | 无状态件换框架不换行为;TopPin 角标、PageNav 省略号特判逐分支对齐 |
+
 ## 背景(2026-09 量化)
 
 用户定性:「现在的前端只是 vanblog style,大部分交互/细节和原版都对不上」。逐文件盘点结论:
@@ -45,6 +67,14 @@
 - **依赖 pin `react@^18.3`**:上游 18.2 系,勿升 19。
 - **CSS 语义变量**:vendor CSS 里的硬编码色改 `var(--text|--bg|--surface|--border|--accent|--text-muted)`;无语义对应保留原值并注 `/* upstream literal */`。
 - **props 类型内联各 vendor 文件**(与上游一致),不建共享 types。
+## 验证基线(parity shim)
+
+`scripts/dev/public-api-shim.mjs`(dev-only,零依赖):在 :3000 把原版 legacy `/api/public/*` 十个端点映射到本仓库 PocketBase,使**原版 Next 站点**(`refs/mereithhh-original/packages/website`,`pnpm dev` 监听 3001,dev rewrite 已指 3000)与**本主题**在同一份种子数据上渲染。垫片不进生产镜像。复现命令见 `.snow/artifacts/parity-report-2026-09-05.md`(gitignored,报告含已知有意偏差清单)。
+
+**可 compare 三件套**(按兼容层原则可重复执行):
+1. **同源数据**:垫片使两站读同一份 PB 数据,渲染差异只可能来自前端。
+2. **URL 探活**:`Accept: text/html` 逐 URL 探状态(curl 默认 `*/*` 会吃到 dev fallback 假 200,必须带真实浏览器头);首页全部内链闭环探活。
+3. **全页截图**:关键页(首页/文章/时间轴/搜索/分页)两站对比,交互(暗色、⌘K、TOC、解锁)走真实浏览器点击流。
 
 ## 上游同步协议
 
@@ -58,10 +88,6 @@ git diff HEAD...upstream/master -- packages/website/components
 - 触发:上游爆发日(批量 `fix:`)后 diff 一次即可,平时静默期无需跟踪。
 - 影响面判断沿用 L0/L1/L2:vendor 文件属主题内 L2(上游行为即规格);seam 与 `base-overrides` 锁定路径不受 vendor 更新影响。
 - 上游若改数据面字段,同步改 Go 端 `SearchResult`/页面 props,不改 seam 签名。
-
-## 验证基线(parity shim)
-
-`scripts/dev/public-api-shim.mjs`(dev-only,零依赖):在 :3000 把原版 legacy `/api/public/*` 十个端点映射到本仓库 PocketBase,使**原版 Next 站点**(`refs/mereithhh-original/packages/website`,`pnpm dev` 监听 3001,dev rewrite 已指 3000)与**本主题**在同一份种子数据上渲染,全页截图逐页对比。复现命令见 `.snow/artifacts/parity-report-2026-09-05.md`(gitignored,报告含已知有意偏差清单)。垫片不进生产镜像。
 
 ## 重评触发
 
