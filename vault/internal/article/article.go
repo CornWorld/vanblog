@@ -52,6 +52,8 @@ func canDeletePosts(auth *core.Record) bool {
 // Manager handles article operations.
 type Manager struct {
 	app core.App
+	// unlockAttempts throttles failed password guesses on /posts/{id}/unlock.
+	unlockAttempts attemptLimiter
 }
 
 // New creates an article Manager and registers its pb hook subscriptions.
@@ -62,12 +64,14 @@ type Manager struct {
 //   - OnServe: register /api/vanblog/timeline and /api/vanblog/search.
 func New(app core.App) *Manager {
 	m := &Manager{app: app}
+	RegisterContentHygieneHooks(app)
 	m.handlePostsCacheInvalidation(app)
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.GET("/api/vanblog/timeline", m.handleTimelineEndpoint)
 		se.Router.GET("/api/vanblog/search", m.handleSearchEndpoint)
 		se.Router.GET("/api/vanblog/posts/trash", m.handleTrashEndpoint)
 		se.Router.POST("/api/vanblog/posts/{id}/restore", m.handleRestoreEndpoint)
+		se.Router.POST("/api/vanblog/posts/{id}/unlock", m.handleUnlock)
 		se.Router.POST("/api/vanblog/posts/{id}/purge", m.handlePurgeEndpoint)
 		return se.Next()
 	})
@@ -224,7 +228,7 @@ func (m *Manager) Search(query string, limit int) ([]SearchResult, error) {
 	// Search in title and content using OR
 	records, err := m.app.FindRecordsByFilter(
 		"posts",
-		"status='published' && deleted=false && (title~{:query} || content~{:query})",
+		"status='published' && deleted=false && password='' && (title~{:query} || content~{:query})",
 		"-created",
 		limit, 0,
 		dbx.Params{"query": query},

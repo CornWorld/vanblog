@@ -17,6 +17,7 @@ export const PostSchema = SystemFieldsSchema.extend({
   deleted: z.boolean().optional(),
   lastVisitedAt: IsoDateTimeSchema.optional(),
   oldId: z.number().optional(),
+  hasPassword: z.boolean().optional(),
   password: z.string().optional(),
   pathname: z.string().optional(),
   private: z.boolean().optional(),

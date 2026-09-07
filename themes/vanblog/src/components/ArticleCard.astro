@@ -105,8 +105,9 @@ const iconClass = 'mr-1 text-[var(--text-muted)]';
   </div>
 
   {/* ── 正文（原版 text-sm md:text-base mt-4 mx-2 容器） ── */}
-  {/* 带密码的文章(private 或 password)概览不渲染正文(上游 PostCard 语义) */}
-  {(post.private || post.password) ? (
+  {/* 带密码的文章(private 或 hasPassword)概览不渲染正文(上游 PostCard 语义);
+    匿名 API 已遮蔽 password/content,锁标志由平台 hasPassword 字段提供 */}
+  {(post.private || post.hasPassword) ? (
     <div class="text-sm md:text-base text-[var(--text-muted)] mt-4 mx-2">
       <p class="my-4">该文章已加密，点击 <code>阅读全文</code> 并输入密码后方可查看。</p>
     </div>

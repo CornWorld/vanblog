@@ -43,26 +43,39 @@ if (!id) return Astro.redirect('/404');
 // path 限定 cookie);本页不再接收表单 POST。
 let data: Post | null = null;
 let html: string | null = null;
-// 密码锁(原版 UnLockCard 流程):匿名无解锁 cookie → 渲染解锁卡,不重定向登录
+// 密码锁语义:匿名读者拿到的行已被平台遮蔽(content/password 空,hasPassword
+// 保留),正文经 vault 校验端点 /api/vanblog/posts/{id}/unlock 获取——密码或
+// 已签发的 HMAC 解锁 cookie 任一通过;都不满足 → 渲染 UnLockCard。
+// 登录用户(作者/admin)读到的行未遮蔽,直接渲染。
 let locked = false;
-// 取数语义:匿名命中未公开/草稿(受 ViewRule 保护)→ 登录页(原语义);
-// 匿名命中密码锁文章(published+password)→ 渲染 UnLockCard;有效解锁 cookie
-// 或登录作者直接渲染;getOne 失败且已登录 → 404。
 try {
   const raw = await pb.collection('posts').getOne<Post>(id);
   if (raw) {
     data = raw;
-    const content = normalizeMathDelimiters(raw.content || '');
-    if (raw.password) {
-      const unlocked =
-        Astro.cookies.get(`vb-unlock-${id}`)?.value === 'true' ||
-        isAuthenticated(pb);
-      if (unlocked) {
+    if (raw.hasPassword || raw.password) {
+      if (isAuthenticated(pb)) {
+        const content = normalizeMathDelimiters(raw.content || '');
         html = (await renderMarkdown(content)).code;
       } else {
-        locked = true;
+        const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+        const r = await fetch(`${pb.baseURL}/api/vanblog/posts/${id}/unlock`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            cookie: Astro.cookies.toString() || '',
+          },
+          body: JSON.stringify({ basePath }),
+        });
+        if (r.ok) {
+          const j = await r.json();
+          const content = normalizeMathDelimiters(j.content || '');
+          html = (await renderMarkdown(content)).code;
+        } else {
+          locked = true;
+        }
       }
     } else {
+      const content = normalizeMathDelimiters(raw.content || '');
       html = (await renderMarkdown(content)).code;
     }
   }
