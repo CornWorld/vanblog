@@ -6,6 +6,9 @@
 @import "katex/dist/katex.min.css"; /* rehype-katex 在平台管线(remark-math + rehypeKatex)启用 */
 @import "./vendor/side-bar.css";
 @import "./vendor/upstream-globals.css";
+@import "./vendor/upstream-var.css";
+@import "./vendor/tip-card.css";
+@import "./vendor/scrollbar.css";
 @import "./vendor/loader.css";
 
 /* ── Builtin source files (app/src/) — Tailwind must scan these for utility classes.
@@ -39,8 +42,8 @@
    The semantic alias flips automatically under html.dark, so there is no
    need for dark: variants on colors that have a semantic alias. */
 @theme {
-  /* Light palette */
-  --color-bg: #fafafa;
+  /* Light palette(底色对齐上游 html bg-slate-100) */
+  --color-bg: #f1f5f9;
   --color-surface: #ffffff;
   --color-text: #1e293b;
   --color-text-muted: #64748b;
@@ -48,7 +51,7 @@
   --color-accent: #2563eb;
 
   /* Dark palette — exposed as named tokens so `bg-bg-dark` etc. work */
-  --color-bg-dark: #0f172a;
+  --color-bg-dark: #1d2025; /* upstream literal(html.dark) */
   --color-surface-dark: #1e293b;
   --color-text-dark: #e2e8f0;
   --color-text-muted-dark: #94a3b8;
@@ -64,6 +67,7 @@
   --color-dark-400: rgb(110 110 110);
   --color-dark-light: rgb(153 153 153);
   --color-dark-hover: rgb(200 200 200);
+  --color-dark-r: #26282c;
   --color-nav-dark: #26282c;
   --color-nav-dark-light: rgb(158 158 158);
   --color-hr-dark: rgb(50 50 50);

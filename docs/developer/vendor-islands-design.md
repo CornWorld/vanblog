@@ -36,6 +36,7 @@
 | 数据获取 | SWR + legacy `/api/public/*` | SDK 串行取数(同 client 并发触发 auto-cancel) | 渲染输入同源(parity 垫片保证);串行是实现约束非行为差异 |
 | Markdown 渲染 | bytemd 客户端 | 平台 remark/rehype SSR + `lib/upstreamMarkdown.ts` 后处理对齐 DOM | 代码块/标题/TOC 行 DOM 同构;语法高亮保持平台 shiki 内联色(见下行) |
 | 语法高亮 | highlight.js(`hljs` 类,code-light/dark.css) | 平台管线 shiki 内联色 + `--shiki-dark` 暗色变量 | **有意分叉**:暗色即开即用;换行符/Token 粒度不同,文本内容一致 |
+| CSS 层 | globals.css 手写工具类(nav-item/headroom/pg-*/text-dark fill 半边/ua/popover-arrow)+ var.css/tip-card.css/scrollbar.css + 代码块包裹内边距 | `vendor/upstream-globals.css` 全量补齐(2026-09-07 CSS 批)+ 三文件 vendor;页面底色对齐上游实际像素(slate-100/#1d2025);`--color-dark-r` token 补齐 | 类名相同必须规则相同:DOM diff 之外新增计算样式探针(nav 0.15s 过渡、headroom transform、ua::before 0.3s、代码块 22px 16px 16px、pre-wrap)逐项核验 |
 | 静态展示件 | React | 已全量 vendor(2026-09-07 二批:PostCard 系/AuthorCard 系/Footer/TimeLineItem/LinkCard/PageNav/ImageBox 等) | 换框架不换行为;删除早期 Astro 手写版 |
 | 评论数角标 | SubTitle 内 `span.waline-comment-count[data-path]` 初始 0,WaLine commentCount 客户端填充(仅文章页;首页保持静态 0) | 同 DOM;CommentArtalk 挂载时按 Artalk `/api/v2/stats` 填充 `data-path` | **修正此前误登记**:上游确有评论数角标;enableComment 由 commentsProvider 映射 |
 

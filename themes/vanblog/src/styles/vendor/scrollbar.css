@@ -1,0 +1,18 @@
+/* UPSTREAM: packages/website/styles/scrollbar.css@4b488500be8100b19772ec00d8315f343a6ac21e
+ * SEAM: .dark → html.dark(平台暗色作用域);其余逐字。上游 fix → apply patch。
+ */
+::-webkit-scrollbar {
+  width: 12px;
+}
+#toc-container::-webkit-scrollbar {
+  width: 10px;
+}
+html.dark #toc-container::-webkit-scrollbar-thumb {
+  background: #797979;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #9f9f9f;
+}
+::-webkit-scrollbar-thumb {
+  background: #cfcfcf;
+}
