@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/cornworld/vanblog/internal/site"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -33,7 +34,7 @@ func New(app core.App) *Manager {
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		// Heal residual secret fields in the public site row (restores of
 		// pre-isolation backups) before S3 config is read.
-		if err := HealSiteSecrets(app); err != nil {
+		if err := site.HealSecrets(app); err != nil {
 			slog.Warn("[media] startup site secret heal failed", "err", err)
 		}
 		if err := ApplyS3BackendToSettings(app); err != nil {
@@ -47,7 +48,7 @@ func New(app core.App) *Manager {
 	// `site` collection can never hold them again (defense in depth on top
 	// of the migration). Values are parked in the admin-only site_secrets row.
 	stripSiteSecrets := func(e *core.RecordRequestEvent) error {
-		if err := MoveSiteSecretsFromRecord(m.app, e.Record); err != nil {
+		if err := site.MoveSecretsFromRecord(m.app, e.Record); err != nil {
 			slog.Warn("[media] site write stripped, secrets write failed", "err", err)
 		}
 		return e.Next()

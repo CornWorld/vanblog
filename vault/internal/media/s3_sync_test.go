@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	vbsite "github.com/cornworld/vanblog/internal/site"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -24,7 +25,7 @@ func TestApplyS3BackendToSettings_DisabledByDefault(t *testing.T) {
 }
 
 // seedSiteS3Config writes an S3 config through the real path: a site payload
-// carrying s3Config passes through MoveSiteSecretsFromRecord (bound to the
+// carrying s3Config passes through vbsite.MoveSecretsFromRecord (bound to the
 // site create/update request hooks), which parks the value in site_secrets
 // and nulls it on the public site row.
 func seedSiteS3Config(t *testing.T, app core.App, cfg core.S3Config) {
@@ -35,7 +36,7 @@ func seedSiteS3Config(t *testing.T, app core.App, cfg core.S3Config) {
 	}
 	raw, _ := json.Marshal(cfg)
 	site.Set("s3Config", json.RawMessage(raw))
-	if err := MoveSiteSecretsFromRecord(app, site); err != nil {
+	if err := vbsite.MoveSecretsFromRecord(app, site); err != nil {
 		t.Fatalf("move to site_secrets: %v", err)
 	}
 	if got := site.GetString("s3Config"); got != "" && got != "null" {

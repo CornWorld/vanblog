@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	vbsite "github.com/cornworld/vanblog/internal/site"
 	_ "github.com/cornworld/vanblog/pb_migrations"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
@@ -179,8 +180,7 @@ func TestHealSiteSecrets_MovesResidualPublicSecrets(t *testing.T) {
 	if err := app.Save(site); err != nil {
 		t.Fatalf("save site: %v", err)
 	}
-
-	if err := HealSiteSecrets(app); err != nil {
+	if err := vbsite.HealSecrets(app); err != nil {
 		t.Fatalf("HealSiteSecrets: %v", err)
 	}
 
@@ -208,8 +208,8 @@ func TestHealSiteSecrets_MovesResidualPublicSecrets(t *testing.T) {
 	}
 
 	// Idempotent: a second heal is a no-op and keeps the secrets row.
-	if err := HealSiteSecrets(app); err != nil {
-		t.Fatalf("second HealSiteSecrets: %v", err)
+	if err := vbsite.HealSecrets(app); err != nil {
+		t.Fatalf("second HealSecrets: %v", err)
 	}
 	again := reloaded
 	if raw := again.GetString("s3Config"); raw != "" && raw != "null" {
