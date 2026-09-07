@@ -31,7 +31,7 @@ for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
           if (s.type === 'wechat') {
             return (
               <div
-                class="wechat-qr-trigger relative w-1/2 mb-1 mx-1 flex items-center rounded-sm transition-all text-xs text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)] no-underline select-none cursor-pointer px-2 py-0.5"
+                class="wechat-qr-trigger relative w-1/2 mb-1 mx-1 flex items-center rounded-xs transition-all text-xs text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)] no-underline select-none cursor-pointer px-2 py-0.5"
                 role="button"
                 tabindex="0"
                 title="wechat"
@@ -51,7 +51,7 @@ for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
               href={href}
               target={target}
               rel="noopener noreferrer"
-              class="w-1/2 mb-1 mx-1 flex items-center rounded-sm transition-all text-xs text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)] no-underline select-none cursor-pointer px-2 py-0.5"
+              class="w-1/2 mb-1 mx-1 flex items-center rounded-xs transition-all text-xs text-[var(--text-muted)] hover:bg-[var(--hover)] hover:text-[var(--text)] no-underline select-none cursor-pointer px-2 py-0.5"
               title={s.type}
             >
               <SocialIcon type={s.type} size={16} />

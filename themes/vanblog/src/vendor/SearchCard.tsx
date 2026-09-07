@@ -208,7 +208,7 @@ export default function SearchCard(props: {
           </div>
           <KeyCard type="esc"></KeyCard>
         </div>
-        <hr className="my-2 dark:border-hr-dark"></hr>
+        <hr className="my-2 border-gray-200 dark:border-hr-dark"></hr>
         <div
           className="dark:text-dark"
           style={{ maxHeight: 400, overflowY: "auto" }}

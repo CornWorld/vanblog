@@ -41,6 +41,7 @@
 | 暗色类机制 | 上游 v3.3.5 会对 @layer components 手写类生成 `dark:` 变体(color+fill 成对、hover/group-hover 全套;`text-dark`=灰158 与 `bg-dark`=#26282c 同名不同值) | @theme 单 token 无法表达 → 已删错误 token;`upstream-globals.css` 手写 27 条变体规则 + 无条件类,**逐字从上游构建产物移植**(dev styleSheets 抓取) | 修正暗色文字被涂成 #26282c(背景同色隐形)与 `a` 全局染 accent 蓝两个根因;计算样式探针实测 nav/标题/副标题/页脚=rgb(158,158,158) 与上游逐位一致 |
 | 调色盘切换失效 | —(上游无调色盘) | SDK `runWithTransition` 裸调 `document.startViewTransition` 抛 Illegal invocation,回调(切 dark 类+换 palette.css link)从未执行 → `vt.call(doc, fn)` | 选盘 → link 换 `name=midnight-dark` + CSS 变量实际生效 + 清除回落,浏览器闭环验证 |
 | 评论数角标 | SubTitle 内 `span.waline-comment-count[data-path]` 初始 0,WaLine commentCount 客户端填充(仅文章页;首页保持静态 0) | 同 DOM;CommentArtalk 挂载时按 Artalk `/api/v2/stats` 填充 `data-path` | **修正此前误登记**:上游确有评论数角标;enableComment 由 commentsProvider 映射 |
+| Tailwind v3→v4 迁移面 | 上游组件按 v3.3.5 语义书写(类名/默认值/选择器) | 按[官方升级手册](https://tailwindcss.com/docs/upgrade-guide)全量审计(4 scout 并行分片 + 构建产物实测):flex-grow/shrink 族→grow/shrink、rounded-sm→rounded-xs(保 v3 0.125rem)、hr/divide 补显式亮色(v4 默认色 currentColor)、button cursor 全局兜底 pointer(官方推荐写法)、custom-container 显式边色;实测 v4.3.2 对 flex-grow/shrink 旧名仍出等值别名,改名属前瞻 | 删除孤儿 ArticleList.astro/TimeLineItem.astro;app/src/pages/admin/** 为锁定区,v4 边框默认色变化在其中保留原样(登记) |
 
 ## 背景(2026-09 量化)
 

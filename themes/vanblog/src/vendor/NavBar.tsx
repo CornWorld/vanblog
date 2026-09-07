@@ -134,10 +134,10 @@ export default function NavBar(props: {
             </a>
           )}
           {/* 第二个flex */}
-          <div className="flex justify-between h-full flex-grow nav-content">
+          <div className="flex justify-between h-full grow nav-content">
             <div
               style={{ transform: "translateX(30px)" }}
-              className="cursor-pointer md:hidden  flex-grow text-center  flex items-center justify-center select-none dark:text-dark"
+              className="cursor-pointer md:hidden  grow text-center  flex items-center justify-center select-none dark:text-dark"
             >
               <a href={withBase("/")}>
                 <div>{props.siteName}</div>

@@ -47,7 +47,7 @@ export function PostBottom(props: {
           ))}
         </div>
       )}
-      <hr className="mt-3 dark:border-hr-dark" />
+      <hr className="mt-3 border-gray-200 dark:border-hr-dark" />
       <div className="flex justify-between text-sm mt-2 whitespace-nowrap overflow-hidden ">
         <div className="" style={{ maxWidth: "50%" }}>
           {props.pre?.id && (

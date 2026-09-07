@@ -85,7 +85,7 @@ export default function NavBarMobile(props: {
               document.body.style.overflow = "auto";
               props.setIsOpen(false);
             }}
-            className=" sm:flex h-full items-center  text-sm text-gray-600 hidden divide-y divide-dashed dark:text-dark "
+            className=" sm:flex h-full items-center  text-sm text-gray-600 hidden divide-y divide-dashed divide-gray-200 dark:text-dark "
           >
             {renderLinks()}
             {props.showAdminButton == "true" && (

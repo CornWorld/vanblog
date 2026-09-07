@@ -123,7 +123,7 @@ export default function (props: { option: AuthorCardProps }) {
               href={`/feed.xml`}
               rel="noreferrer"
               target="_blank"
-              className="flex text-gray-500 px-2 py-1 dark:text-dark select-none cursor-pointer hover:bg-gray-200 dark:hover:bg-dark-light dark:hover:text-dark-r rounded-sm transition-all text-xs"
+              className="flex text-gray-500 px-2 py-1 dark:text-dark select-none cursor-pointer hover:bg-gray-200 dark:hover:bg-dark-light dark:hover:text-dark-r rounded-xs transition-all text-xs"
             >
               <RssLogo size={18} />
               <span className="ml-1 text-sm">RSS</span>

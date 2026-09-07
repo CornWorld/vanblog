@@ -232,7 +232,7 @@ html.dark {
 
 /* ── Custom containers (remark-directive / ::tip ::warning etc.) ── */
 .custom-container {
-  @apply rounded-lg border p-4 my-4;
+  @apply rounded-lg border border-[var(--border)] p-4 my-4;
 }
 
 /* ── Thin global scrollbar ── */

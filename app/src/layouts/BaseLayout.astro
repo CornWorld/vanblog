@@ -61,7 +61,7 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     />
   </head>
   <body class="min-h-screen flex flex-col">
-    <header class="border-b">
+    <header class="border-b border-[var(--border)]">
       <div class="container-page flex items-center justify-between py-3">
         <a href="/" class="font-semibold no-underline">{siteName}</a>
         <nav class="flex flex-wrap gap-3 text-sm">
@@ -83,7 +83,7 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
       <slot />
     </main>
 
-    <footer class="border-t py-4 text-center text-xs text-[var(--text-muted)]">
+    <footer class="border-t border-[var(--border)] py-4 text-center text-xs text-[var(--text-muted)]">
       <p>{site?.copyrightAgreement || ''} {site?.author || ''} · Powered by Vanblog</p>
     </footer>
 

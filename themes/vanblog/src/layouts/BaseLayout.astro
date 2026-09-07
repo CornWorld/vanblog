@@ -209,10 +209,10 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     <ToastProviderIsland client:load />
     <div class="mx-auto lg:px-6 md:py-4 py-2 px-2 md:px-4 text-gray-700">
       <div class="flex mx-auto justify-center">
-        <div class="flex-shrink flex-grow md:max-w-3xl xl:max-w-4xl w-full vanblog-main">
+        <div class="shrink grow md:max-w-3xl xl:max-w-4xl w-full vanblog-main">
           <slot />
         </div>
-        <div class={`hidden lg:block flex-shrink-0 flex-grow-0 vanblog-sider ${sideBar ? 'w-52' : ''}`}>
+        <div class={`hidden lg:block shrink-0 grow-0 vanblog-sider ${sideBar ? 'w-52' : ''}`}>
           <slot name="sideBar" />
         </div>
       </div>

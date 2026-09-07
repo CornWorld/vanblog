@@ -264,6 +264,11 @@ html.dark {
   select:focus {
     @apply border-[var(--accent)] ring-1 ring-[var(--accent)]/30;
   }
+  /* v4 preflight 将 button 光标改为 default;对齐 v3 的 pointer(官方迁移手册推荐写法) */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
   /* checkbox / radio: keep native, do not paint a box around them */
   input[type="checkbox"],
   input[type="radio"] {
@@ -291,7 +296,8 @@ html.dark {
 
 /* ── Custom containers (remark-directive / ::tip ::warning etc.) ── */
 .custom-container {
-  @apply rounded-lg border p-4 my-4;
+  /* v4 默认边色 currentColor → 显式化对齐 v3 gray-200 */
+  @apply rounded-lg border border-gray-200 p-4 my-4;
 }
 
 /* ── Thin global scrollbar ── */

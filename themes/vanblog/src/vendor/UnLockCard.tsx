@@ -76,7 +76,7 @@ export default function UnLockCard(props: {
             文章已解锁，请输入密码后查看：
           </p>
           <div className="flex items-center">
-            <div className=" bg-gray-100 rounded-md dark:bg-dark-2 overflow-hidden flex-grow">
+            <div className=" bg-gray-100 rounded-md dark:bg-dark-2 overflow-hidden grow">
               <input
                 type="password"
                 value={value}
@@ -96,7 +96,7 @@ export default function UnLockCard(props: {
             </div>
             <button
               onClick={handleClick}
-              className="flex-grow-0 text-gray-500 dark:text-dark ml-2 rounded-md dark:bg-dark-2 bg-gray-200 transition-all hover:text-lg w-20 h-8"
+              className="grow-0 text-gray-500 dark:text-dark ml-2 rounded-md dark:bg-dark-2 bg-gray-200 transition-all hover:text-lg w-20 h-8"
             >
               确认
             </button>
