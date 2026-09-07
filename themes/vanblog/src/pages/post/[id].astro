@@ -49,7 +49,16 @@ let html: string | null = null;
 // 登录用户(作者/admin)读到的行未遮蔽,直接渲染。
 let locked = false;
 try {
-  const raw = await pb.collection('posts').getOne<Post>(id);
+  let raw: Post | null = null;
+  try {
+    raw = await pb.collection('posts').getOne<Post>(id);
+  } catch {
+    // id 未命中 → 按 permalink(pathname)直接渲染,对齐原版
+    // getArticleByIdOrPathname 双解析语义(URL 保持 slug 形态,无重定向)。
+    raw = await pb.collection('posts').getFirstListItem<Post>(
+      `pathname="/${id.replace(/"/g, '\\"')}" && deleted=false`,
+    );
+  }
   if (raw) {
     data = raw;
     if (raw.hasPassword || raw.password) {
@@ -58,7 +67,7 @@ try {
         html = (await renderMarkdown(content)).code;
       } else {
         const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
-        const r = await fetch(`${pb.baseURL}/api/vanblog/posts/${id}/unlock`, {
+        const r = await fetch(`${pb.baseURL}/api/vanblog/posts/${raw.id}/unlock`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -80,19 +89,7 @@ try {
     }
   }
 } catch {
-  // id 未命中 → 回退按自定义 permalink(pathname)匹配,301 到规范 /post/<id>
-  // (原 [pathname].astro 的机制;原版无此字段,平台自有 permalink 兼容层)。
-  try {
-    const alt = await pb.collection('posts').getFirstListItem<Post>(
-      `pathname="${id.replace(/"/g, '\\"')}" && deleted=false`,
-      { fields: 'id,status,private' }
-    );
-    if (alt.status === 'published' && !alt.private) {
-      return Astro.redirect(`/post/${alt.id}`, 301);
-    }
-  } catch {
-    // fall through
-  }
+  // 双解析(getOne → pathname)都未命中,或命中但被 ViewRule 拦截。
   if (isAuthenticated(pb)) {
     // Not found OR blocked by ViewRule even when authenticated.
     Astro.response.status = 404;

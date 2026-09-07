@@ -19,7 +19,7 @@ export default function ArticleList(props: {
     <div className="space-y-2" onClick={props.onClick}>
       {props.articles.map((article) => (
         <a
-          href={withBase(`/post/${article.id}`)}
+          href={withBase(`/post${article.path || `/${article.id}`}`)}
           key={article.id}
           target={props.openArticleLinksInNewWindow ? "_blank" : "_self"}
           rel={props.openArticleLinksInNewWindow ? "noreferrer" : undefined}
