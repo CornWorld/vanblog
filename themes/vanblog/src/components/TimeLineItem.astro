@@ -32,7 +32,7 @@ const rowDate = (raw: string) => (showYear ? raw : raw.slice(5, 10));
   <div class="space-y-2 pb-1">
     {articles.map((a) => (
       <a
-        href={`/posts/${a.id}`}
+        href={`/post/${a.id}`}
         class="flex items-center border-b border-dashed border-[var(--border)] hover:border-[var(--text-muted)] pb-1 group/row cursor-pointer"
       >
         <div class="text-[var(--text-muted)] flex-grow-0 flex-shrink-0 text-sm group-hover/row:text-[var(--text)]">

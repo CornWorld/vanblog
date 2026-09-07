@@ -25,23 +25,18 @@ export interface AuthorCardProps {
 /**
  * Build AuthorCard sidebar props: author identity + post/category/tag counts.
  * - postNum / categoryNum 与口径同原版（发布文章总数 / 全量分类数）。
- * - tagNum 按原版 `getTagsWithArticle(false)` 语义：只统计**已发布文章实际引用**的去重 tag，
- *   排除 admin 单独创建但未被文章引用的「孤儿 tag」，避免数字虚高。
+ * - tagNum 对齐原版 getAuthorCardProps:全量 tag 数(原版 data.tags 含未被
+ *   文章引用的孤儿 tag,如需排除应同时改原版,不在此分叉)。
  */
 export async function getAuthorCardProps(
   pb: VanblogClient,
   site: Partial<Site> | null
 ): Promise<AuthorCardProps> {
-  const [posts, categories, tagsOnPosts] = await Promise.all([
-    safe(() => pb.vanblog.posts.listPublished(1, 1, { fields: 'id' }), 'vm-posts'),
-    safe(() => pb.collection('categories').getFullList({ fields: 'id' }), 'vm-categories'),
-    safe(() => pb.vanblog.posts.listPublished(1, 500, { fields: 'tags' }), 'vm-tags'),
-  ]);
-
-  const tagSet = new Set<string>();
-  for (const p of tagsOnPosts.data?.items ?? []) {
-    for (const t of p.tags ?? []) if (t) tagSet.add(t);
-  }
+  // 串行:同一 pb client 并发请求触发 SDK auto-cancel(posts 请求被取消 →
+  // postNum 落 0,截图实证),与 lib/home.ts 同因。
+  const posts = await safe(() => pb.vanblog.posts.listPublished(1, 1, { fields: 'id' }), 'vm-posts');
+  const categories = await safe(() => pb.collection('categories').getFullList({ fields: 'id' }), 'vm-categories');
+  const tags = await safe(() => pb.collection('tags').getFullList({ fields: 'id' }), 'vm-tags');
 
   return {
     author: site?.author || site?.siteName || 'Vanblog',
@@ -50,7 +45,7 @@ export async function getAuthorCardProps(
     logoDark: site?.authorLogoDark || site?.siteLogoDark || '',
     postNum: posts.data?.totalItems ?? 0,
     categoryNum: categories.data?.length ?? 0,
-    tagNum: tagSet.size,
+    tagNum: tags.data?.length ?? 0,
     socials: site?.socials ?? [],
     showRSS: site?.displayOptions?.showRSS !== false,
   };

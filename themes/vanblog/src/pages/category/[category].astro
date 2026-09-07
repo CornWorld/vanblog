@@ -2,7 +2,7 @@
 ⛔ AGENT: DO NOT EDIT THIS BLOCK
 L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
 页面: 分类详情
-路径: themes/vanblog/src/pages/categories/[id].astro
+路径: themes/vanblog/src/pages/category/[category].astro
 契约变量:
   - category: Category — 当前分类
   - posts: PostExpand[] — 该分类下的文章
@@ -21,18 +21,20 @@ import { getAuthorCardProps } from '../../lib/viewModel';
 import { withBase } from '../../lib/base';
 
 const pb = Astro.locals.pb;
-const { id } = Astro.params;
-if (!id) return Astro.redirect('/404');
+const { category: name } = Astro.params;
+if (!name) return Astro.redirect('/404');
+// Astro params 是原始(未解码)段;Next 对路径参数自动解码,此处对齐。
+const decoded = (() => { try { return decodeURIComponent(name); } catch { return name; } })();
 
 let cat: Category;
 try {
-  cat = await pb.collection('categories').getOne<Category>(id);
+  cat = await pb.collection('categories').getFirstListItem<Category>(`name="${decoded.replace(/"/g, '\\"')}"`);
 } catch {
   return Astro.redirect('/404');
 }
 
 const { data: result } = await safe(
-  // relation 字段存 record ID，必须用 cat.id 过滤（原版按 name，PB 语义不同）
+  // 原版 getCategoryPagesProps(params.category) 按分类名取;relation 过滤仍用 cat.id
   () => pb.vanblog.posts.listPublished(1, 500, { category: cat.id, sort: '-created' }),
   'category',
 );
@@ -55,8 +57,8 @@ const grouped = posts.reduce<Record<string, { id: string; title: string; created
 const years = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
 ---
 
-<BaseLayout title={cat.name} path={`/categories/${id}`} sideBar>
-  <a href={withBase('/categories')} class="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] mb-4 inline-block">
+<BaseLayout title={cat.name} path={`/category/${encodeURIComponent(name)}`} sideBar>
+  <a href={withBase('/category')} class="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] mb-4 inline-block">
     ← 所有分类
   </a>
 

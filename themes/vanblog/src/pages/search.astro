@@ -49,7 +49,7 @@ const { data: results = [], error } = searched
     <ul class="space-y-3">
       {results.map(r => (
         <li class="card-post">
-          <a href={`/posts/${r.id}`} class="font-medium text-[var(--text)] hover:text-[var(--accent)] no-underline">
+          <a href={`/post/${r.id}`} class="font-medium text-[var(--text)] hover:text-[var(--accent)] no-underline">
             {r.title}
           </a>
           {r.path && (

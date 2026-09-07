@@ -48,7 +48,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   // 必须与实际页面路径一致才能随请求回传。
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   cookies.set(`vb-unlock-${id}`, 'true', {
-    path: `${basePath}/posts/${id}`,
+    path: `${basePath}/post/${id}`,
     maxAge: 86400 * 7,
     sameSite: 'lax',
   });

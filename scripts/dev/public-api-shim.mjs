@@ -72,7 +72,8 @@ function toLegacyArticle(r) {
     private: Boolean(r.private) || Boolean(r.password),
     author: r.expand?.author?.name || r.author || "",
     copyright: r.copyright ?? "",
-    pathname: r.pathname || r.id,
+    // 原版正常数据 pathname 无前导 /;PB 种子带 /,剥掉以免 /post//xxx 双斜杠
+    pathname: (r.pathname || "").replace(/^\//, "") || r.id,
     wordCount: (r.content ?? "").length,
   };
 }
@@ -108,7 +109,8 @@ async function buildMeta() {
     totalWordCount: wordTotalOf(posts),
     totalArticles: posts.length,
     menus,
-    tags: tagRows.map((t) => ({ name: t.name, count: 0 })),
+    // 原版 meta.tags 为名字数组(getStaticPaths 直接 map 成 params.tag)
+    tags: tagRows.map((t) => t.name),
     meta: {
       categories: cats.map((c) => c.name),
       links: site.links ?? [],

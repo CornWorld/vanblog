@@ -1,7 +1,7 @@
 /* UPSTREAM: packages/website/components/NavBar/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: 1) next/link → <a>;2) ThemeContext → seams/theme.ts useRealTheme(logo 明暗
  * 切换语义不变);3) utils/encode encodeQuerystring 内联;4) categories prop 改
- * {id,name}[] 并按平台路由 /categories/{id} 链接(上游为名字链接 /category/{name});
+ * {id,name}[] 并按上游形态 /category/{name} 链接;
  * 5) palettePicker 插位:平台调色盘 UI(上游无),渲染在 ThemeButton 之后。
  * headroom 收放/子菜单/搜索入口/按钮组结构全部上游原样。
  * 上游 fix → 对本文件 apply patch。
@@ -202,7 +202,7 @@ export default function NavBar(props: {
                     key={catelog.id}
                     className="flex items-center h-full md:px-2 hover:text-gray-900 dark:hover:text-dark-hover transform hover:scale-110 cursor-pointer transition-all"
                   >
-                    <a href={withBase(`/categories/${catelog.id}`)}>
+                    <a href={withBase(`/category/${catelog.name}`)}>
                       <div>{catelog.name}</div>
                     </a>
                   </li>

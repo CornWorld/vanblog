@@ -2,20 +2,20 @@
 ⛔ AGENT: DO NOT EDIT THIS BLOCK
 L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
 页面: 分类索引
-路径: themes/vanblog/src/pages/categories/index.astro
+路径: themes/vanblog/src/pages/category.astro
 契约变量:
   - categories: Category[] — 全部分类
 -->
 ---
 export const prerender = false;
 
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import AuthorCard from '../../components/AuthorCard.astro';
-import ArticleList from '../../components/ArticleList.astro';
-import ErrorState from '../../components/ErrorState.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AuthorCard from '../components/AuthorCard.astro';
+import ArticleList from '../components/ArticleList.astro';
+import ErrorState from '../components/ErrorState.astro';
 import { safe } from '@vanblog/sdk';
 import type { PostExpand } from '@vanblog/sdk';
-import { getAuthorCardProps } from '../../lib/viewModel';
+import { getAuthorCardProps } from '../lib/viewModel';
 const pb = Astro.locals.pb;
 
 const { data: result, error } = await safe(
@@ -36,7 +36,7 @@ for (const post of posts) {
 }
 const categoryNames = Object.keys(byCategory).sort((a, b) => a.localeCompare(b));
 ---
-<BaseLayout title="分类" path="/categories" sideBar>
+<BaseLayout title="分类" path="/category" sideBar>
   <div class="card-post py-4 px-8 md:py-6 md:px-8">
     <div class="text-2xl md:text-3xl text-[var(--text)] text-center">分类</div>
     <div class="text-center text-sm text-[var(--text-muted)] mt-2 mb-4 font-light">

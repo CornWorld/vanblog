@@ -24,7 +24,7 @@ const { post, showExcerpt = true, overviewHtml, showExpirationReminder = true, o
 const isPinned = (post.top ?? 0) > 0;
 // Plain-text excerpt fallback when no pre-rendered overview is supplied.
 const excerpt = stripMarkdown(post.content, 200);
-const postUrl = withBase(`/posts/${encodeURIComponent(post.id ?? '')}`);
+const postUrl = withBase(`/post/${encodeURIComponent(post.id ?? '')}`);
 const category = post.expand?.category;
 // 原版 SubTitle 的图标尺寸与颜色（用语义 token 自动跟随暗色）
 const iconClass = 'mr-1 text-[var(--text-muted)]';
@@ -69,7 +69,7 @@ const iconClass = 'mr-1 text-[var(--text-muted)]';
     {/* 分类 + 文件夹图标（非 about 类型） */}
     {category && (
       <a
-        href={withBase(`/categories/${post.category}`)}
+        href={withBase(`/category/${encodeURIComponent(category?.name ?? '')}`)}
         class="inline-flex px-2 items-center group cursor-pointer hover:text-[var(--text)]"
         target={openInNewWindow ? '_blank' : undefined}
         rel={openInNewWindow ? 'noopener noreferrer' : undefined}

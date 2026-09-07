@@ -2,7 +2,7 @@
  * 站内路径统一加 Astro base 前缀。
  *
  * 主题以 base=/themes/<name>/ 运行（dev 直访与生产 Caddy 拓扑一致：
- * 静态件与 fallback 都保留前缀转发）。原版裸根路径（/posts/x、/page/2）
+ * 静态件与 fallback 都保留前缀转发）。原版裸根路径（/post/x、/page/2）
  * 在此拓扑下必须带前缀才是有效路由。
  *
  * 排除（平台根路径，不属于主题 base）：

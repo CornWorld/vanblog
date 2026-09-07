@@ -1,6 +1,6 @@
 /* UPSTREAM: packages/website/components/ArticleList/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: 1) next/link → <a>(MPA 整页导航);2) 上游 /post/{pathname||id} → 平台
- * /posts/{id}(平台路由以 id 定位);3) 上游 Article 类型 → seams/search.ts SearchHit
+ * /post/{id}(对齐上游文章路由形态);3) 上游 Article 类型 → seams/search.ts SearchHit
  * (仅消费 id/title/createdAt,与上游用到的字段一致);4) utils/getArticlePath、
  * Link/tools getTarget 内联(一行表达式)。dayjs 日期格式原样。
  * 上游 fix → 对本文件 apply patch。
@@ -19,7 +19,7 @@ export default function ArticleList(props: {
     <div className="space-y-2" onClick={props.onClick}>
       {props.articles.map((article) => (
         <a
-          href={withBase(`/posts/${article.id}`)}
+          href={withBase(`/post/${article.id}`)}
           key={article.id}
           target={props.openArticleLinksInNewWindow ? "_blank" : "_self"}
           rel={props.openArticleLinksInNewWindow ? "noreferrer" : undefined}

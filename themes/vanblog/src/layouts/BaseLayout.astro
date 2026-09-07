@@ -95,8 +95,8 @@ const defaultNav: NavEntry[] = [
   { label: '首页', href: '/' },
   { label: '归档', href: '/archive' },
   { label: '时间轴', href: '/timeline' },
-  { label: '标签', href: '/tags' },
-  { label: '分类', href: '/categories' },
+  { label: '标签', href: '/tag' },
+  { label: '分类', href: '/category' },
   ...packNavItems.map((p) => ({ label: p.label, href: p.href })),
   ...((site?.links?.length ?? 0) > 0 ? [{ label: '友链', href: '/link' }] : []),
   ...(site?.aboutContent && site.aboutContent.trim() ? [{ label: '关于', href: '/about' }] : []),
@@ -197,7 +197,7 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
       showAdminButton={site?.displayOptions?.showAdminButton !== false ? "true" : "false"}
       showFriends={site?.displayOptions?.showFriends !== false ? "true" : "false"}
       showRSS={site?.displayOptions?.showRSS !== false ? "true" : "false"}
-      headerLeftContent={site?.displayOptions?.headerLeftContent || 'siteName'}
+      headerLeftContent={(site?.siteLogo && site?.displayOptions?.headerLeftContent === 'siteLogo') ? 'siteLogo' : 'siteName'}
       defaultTheme="auto"
       subMenuOffset={site?.displayOptions?.subMenuOffset || 0}
       openArticleLinksInNewWindow={site?.displayOptions?.openArticleLinksInNewWindow === true}

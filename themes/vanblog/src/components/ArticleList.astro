@@ -25,7 +25,7 @@ function fmt(raw: string | undefined, withYear: boolean): string {
   <div class="space-y-0">
     {items.map((item) =>
       item.id ? (
-        <a href={withBase(`/posts/${encodeURIComponent(item.id)}`)} class="no-underline group block"
+        <a href={withBase(`/post/${encodeURIComponent(item.id)}`)} class="no-underline group block"
            target={openInNewWindow ? '_blank' : undefined}
            rel={openInNewWindow ? 'noopener noreferrer' : undefined}>
           <div class="flex items-center border-b border-dashed border-[var(--border)] py-1 group-hover:border-[var(--text-muted)] cursor-pointer transition-colors">

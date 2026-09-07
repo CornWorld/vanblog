@@ -2,7 +2,7 @@
 ⛔ AGENT: DO NOT EDIT THIS BLOCK
 L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
 页面: 标签详情
-路径: themes/vanblog/src/pages/tags/[id].astro
+路径: themes/vanblog/src/pages/tag/[tag].astro
 契约变量:
   - tag: Tag — 当前标签
   - posts: PostExpand[] — 该标签下的文章
@@ -21,18 +21,20 @@ import { getAuthorCardProps } from '../../lib/viewModel';
 import { withBase } from '../../lib/base';
 
 const pb = Astro.locals.pb;
-const { id } = Astro.params;
-if (!id) return Astro.redirect('/404');
+const { tag: name } = Astro.params;
+if (!name) return Astro.redirect('/404');
+// Astro params 是原始(未解码)段;Next 对路径参数自动解码,此处对齐。
+const decoded = (() => { try { return decodeURIComponent(name); } catch { return name; } })();
 
 let tag: Tag;
 try {
-  tag = await pb.collection('tags').getOne<Tag>(id);
+  tag = await pb.collection('tags').getFirstListItem<Tag>(`name="${decoded.replace(/"/g, '\\"')}"`);
 } catch {
   return Astro.redirect('/404');
 }
 
 const { data: result } = await safe(
-  // relation 字段存 record ID，必须用 tag.id 过滤（原版按 name，PB 语义不同）
+  // 原版 getTagPagesProps(params.tag) 按标签名取;relation 过滤仍用 tag.id
   () => pb.vanblog.posts.listPublished(1, 500, { tag: tag.id, sort: '-created' }),
   'tag',
 );
@@ -55,8 +57,8 @@ const grouped = posts.reduce<Record<string, { id: string; title: string; created
 const years = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
 ---
 
-<BaseLayout title={`#${tag.name}`} path={`/tags/${id}`} sideBar>
-  <a href={withBase('/tags')} class="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] mb-4 inline-block">
+<BaseLayout title={`#${tag.name}`} path={`/tag/${encodeURIComponent(name)}`} sideBar>
+  <a href={withBase('/tag')} class="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] mb-4 inline-block">
     ← 所有标签
   </a>
 

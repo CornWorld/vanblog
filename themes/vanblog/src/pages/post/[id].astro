@@ -1,0 +1,451 @@
+<!--
+⛔ AGENT: DO NOT EDIT THIS BLOCK
+L0 CONTRACT - 前端契约变量（见 .snow/plan/migrate-vanblog-frontend-to-theme-palette.md §模板契约清单）
+页面: 文章详情
+路径: themes/vanblog/src/pages/post/[id].astro
+契约变量:
+  - post: Post | null — 文章数据
+  - html: string | null — 渲染后的 Markdown HTML
+  - id: string — 文章 ID
+  - site: Site — 站点配置
+-->
+
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostViewer from '../../components/PostViewer.astro';
+import ExpirationNotice from '../../components/ExpirationNotice.astro';
+import CopyRight from '../../components/CopyRight.astro';
+import ErrorNotice from '@vanblog/base/components/ErrorNotice.astro';
+import Comments from '../../components/Comments.astro';
+import Reward from '../../components/Reward.astro';
+import TopPin from '../../components/TopPin.astro';
+import { isAuthenticated, safe } from '@vanblog/sdk';
+import { fmtDate } from '../../lib/dates';
+import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
+import { normalizeMathDelimiters } from '@vanblog/base/lib/markdown/normalizeMathDelimiters';
+import type { Post } from '@vanblog/sdk';
+import { sanitizeHtml } from '../../lib/sanitizeHtml';
+import { extractHeadings, hasHeadings } from '../../lib/toc';
+import { TocCard, default as MarkdownTocBarIsland } from '../../vendor/MarkdownTocBar';
+import ViewerIsland from '../../vendor/Viewer';
+import ImageZoom from '../../vendor/ImageZoom';
+import PostLock from '../../vendor/PostLock';
+import { withBase } from '../../lib/base';
+
+const pb = Astro.locals.pb;
+const site = await Astro.locals.getSite();
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect('/404');
+// 密码解锁走 vendor UnLockCard → POST /api/unlock(服务端渲染+消毒+下发
+// path 限定 cookie);本页不再接收表单 POST。
+let data: Post | null = null;
+let html: string | null = null;
+// 密码锁(原版 UnLockCard 流程):匿名无解锁 cookie → 渲染解锁卡,不重定向登录
+let locked = false;
+// 取数语义:匿名命中未公开/草稿(受 ViewRule 保护)→ 登录页(原语义);
+// 匿名命中密码锁文章(published+password)→ 渲染 UnLockCard;有效解锁 cookie
+// 或登录作者直接渲染;getOne 失败且已登录 → 404。
+try {
+  const raw = await pb.collection('posts').getOne<Post>(id);
+  if (raw) {
+    data = raw;
+    const content = normalizeMathDelimiters(raw.content || '');
+    if (raw.password) {
+      const unlocked =
+        Astro.cookies.get(`vb-unlock-${id}`)?.value === 'true' ||
+        isAuthenticated(pb);
+      if (unlocked) {
+        html = (await renderMarkdown(content)).code;
+      } else {
+        locked = true;
+      }
+    } else {
+      html = (await renderMarkdown(content)).code;
+    }
+  }
+} catch {
+  // id 未命中 → 回退按自定义 permalink(pathname)匹配,301 到规范 /post/<id>
+  // (原 [pathname].astro 的机制;原版无此字段,平台自有 permalink 兼容层)。
+  try {
+    const alt = await pb.collection('posts').getFirstListItem<Post>(
+      `pathname="${id.replace(/"/g, '\\"')}" && deleted=false`,
+      { fields: 'id,status,private' }
+    );
+    if (alt.status === 'published' && !alt.private) {
+      return Astro.redirect(`/post/${alt.id}`, 301);
+    }
+  } catch {
+    // fall through
+  }
+  if (isAuthenticated(pb)) {
+    // Not found OR blocked by ViewRule even when authenticated.
+    Astro.response.status = 404;
+  } else {
+    // Anonymous visitor hitting a private/draft post → send to login so they
+    // can come back as the author/admin. Returning a bare 404 here would
+    // confuse authors who just toggled "private" in the editor.
+    return Astro.redirect(`/login?back=${encodeURIComponent(`/post/${id}`)}`);
+  }
+}
+// Sanitize the rendered HTML before injecting it into the page.
+const safeHtml = html !== null ? sanitizeHtml(html) : null;
+
+// 文章含 h2/h3 标题 → 侧栏渲染 Toc（原版 hasToc ? <Toc/> : null）。
+const hasToc = !!safeHtml && hasHeadings(safeHtml);
+const tocItems = safeHtml ? extractHeadings(safeHtml) : [];
+let prePost: { id: string; title: string } | null = null;
+let nextPost: { id: string; title: string } | null = null;
+if (data?.created) {
+  const baseFilter = 'status = "published" && deleted = false';
+  // 更旧的（pre，左 `<`）：created < 本篇，取最近一条
+  const { data: older } = await safe(
+    () => pb.collection('posts').getList<Post>(1, 1, {
+      filter: `${baseFilter} && created < "${data.created}"`,
+      sort: '-created',
+      fields: 'id,title',
+    }),
+    'post-prev'
+  );
+  // 更新的（next，右 `>`）：created > 本篇，取最早一条
+  const { data: newer } = await safe(
+    () => pb.collection('posts').getList<Post>(1, 1, {
+      filter: `${baseFilter} && created > "${data.created}"`,
+      sort: 'created',
+      fields: 'id,title',
+    }),
+    'post-next'
+  );
+  const prev = older?.items?.[0];
+  const next = newer?.items?.[0];
+  if (prev?.id) prePost = { id: prev.id, title: prev.title };
+  if (next?.id) nextPost = { id: next.id, title: next.title };
+}
+
+// 标签名映射（data.tags 是 record id，需查 name 渲染）。
+let tagMap: Record<string, string> = {};
+const tagIds = data?.tags ?? [];
+if (tagIds.length) {
+  const { data: tags } = await safe(
+    () => pb.collection('tags').getFullList<{ id: string; name: string }>(),
+    'post-tags'
+  );
+  tagMap = Object.fromEntries((tags ?? []).map((t) => [t.id, t.name]));
+}
+
+// 分类名（data.category 是 record id；keywords 需要 name）。
+let categoryName = '';
+if (data?.category) {
+  // 局部 const 收窄：data 是 let，属性访问不会被 TS 可靠收窄
+  const categoryId = data.category;
+  const { data: cat } = await safe(
+    () => pb.collection('categories').getOne<{ name: string }>(categoryId),
+    'post-category'
+  );
+  categoryName = cat?.name || '';
+}
+---
+
+<BaseLayout title={data?.title || '文章不存在'} post={data && safeHtml !== null ? data : undefined} path={`/post/${id}`} sideBar={hasToc} keywords={data && safeHtml !== null ? [data.title, categoryName, ...Object.values(tagMap)].filter(Boolean).join(',') : undefined}>
+  {data && safeHtml !== null ? (
+    <Fragment>
+      <div class="card-post relative">
+        {data.top != 0 && <TopPin />}
+        <article>
+          <h1>
+            {data.title}
+            {isAuthenticated(pb) && site?.displayOptions?.showEditButton !== false && (
+              <a
+                href={`/admin/edit/${id}`}
+                class="ml-3 text-sm font-normal text-[var(--text-muted)] hover:text-[var(--accent)] no-underline align-middle"
+                title="编辑文章"
+              >
+                ✏️ 编辑
+              </a>
+            )}
+          </h1>
+          <div class="text-center text-xs md:text-sm divide-x divide-[var(--border)] text-[var(--text-muted)] post-card-sub-title">
+            <span class="inline-flex px-2 items-center">
+              <svg class="mr-1 text-[var(--text-muted)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M832 128H704V96a32 32 0 0 0-64 0v32H384V96a32 32 0 0 0-64 0v32H192a64 64 0 0 0-64 64v640a64 64 0 0 0 64 64h640a64 64 0 0 0 64-64V192a64 64 0 0 0-64-64z m0 704H192V384h640v448zM192 320V192h128v32a32 32 0 0 0 64 0V192h256v32a32 32 0 0 0 64 0V192h128v128H192z"></path>
+              </svg>
+              {fmtDate(data.created)}
+            </span>
+            {categoryName && (
+              <span class="inline-flex px-2 items-center">
+                <svg class="mr-1 text-[var(--text-muted)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M810.666667 85.333333a85.333333 85.333333 0 0 1 85.333333 85.333334v152.021333c36.821333 9.493333 64 42.88 64 82.645333v405.333334a128 128 0 0 1-128 128H192a128 128 0 0 1-128-128V298.666667a85.376 85.376 0 0 1 64-82.645334V170.666667a85.333333 85.333333 0 0 1 85.333333-85.333334h597.333334zM128.149333 296.170667L128 298.666667v512a64 64 0 0 0 60.245333 63.893333L192 874.666667h640a64 64 0 0 0 63.893333-60.245334L896 810.666667V405.333333a21.333333 21.333333 0 0 0-18.837333-21.184L874.666667 384H638.165333l-122.069333-101.717333a21.333333 21.333333 0 0 0-10.688-4.736l-2.986667-0.213334H149.333333a21.333333 21.333333 0 0 0-21.184 18.837334zM535.189333 213.333333l127.978667 106.666667H832V170.666667a21.333333 21.333333 0 0 0-18.837333-21.184L810.666667 149.333333H213.333333a21.333333 21.333333 0 0 0-21.184 18.837334L192 170.666667v42.666666h343.168z"></path>
+                </svg>
+                <a href={`/category/${encodeURIComponent(categoryName)}`} class="text-inherit no-underline hover:text-[var(--text)]">{categoryName}</a>
+              </span>
+            )}
+            {data.viewCount != null && (
+              <span class="inline-flex px-2 items-center">
+                <svg class="mr-1 text-[var(--text-muted)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M942.2 486.2C847.4 286.5 704.1 186 512 186c-192.2 0-335.4 100.5-430.2 300.3-7.7 16.2-7.7 35.2 0 51.5C176.6 737.5 319.9 838 512 838c192.2 0 335.4-100.5 430.2-300.3 7.7-16.2 7.7-35 0-51.5zM512 766c-161.3 0-279.4-81.8-362.7-254C232.6 339.8 350.7 258 512 258c161.3 0 279.4 81.8 362.7 254C791.5 684.2 673.4 766 512 766z"></path>
+                  <path d="M508 336c-97.2 0-176 78.8-176 176s78.8 176 176 176 176-78.8 176-176-78.8-176-176-176z m0 288c-61.9 0-112-50.1-112-112s50.1-112 112-112 112 50.1 112 112-50.1 112-112 112z"></path>
+                </svg>
+                <ViewerIsland client:load id={id} shouldAddViewer={true} initial={data.viewCount} />
+              </span>
+            )}
+            {data.private && (
+              <span class="inline-flex px-2 items-center">
+                <svg class="mr-1 text-[var(--text-muted)]" width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M800 384h-32V288C768 164.288 667.712 64 544 64h-64C356.288 64 256 164.288 256 288v96h-32a64 64 0 0 0-64 64v448a64 64 0 0 0 64 64h576a64 64 0 0 0 64-64V448a64 64 0 0 0-64-64zM320 288a160 160 0 0 1 160-160h64a160 160 0 0 1 160 160v96H320V288z m480 512H224V448h576v352zM480 640v96a32 32 0 0 0 64 0v-96a64 64 0 1 0-64 0z"></path>
+                </svg>
+                私有
+              </span>
+            )}
+          </div>
+          {data.status !== 'published' && (
+            <div class="text-center mt-1">
+              <span class="inline-block px-2 py-0.5 text-xs rounded bg-[var(--border)] text-[var(--text-muted)]">{data.status}</span>
+            </div>
+          )}
+          <ExpirationNotice
+            created={data.created}
+            updated={data.updated}
+            show={site?.displayOptions?.showExpirationReminder !== false}
+          />
+          {hasToc && (
+            <div class="lg:hidden"><MarkdownTocBarIsland client:load items={tocItems} mobile headingOffset={56} /></div>
+          )}
+          <PostViewer html={safeHtml} />
+          <ImageZoom client:load />
+          {site?.displayOptions?.showCopyRight !== false && <CopyRight site={site} post={data} />}
+
+          {/* 标签 + 上下篇（原版 PostBottom） */}
+          <div class="mt-6">
+            {tagIds.length > 0 && (
+              <div class="flex flex-wrap justify-center gap-x-3 gap-y-1 text-sm text-[var(--text-muted)] select-none mb-2">
+                {tagIds.map((tid) => tagMap[tid] && (
+                  <a href={`/tag/${encodeURIComponent(tagMap[tid])}`} class="text-inherit no-underline border-b border-transparent hover:border-[var(--text-muted)]">
+                    {tagMap[tid]}
+                  </a>
+                ))}
+              </div>
+            )}
+            <hr class="border-[var(--border)]" />
+            <div class="flex justify-between text-sm mt-3 whitespace-nowrap overflow-hidden gap-4">
+              <div class="min-w-0 max-w-[50%] overflow-hidden text-ellipsis">
+                {prePost && (
+                  <a href={`/post/${prePost.id}`} class="text-[var(--text-muted)] hover:text-[var(--text)] no-underline border-b border-dashed border-[var(--border)]">
+                    {`< ${prePost.title}`}
+                  </a>
+                )}
+              </div>
+              <div class="min-w-0 max-w-[50%] overflow-hidden text-ellipsis text-right">
+                {nextPost && (
+                  <a href={`/post/${nextPost.id}`} class="text-[var(--text-muted)] hover:text-[var(--text)] no-underline border-b border-dashed border-[var(--border)]">
+                    {`${nextPost.title} >`}
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+      {site?.displayOptions?.showDonateButton !== false && data && <Reward site={site} />}
+
+      {/* 评论区 + 返回首页仅在文章加载成功时渲染（错误态不显示） */}
+      <hr />
+      <Comments
+        provider={site?.commentsProvider || 'disabled'}
+        config={site?.commentsConfig || null}
+      />
+      <p><a href={withBase('/')}>← 返回首页</a></p>
+    </Fragment>
+  ) : locked && data ? (
+    <PostLock client:load id={id} />
+  ) : (
+    <ErrorNotice code="404" title="文章不存在" message="该文章可能已被删除、未发布，或你没有访问权限。" />
+  )}
+
+  {hasToc && (
+    <Fragment slot="sideBar">
+      <TocCard client:load items={tocItems} showSubMenu={site?.displayOptions?.showSubMenu !== false ? "true" : "false"} />
+    </Fragment>
+  )}
+</BaseLayout>
+
+<script is:inline define:vars={{ postId: id, path: `/post/${id}` }}>
+  // 文章浏览计数：平台 Go 层 /api/vanblog/visits/record（原子 viewCount+1）。
+  // 仅当文章真正渲染（<article> 存在）时触发，避免 404/密码错误页误计数。
+  // postId/path 由 define:vars 注入（Astro 不插值 is:inline 脚本文本）。
+  if (document.querySelector('article')) {
+    ;(async () => {
+      try {
+        await fetch('/api/vanblog/visits/record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path, postId }),
+        });
+      } catch { /* silent */ }
+    })();
+  }
+</script>
+
+<script>
+  // ── Mermaid: render + export toolbar ──
+  import mermaid from 'mermaid';
+
+  const isDark = () => document.documentElement.classList.contains('dark');
+  mermaid.initialize({ startOnLoad: false, theme: isDark() ? 'dark' : 'default' });
+
+  const mermaidCodes = document.querySelectorAll('code.language-mermaid');
+  if (mermaidCodes.length > 0) {
+    mermaidCodes.forEach((code) => {
+      const wrapper = document.createElement('pre');
+      wrapper.className = 'mermaid';
+      wrapper.textContent = code.textContent;
+      code.parentElement?.replaceWith(wrapper);
+    });
+    await mermaid.run();
+
+    // Attach export toolbar to each rendered mermaid SVG
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const XLINK_NS = 'http://www.w3.org/1999/xlink';
+    const LIGHT_BG = '#ffffff', DARK_BG = '#0f172a';
+
+    function isTransparent(color: string | null | undefined): boolean {
+      return !color || color === 'transparent' || color.startsWith('rgba(0, 0, 0, 0)');
+    }
+    function resolveBg(el: HTMLElement): string {
+      let cur = el.parentElement;
+      while (cur) {
+        const bg = getComputedStyle(cur).backgroundColor;
+        if (!isTransparent(bg)) return bg;
+        cur = cur.parentElement;
+      }
+      return isDark() ? DARK_BG : LIGHT_BG;
+    }
+    function getSvgDim(svg: SVGSVGElement): { w: number; h: number } {
+      const vb = svg.viewBox?.baseVal;
+      if (vb && vb.width > 0 && vb.height > 0) return { w: vb.width, h: vb.height };
+      const r = svg.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) return { w: r.width, h: r.height };
+      return { w: 1200, h: 800 };
+    }
+    function serializeSvg(svg: SVGSVGElement, bg: string): { w: number; h: number; markup: string } {
+      const clone = svg.cloneNode(true) as SVGSVGElement;
+      const { w, h } = getSvgDim(clone);
+      clone.setAttribute('xmlns', SVG_NS);
+      clone.setAttribute('xmlns:xlink', XLINK_NS);
+      clone.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      clone.setAttribute('width', String(w));
+      clone.setAttribute('height', String(h));
+      const style = [clone.getAttribute('style'), `background:${bg}`, 'max-width:none'].filter(Boolean).join(';');
+      clone.setAttribute('style', style);
+      return { w, h, markup: `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(clone)}` };
+    }
+    function downloadFile(name: string, href: string): void {
+      const a = document.createElement('a');
+      a.download = name; a.href = href;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+    function downloadSvg(container: HTMLElement): void {
+      const svg = container.querySelector('svg');
+      if (!svg) return;
+      const { markup } = serializeSvg(svg, resolveBg(container));
+      const url = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }));
+      downloadFile(`diagram-${Date.now()}.svg`, url);
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+    async function downloadPng(container: HTMLElement): Promise<void> {
+      const svg = container.querySelector('svg');
+      if (!svg) return;
+      const bg = resolveBg(container);
+      const { w, h, markup } = serializeSvg(svg, bg);
+      const dataUrl = await new Promise<string>((ok, no) => {
+        const r = new FileReader();
+        r.onload = () => ok(String(r.result));
+        r.onerror = () => no(new Error('read failed'));
+        r.readAsDataURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }));
+      });
+      const scale = 2;
+      const c = document.createElement('canvas');
+      c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+      const ctx = c.getContext('2d');
+      if (!ctx) return;
+      const img = await new Promise<HTMLImageElement>((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = dataUrl; });
+      ctx.fillStyle = bg; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      downloadFile(`diagram-${Date.now()}.png`, c.toDataURL('image/png'));
+    }
+    function toolBtn(label: string, icon: string, onClick: () => Promise<void>): HTMLButtonElement {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.title = label; b.setAttribute('aria-label', label);
+      b.innerHTML = icon;
+      b.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); onClick().catch(console.error); });
+      return b;
+    }
+    const pngIcon = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="2"/><circle cx="5.5" cy="6.2" r="1"/><path d="M4.5 11l2.2-2.3 1.8 1.8 1.6-1.6 1.4 2.1"/></svg>';
+    const svgIcon = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="4" cy="4" r="1.5"/><circle cx="12" cy="4" r="1.5"/><circle cx="8" cy="12" r="1.5"/><path d="M5.5 4h5"/><path d="M4.9 5.3l2.2 4.2"/><path d="M11.1 5.3l-2.2 4.2"/></svg>';
+    document.querySelectorAll<HTMLElement>('.mermaid').forEach((el) => {
+      if (!el.querySelector('svg') || el.querySelector('.vb-mermaid-toolbar')) return;
+      const tb = document.createElement('div');
+      tb.className = 'vb-mermaid-toolbar';
+      tb.setAttribute('role', 'group');
+      tb.setAttribute('aria-label', '导出工具');
+      tb.style.cssText = 'display:flex;gap:4px;position:absolute;top:4px;right:4px;z-index:10;opacity:0;transition:opacity .2s';
+      tb.appendChild(toolBtn('导出 PNG', pngIcon, () => downloadPng(el)));
+      tb.appendChild(toolBtn('导出 SVG', svgIcon, () => { downloadSvg(el); return Promise.resolve(); }));
+      el.style.position = 'relative';
+      el.appendChild(tb);
+      el.addEventListener('mouseenter', () => tb.style.opacity = '1');
+      el.addEventListener('mouseleave', () => tb.style.opacity = '0');
+    });
+  }
+
+  // ── Code block enhancements: wrap toggle + collapse ──
+  const MAX_LINES = 15;
+  document.querySelectorAll<HTMLElement>('.code-block-wrapper').forEach((wrapper) => {
+    const code = wrapper.querySelector('code');
+    const header = wrapper.querySelector('.code-header');
+    if (!code || !header) return;
+
+    // --- wrap toggle ---
+    const wrapBtn = document.createElement('span');
+    wrapBtn.className = 'code-wrap-btn';
+    wrapBtn.textContent = '换行';
+    wrapBtn.style.cssText = 'cursor:pointer;margin-left:8px;font-size:12px;color:#6f7177';
+    wrapBtn.addEventListener('click', () => {
+      const enabled = code.classList.toggle('code-wrap-enabled');
+      wrapBtn.textContent = enabled ? '不换行' : '换行';
+    });
+    header.appendChild(wrapBtn);
+
+    // --- collapse long blocks ---
+    const lines = (code.textContent || '').trim().split('\n');
+    const nonEmpty = lines.filter((l) => l.trim());
+    if (lines.length > MAX_LINES || nonEmpty.length > MAX_LINES - 3) {
+      code.classList.add('code-collapsed');
+      const toggleBtn = document.createElement('span');
+      toggleBtn.className = 'code-toggle-btn';
+      toggleBtn.textContent = '展开';
+      toggleBtn.style.cssText = 'cursor:pointer;margin-left:8px;font-size:12px;color:#6f7177';
+      toggleBtn.addEventListener('click', () => {
+        const collapsed = code.classList.toggle('code-collapsed');
+        toggleBtn.textContent = collapsed ? '展开' : '收起';
+      });
+      header.appendChild(toggleBtn);
+    }
+  });
+
+  // ── Code copy buttons（模式照抄 app/src/components/ByteMdEditor.astro bindCopyBtns）──
+  document.querySelectorAll<HTMLElement>('.code-copy-btn').forEach((btn) => {
+    btn.onclick = () => {
+      const code = btn.closest('.code-block-wrapper')?.querySelector('code')?.textContent;
+      if (!code) return;
+      navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = '✓';
+        setTimeout(() => (btn.textContent = '复制'), 1500);
+      });
+    };
+  });
+</script>
+
+<!-- Styles moved to global.css (Phase 4) -->
