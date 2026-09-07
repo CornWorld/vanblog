@@ -59,10 +59,16 @@ func (m *Manager) handleRecord(e *core.RequestEvent) error {
 		return e.BadRequestError("invalid JSON body", "")
 	}
 	path := strings.TrimSpace(req.Path)
-	if path == "" {
-		return e.BadRequestError("missing 'path'", "")
+	// Public endpoint: constrain the counter key so anonymous callers can't
+	// create unbounded junk rows (one visits row per path per day) or smuggle
+	// control characters into the DB. Deployment-level rate limiting (Caddy /
+	// reverse proxy) remains the defense against view-count pumping.
+	if len(path) > 512 || !strings.HasPrefix(path, "/") {
+		return e.BadRequestError("invalid 'path'", "")
 	}
-
+	if len(req.PostID) > 32 {
+		return e.BadRequestError("invalid 'postId'", "")
+	}
 	// Resolve post id: prefer the explicit postId the theme sends; fall back
 	// to pathname lookup (best effort; non-article paths still count).
 	postID := strings.TrimSpace(req.PostID)

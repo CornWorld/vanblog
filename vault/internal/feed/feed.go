@@ -19,7 +19,7 @@ func GenerateRSS(app core.App, limit int) ([]byte, error) {
 	}
 
 	posts, err := app.FindRecordsByFilter(
-		"posts", "status='published' && deleted=false", "-created", limit, 0,
+		"posts", "status='published' && deleted=false && password=''", "-created", limit, 0,
 	)
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func GenerateAtom(app core.App, limit int) ([]byte, error) {
 	}
 
 	posts, err := app.FindRecordsByFilter(
-		"posts", "status='published' && deleted=false", "-created", limit, 0,
+		"posts", "status='published' && deleted=false && password=''", "-created", limit, 0,
 	)
 	if err != nil {
 		return nil, err
