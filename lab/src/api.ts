@@ -42,8 +42,42 @@ export interface RunDetail extends RunSummary {
   transcript: string | null;
 }
 
+export interface JobEntry {
+  id: string;
+  at: string;
+  target: string;
+  seed: boolean;
+  cleanup: boolean;
+  status: "running" | "done";
+  pid?: number;
+  findings?: number;
+}
+
+export interface LastRunFinding {
+  info?: { name?: string; severity?: string };
+  matched_at?: string;
+  host?: string;
+}
+
+export interface LastRun {
+  target: string;
+  at: string;
+  seeded: { catId: string; postId: string } | null;
+  findings: LastRunFinding[];
+}
+
 async function get<T>(url: string): Promise<T> {
   const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url} → ${res.status}`);
+  return res.json();
+}
+
+async function post<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
   if (!res.ok) throw new Error(`${url} → ${res.status}`);
   return res.json();
 }
@@ -52,6 +86,10 @@ export const api = {
   runs: () => get<RunSummary[]>("/api/runs"),
   run: (id: string) => get<RunDetail>(`/api/runs/${id}`),
   session: (id: string) => get<Entry[]>(`/api/runs/${id}/session`),
+  jobs: () => get<JobEntry[]>("/api/jobs"),
+  lastRun: () => get<LastRun | null>("/api/jobs/last"),
+  runJob: (body: { target: string; seed: boolean; cleanup: boolean }) =>
+    post<JobEntry>("/api/jobs/run", body),
   file: async (id: string, path: string): Promise<string> => {
     const res = await fetch(
       `/api/runs/${id}/file?path=${encodeURIComponent(path)}`

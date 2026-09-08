@@ -13,8 +13,16 @@
  * which routes /api to this server. Read-only: never writes or deletes artifacts.
  */
 import { createServer } from "node:http";
-import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+  existsSync,
+  statSync,
+  writeFileSync,
+  mkdirSync,
+} from "node:fs";
 import { join, resolve, basename, dirname } from "node:path";
+import { spawn } from "node:child_process";
 
 // ── args ──
 function arg(name, fallback) {
@@ -79,12 +87,87 @@ function listRuns() {
 
 const MAX_RAW = 512 * 1024;
 
-// ── API + static page ──
-const server = createServer((req, res) => {
+// ── jobs: 触发 scripts/pentest/nuclei-run.mjs(黑盒不变量验证)──
+// 安全约束:仅此一个白名单脚本;target 仅限本地回环;admin 凭据经服务端
+// env 透传给子进程,永不经过 HTTP API。
+const JOBS_FILE = () => resolve(PROJECT_ROOT, "refs/pentest/jobs.json");
+const LAST_RUN = () => resolve(PROJECT_ROOT, "refs/pentest/last-run.json");
+const LOCAL_TARGET = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/;
+
+function readJobs() {
+  try {
+    return JSON.parse(readFileSync(JOBS_FILE(), "utf8"));
+  } catch {
+    return [];
+  }
+}
+
+async function readBody(req) {
+  const chunks = [];
+  for await (const c of req) chunks.push(c);
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+  } catch {
+    return {};
+  }
+}
+
+const server = createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
   const parts = url.pathname.split("/").filter(Boolean);
 
-  if (url.pathname === "/api/runs") return json(res, 200, listRuns());
+  // ── jobs API(本地安全扫描触发) ──
+  if (url.pathname === "/api/jobs") {
+    // nuclei-run 结束时写 last-run.json;据此把仍在 "running" 的条目标为 done。
+    const last = safeReadJson(LAST_RUN());
+    const jobs = readJobs().map((j) =>
+      j.status === "running" && last?.at && last.at > j.at
+        ? { ...j, status: "done", findings: last.findings?.length ?? 0 }
+        : j
+    );
+    return json(res, 200, jobs);
+  }
+
+  if (url.pathname === "/api/jobs/last") {
+    return json(res, 200, safeReadJson(LAST_RUN()));
+  }
+
+  if (url.pathname === "/api/jobs/run" && req.method === "POST") {
+    const body = await readBody(req);
+    const target = String(body.target || "http://127.0.0.1:8090");
+    if (!LOCAL_TARGET.test(target))
+      return json(res, 400, { error: "target 仅允许本地回环地址" });
+    const job = {
+      id: new Date().toISOString().replace(/[:.]/g, "-"),
+      at: new Date().toISOString(),
+      target,
+      seed: !!body.seed,
+      cleanup: !!body.cleanup,
+      status: "running",
+    };
+    const args = [
+      resolve(PROJECT_ROOT, "scripts/pentest/nuclei-run.mjs"),
+      "--target",
+      target,
+      ...(job.seed ? ["--seed"] : []),
+      ...(job.cleanup ? ["--cleanup"] : []),
+    ];
+    const child = spawn(process.execPath, args, {
+      cwd: PROJECT_ROOT,
+      detached: true,
+      stdio: "ignore",
+      env: process.env,
+    });
+    job.pid = child.pid;
+    child.unref();
+    const jobs = readJobs();
+    jobs.unshift(job);
+    mkdirSync(resolve(PROJECT_ROOT, "refs/pentest"), { recursive: true });
+    writeFileSync(JOBS_FILE(), JSON.stringify(jobs.slice(0, 50), null, 2));
+    return json(res, 200, job);
+  }
+
+   if (url.pathname === "/api/runs") return json(res, 200, listRuns());
 
   // /api/runs/:id[/file?path=...]
   if (parts[0] === "api" && parts[1] === "runs" && parts[2]) {

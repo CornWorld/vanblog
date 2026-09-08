@@ -1,5 +1,6 @@
 import { createSignal, createMemo, createResource } from "solid-js";
-import { Route, useParams } from "@solidjs/router";
+import { A, Route, useParams } from "@solidjs/router";
+import { JobsView } from "./views/JobsView";
 import { api } from "./api";
 import { compareScore } from "./lib/format";
 import { RunList, type RunFilter } from "./views/RunList";
@@ -63,20 +64,6 @@ export default function App() {
 
   // Route page components — useNavigate/useParams MUST be called here
   // (inside <Route component={...}>), not in App (direct <Router> child).
-  function ListPage() {
-    return (
-      <RunList
-        rows={rows()}
-        models={models()}
-        stats={stats()}
-        filter={filter()}
-        onFilter={setFilter}
-        loading={runs.loading}
-        error={runs.error}
-        onRetry={() => void refetchRuns()}
-      />
-    );
-  }
   function DetailPage() {
     const p = useParams();
     const id = () => p.id!;
@@ -88,9 +75,36 @@ export default function App() {
     return <SessionDetail id={id()} />;
   }
 
+  function JobsPage() {
+    return <JobsView />;
+  }
+
+  function ListPage() {
+    return (
+      <>
+        <div class="max-w-6xl mx-auto px-6 pt-4">
+          <A href="/jobs" class="link text-sm">
+            → Security Jobs (nuclei 不变量验证)
+          </A>
+        </div>
+        <RunList
+          rows={rows()}
+          models={models()}
+          stats={stats()}
+          filter={filter()}
+          onFilter={setFilter}
+          loading={runs.loading}
+          error={runs.error}
+          onRetry={() => void refetchRuns()}
+        />
+      </>
+    );
+  }
+
   return (
-    <>
+      <>
       <Route path="/" component={ListPage} />
+      <Route path="/jobs" component={JobsPage} />
       <Route path="/runs/:id" component={DetailPage} />
       <Route path="/runs/:id/session" component={SessionPage} />
     </>
