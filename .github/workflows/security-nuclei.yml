@@ -1,0 +1,124 @@
+name: Security Invariants (nuclei)
+
+# 黑盒不变量验证:runner 内从零起 vanblog 实例 → harness(8 模板,含 canary
+# 假绿防线)→ 违规自动开 issue(标题精确匹配防重,fork PR 仅红叉不开 issue)。
+# 环境错误(exit 2:实例起不来/canary 未命中)只红不报 issue,避免误报。
+on:
+  push:
+    branches: [main-go]
+    paths:
+      - "vault/**"
+      - "app/src/**"
+      - "sdk/src/**"
+      - "scripts/pentest/**"
+      - ".github/workflows/security-nuclei.yml"
+  pull_request:
+    paths:
+      - "vault/**"
+      - "app/src/**"
+      - "sdk/src/**"
+      - "scripts/pentest/**"
+      - ".github/workflows/security-nuclei.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: security-nuclei-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  nuclei-invariants:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          cache-dependency-path: vault/go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build models bundle
+        run: pnpm build:models
+
+      - name: Build vanblog binary
+        working-directory: vault
+        run: go build -o bin/vanblog .
+
+      - name: Install nuclei v3.11.1
+        run: |
+          curl -sSfL https://github.com/projectdiscovery/nuclei/releases/download/v3.11.1/nuclei_3.11.1_linux_amd64.zip -o /tmp/nuclei.zip
+          unzip -o /tmp/nuclei.zip -d /usr/local/bin nuclei
+          nuclei --version
+
+      - name: Start vanblog
+        run: |
+          mkdir -p .ci-pbdata refs/pentest
+          ./vault/bin/vanblog serve --dir="$PWD/.ci-pbdata" --http=127.0.0.1:8093 \
+            --builtinPacksDir="$PWD/packs" \
+            --hooksDir="$PWD/vault/pb_hooks" \
+            --coreSchemaPath="$PWD/runtime/core-schema/models.js" \
+            > .ci-vanblog.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8093/api/health > /dev/null && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8093/api/health > /dev/null || { cat .ci-vanblog.log; exit 1; }
+          echo "[ci] vanblog ready on 127.0.0.1:8093"
+
+      - name: Setup admin
+        run: |
+          PASS="$(openssl rand -hex 16)"
+          code=$(curl -s -o /tmp/setup.json -w '%{http_code}' -X POST http://127.0.0.1:8093/api/vanblog/setup/complete \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"ci-admin","email":"ci@vanblog.local","password":"'"$PASS"'","passwordConfirm":"'"$PASS"'"}')
+          cat /tmp/setup.json; echo
+          [ "$code" = "200" ] || { echo "setup/complete HTTP $code"; exit 1; }
+          echo "PB_ADMIN_EMAIL=ci@vanblog.local" >> "$GITHUB_ENV"
+          echo "PB_ADMIN_PASSWORD=$PASS" >> "$GITHUB_ENV"
+
+      - name: Run nuclei invariants
+        id: run
+        run: |
+          set +e
+          node scripts/pentest/nuclei-run.mjs --target http://127.0.0.1:8093 --seed --cleanup
+          code=$?
+          echo "exit=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload findings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuclei-findings
+          path: |
+            refs/pentest/last-run.json
+            refs/pentest/nuclei-*.jsonl
+          if-no-files-found: ignore
+
+      - name: Open issue on violations
+        if: steps.run.outputs.exit == '1' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GIT_SHA: ${{ github.sha }}
+        run: node scripts/pentest/gh-issue.mjs
+
+      - name: Gate
+        if: steps.run.outputs.exit != '0'
+        run: |
+          echo "harness exit=${{ steps.run.outputs.exit }} (1=不变量违规, 2=环境错误)"
+          exit 1

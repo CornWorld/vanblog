@@ -5,6 +5,7 @@
 - **白盒**：OCR 审查规则 `.opencodereview/rule.json`（域 prompt 引用本文）
 - **黑盒**：nuclei 模板 `scripts/pentest/templates/vanblog-invariants.yaml`
 - **守护测试**：`vault/internal/article/unlock_test.go` 等 Go 集成测试
+- **CI**:`.github/workflows/security-nuclei.yml`(push main-go / PR / 手动;runner 内从零起实例跑 harness,违规自动开 issue,fork PR 仅挂红)
 
 任何改动公开 API 面（集合规则、Go 路由、SSR 数据读取）的 PR，必须对照本文检查；违反任一不变量的代码必须在 PR 中显式论证。
 

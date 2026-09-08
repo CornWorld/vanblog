@@ -87,3 +87,11 @@ onRecordEnrich((e) => {
 - nuclei 黑盒实测（v3.11.1，7 条不变量模板）：修复态 0 findings；旧实例（隔离前）
   命中 2 条 high（search 锁文泄漏、RSS 内容泄漏）——模板具备证伪能力。
   注意：nuclei 3.11 单文件多文档 YAML 只加载第一条，harness 已运行时拆分。
+- CI 接入:`.github/workflows/security-nuclei.yml`——runner 从零构建(pb 二进制 + models bundle)、
+  起 `serve --dir --http --builtinPacksDir --hooksDir --coreSchemaPath`、setup/complete 需
+  `username+password+passwordConfirm` 三字段;harness exit 1 → `scripts/pentest/gh-issue.mjs`
+  开/追加 issue(标题精确匹配防重,fork PR 跳过),exit 2 → 仅红不开 issue。findings JSONL
+  随 artifact `nuclei-findings` 上传。
+- harness 假绿三防线:拆分模板份数校验 / nuclei "Templates loaded" 计数匹配(走 stderr,
+  合并解析) / canary 控制组(`/api/health`)必须命中;网络不可达报"目标不可达" exit 2。
+  8 模板 = 7 不变量 + 1 canary,违规 mock 全命中、修复态实例全绿、死目标 exit 2 已三向实测。
