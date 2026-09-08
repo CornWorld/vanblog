@@ -6,7 +6,7 @@ import { safe, stripMarkdown } from '@vanblog/sdk';
 import type { VanblogClient, PostExpand } from '@vanblog/sdk';
 import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
 import { sanitizeHtml } from './sanitizeHtml';
-import { upstreamCodeBlocks } from './upstreamMarkdown';
+import { upstreamDom } from './upstreamMarkdown';
 
 export interface HomeFeed {
   loadError: boolean;
@@ -51,7 +51,7 @@ export async function loadHomeFeed(
       if (!overviewMd.trim()) return '';
       try {
         const { code } = await renderMarkdown(overviewMd);
-        return upstreamCodeBlocks(sanitizeHtml(code));
+        return upstreamDom(sanitizeHtml(code));
       } catch (e) {
         console.error('[home] overview render:', e);
         return '';

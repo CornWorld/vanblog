@@ -52,7 +52,7 @@ const donateTable =
 const content = `${raw}${donateTable}`;
 
 import PostCard from '../vendor/PostCard';
-import { upstreamCodeBlocks } from '../lib/upstreamMarkdown';
+import { upstreamDom } from '../lib/upstreamMarkdown';
 import { getPostCardLayoutProps } from '../lib/layoutProps';
 const lp = getPostCardLayoutProps(site);
 
@@ -60,7 +60,7 @@ let html = '';
 if (content.trim()) {
   try {
     const { code } = await renderMarkdown(content);
-    html = upstreamCodeBlocks(sanitizeHtml(code));
+    html = upstreamDom(sanitizeHtml(code));
   } catch (e) {
     console.error('[about] render:', e);
   }

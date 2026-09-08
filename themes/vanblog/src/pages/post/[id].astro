@@ -26,7 +26,7 @@ import { sanitizeHtml } from '../../lib/sanitizeHtml';
 import { extractHeadings, hasHeadings } from '../../lib/toc';
 import { getPostCardLayoutProps } from '../../lib/layoutProps';
 import { articlePath } from '../../lib/base';
-import { upstreamCodeBlocks, upstreamHeadings } from '../../lib/upstreamMarkdown';
+import { upstreamDom } from '../../lib/upstreamMarkdown';
 
 const pb = Astro.locals.pb;
 const site = await Astro.locals.getSite();
@@ -98,7 +98,7 @@ try {
 }
 // Sanitize the rendered HTML before injecting it into the page.
 // DOM 对齐层:消毒后按上游 bytemd 插件形态重排代码块/标题
-const safeHtml = html !== null ? upstreamHeadings(upstreamCodeBlocks(sanitizeHtml(html))) : null;
+const safeHtml = html !== null ? upstreamDom(sanitizeHtml(html)) : null;
 
 // 文章含 h2/h3 标题 → 侧栏渲染 Toc（原版 hasToc ? <Toc/> : null）。
 const hasToc = !!safeHtml && hasHeadings(safeHtml);

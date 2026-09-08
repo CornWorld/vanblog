@@ -219,9 +219,21 @@ body .ua-link::before {
 .dark .group:hover .dark\:group-hover\:text-dark-r { color: rgb(38, 40, 44); fill: rgb(38, 40, 44); }
 
 /* ── code-light/code-dark.css 共有段:代码块包裹内边距与横向滚动 ──
-   (hljs token 色不搬 — 高亮为有意分叉,平台 shiki 内联色) */
-pre .code-block-wrapper {
+   (hljs token 色不搬 — 高亮为有意分叉,平台 shiki 内联色)
+   结构偏差:上游 wrapper 在 pre 内(React DOM 创建);本主题 SSR 解析安全
+   要求 wrapper 外移到 pre 外(upstreamMarkdown.ts),选择器不再限定 pre 前缀。 */
+.markdown-body .code-block-wrapper {
   display: block;
   overflow-x: auto;
   padding: 22px 16px 16px;
+}
+
+/* ── shiki 双主题暗色激活:shiki 以 inline color + --shiki-dark 成对输出,
+   暗色时切到 dark 变量(上游为 hljs 类切换,无对应物) ── */
+html.dark .markdown-body pre[data-language] {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+}
+html.dark .markdown-body pre[data-language] span {
+  color: var(--shiki-dark) !important;
 }
