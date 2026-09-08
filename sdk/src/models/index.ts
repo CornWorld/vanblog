@@ -12,6 +12,7 @@ export * from "./audits";
 export * from "./moments";
 export * from "./agentSessions";
 export * from "./bookmarks";
+export * from "./siteSecrets";
 import { AgentSessionSchema } from "./agentSessions";
 import { TagSchema } from "./tags";
 import { CategorySchema } from "./categories";
@@ -23,6 +24,7 @@ import { SiteSchema } from "./site";
 import { VisitSchema } from "./visits";
 import { AuditSchema } from "./audits";
 import { BookmarkSchema } from "./bookmarks";
+import { SiteSecretsSchema } from "./siteSecrets";
 
 export const models = {
   tags: TagSchema,
@@ -36,4 +38,5 @@ export const models = {
   agent_sessions: AgentSessionSchema,
   audits: AuditSchema,
   bookmarks: BookmarkSchema,
+  site_secrets: SiteSecretsSchema,
 } as const;

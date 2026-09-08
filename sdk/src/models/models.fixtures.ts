@@ -55,6 +55,7 @@ const valid = {
   },
   agent_sessions: { owner: id, status: "idle", sessionDir: "/tmp/agent-sessions/x" },
   bookmarks: { title: "VanBlog", url: "https://vanblog.example", owner: id },
+  site_secrets: { key: "main", syncRemote: "https://user:token@example.com/repo.git" },
 } satisfies Record<keyof typeof models, unknown>;
 
 const invalid = {
@@ -72,6 +73,7 @@ const invalid = {
   agent_sessions: { owner: id, status: "running", sessionDir: "/tmp/x" },
   audits: { result: "unknown" },
   bookmarks: { title: "VanBlog", url: "not-a-url", owner: id },
+  site_secrets: { key: "" },
 } satisfies Record<keyof typeof models, unknown>;
 
 function assertAccepts(
