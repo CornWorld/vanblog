@@ -215,7 +215,7 @@ const renderLink = (item: PageItem, isCur: boolean) => {
     </a>
   );
 };
-const renderBtn = (item: PageItem, disable: boolean, isNext: boolean) => {
+const renderBtn = (item: PageItem, _disable: boolean, isNext: boolean) => {
   return (
     <a
       href={withBase(item.href)}

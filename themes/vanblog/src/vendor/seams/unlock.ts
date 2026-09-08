@@ -29,7 +29,7 @@ export async function unlockPost(
       message:
         (typeof data?.message === "string" && data.message) || "密码错误！请重试！",
     };
-  } catch (err) {
+  } catch (_) {
     return { ok: false, message: "解锁失败！" };
   }
 }

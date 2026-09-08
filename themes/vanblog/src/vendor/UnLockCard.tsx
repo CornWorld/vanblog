@@ -42,7 +42,7 @@ export default function UnLockCard(props: {
         return false;
       }
       return res;
-    } catch (err) {
+    } catch (_) {
       onError("密码错误！请重试！");
       return false;
     }
@@ -63,7 +63,7 @@ export default function UnLockCard(props: {
       } else {
         setLoading(false);
       }
-    } catch (err) {
+    } catch (_) {
       onError("解锁失败！");
       setLoading(false);
     }
