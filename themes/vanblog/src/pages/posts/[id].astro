@@ -7,3 +7,4 @@ export const prerender = false;
 const { id } = Astro.params;
 if (!id) return Astro.redirect('/404');
 return Astro.redirect(`/post/${encodeURIComponent(id)}`, 301);
+---

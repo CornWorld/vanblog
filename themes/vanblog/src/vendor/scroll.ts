@@ -29,7 +29,7 @@ export async function scrollTo(
     startTime: number,
     duration: number | undefined = DEFAULT_DURATION,
     easeFunc: EasingFunction,
-    callback: Function
+    callback: (value?: unknown) => void
   ) => {
     window.requestAnimationFrame(() => {
       const currentTime = Date.now();
@@ -77,7 +77,7 @@ export function scrollIntoView(
   }
   const { duration, easing } = sanitizeScrollOptions(options);
   scroller = scroller || utils.getDocument().body;
-  let currentContainerScrollYPos = 0;
+  let currentContainerScrollYPos: number;
   let elementScrollYPos = element ? element.offsetTop : 0;
   const document = utils.getDocument();
 

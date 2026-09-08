@@ -1,7 +1,7 @@
 /* UPSTREAM: packages/website/components/TopPinIcon/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: 无 — 逐字搬运。上游 fix → 对本文件 apply patch。
  */
-export default function (props: {}) {
+export default function () {
   return (
     <div
       style={{

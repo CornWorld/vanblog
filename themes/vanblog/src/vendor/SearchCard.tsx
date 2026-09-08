@@ -64,7 +64,7 @@ export default function SearchCard(props: {
     return search.trim() !== "";
   }, [search]);
   const renderResult = () => {
-    let text = "";
+    let text: string;
     if (loading) {
       text = "搜索中...";
     } else {
