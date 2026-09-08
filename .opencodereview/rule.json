@@ -1,0 +1,39 @@
+{
+  "rules": [
+    {
+      "path": "vault/pb_migrations/*.go",
+      "rule": "本仓安全不变量: docs/security-invariants.md;PB 语义卡片: docs/developer/pb-security-notes.md (引用编号 S1-S6)。审查集合/字段/规则变更时强制执行:\n\n- 行级≠字段级 [S1]: listRule/viewRule 是查询过滤器,规则不满足时匿名 list 返回 200 空数组而非 403。任何 ListRule/ViewRule 为空串(公开)或宽松的集合,必须枚举其全部字段并逐个确认\"匿名可读是否可接受\"。\n- 凭据类字段(s3Config/syncConfig/syncRemote/outputConfig/password/tokenKey/内嵌凭证的 URL)禁止落在公开可读集合——必须入 site_secrets 模式(admin-only 独立集合,访问收敛到 internal/site 包)。\n- 新增字段三问: 落在哪个集合? 匿名/API 读是否可见? 是否需要 OnRecordEnrich 按身份遮蔽 [S2]?\n- relation 字段经 expand 的连带暴露也要评估。\n- 写钩子分层 [S5]: 派生字段/审计/剥离逻辑必须挂 OnRecordCreate/Update(模型层,Go 直写也触发);只挂 OnRecord*Request 层会被 Go 直写/import/迁移回填绕过。\n- 新集合默认 deny;公开读是显式决定,且必须登记进 docs/security-invariants.md §1 清单。\n- 迁移注释声称的防护机制必须能在代码中指出实现位置(本仓事故: visits 迁移注释声称 abuse checks 实际不存在)。",
+      "merge_system_rule": true
+    },
+    {
+      "path": "vault/internal/**/*.go",
+      "rule": "本仓安全不变量: docs/security-invariants.md。审查自定义路由/handler 时强制执行:\n\n- 鉴权口径一致: admin 域操作(备份/导出/路由/用户/删除/重启)必须实调 requireAdmin 校验;注释或文档句不算实现。注意 users.role 与 _superusers 是两套主体,口径混用即报 [S4]。\n- 公开路由(无鉴权)必须有输入上限(前缀/长度/枚举校验)与滥用对策(限速或明确声明由部署层负责);无 oracle: 缺失/未授权/不存在统一响应,不泄露原因。\n- 密码/凭证比对必须常数时间(crypto/subtle);签发 cookie/token 的密钥不得离开服务端(HMAC),禁止字面量哨兵值(如 \"true\")作为凭证。\n- 涉及锁定内容的读路径必须按身份整形(OnRecordEnrich)或走服务端校验端点;可见性过滤复用统一表达式(status='published' && deleted=false && password=''),禁止各处手写造成旁路(本仓事故: feed 泄漏锁定文章摘要)。\n- 注释声称的防护必须在 diff 中可见实现,否则报\"注释-实现不一致\"。",
+      "merge_system_rule": true
+    },
+    {
+      "path": "app/src/pages/api/**",
+      "rule": "公开 SSR/HTTP 端点域。不变量: docs/security-invariants.md §2。强制执行:\n\n- 服务端执行原则: 凡\"锁定/解锁/验证密码/签发凭证\"语义必须服务端完整执行。匿名经 pb REST 读到的行=攻击者可见;禁止用客户端可达的数据形态做权限判断(本仓事故: unlock.ts 依赖匿名读 posts.password 验证,导致锁定文章全文+密码泄漏)。\n- 解锁 cookie/token 必须服务端 HMAC 签名且不可伪造;cookie path 必须对齐规范页面路由(本仓事故: 解锁 cookie path 指向 301 桩 /posts/ 而规范页在 /post/,凭证永远回不来)。\n- 无 oracle: 不存在/未发布/无密码文章统一 404 同响应;错误信息不区分原因。\n- 暴力破解对策: 密码类端点必须失败限速(每 IP 窗口计数,超限 429)。\n- 渲染用户内容必须走平台消毒管线(sanitizeHtml),禁止拼接未消毒 html。",
+      "merge_system_rule": true
+    },
+    {
+      "path": "themes/*/src/pages/api/**",
+      "rule": "公开 SSR/HTTP 端点域。不变量: docs/security-invariants.md §2。强制执行:\n\n- 服务端执行原则: 凡\"锁定/解锁/验证密码/签发凭证\"语义必须服务端完整执行。匿名经 pb REST 读到的行=攻击者可见;禁止用客户端可达的数据形态做权限判断(本仓事故: unlock.ts 依赖匿名读 posts.password 验证,导致锁定文章全文+密码泄漏)。\n- 解锁 cookie/token 必须服务端 HMAC 签名且不可伪造;cookie path 必须对齐规范页面路由(本仓事故: 解锁 cookie path 指向 301 桩 /posts/ 而规范页在 /post/,凭证永远回不来)。\n- 无 oracle: 不存在/未发布/无密码文章统一 404 同响应;错误信息不区分原因。\n- 暴力破解对策: 密码类端点必须失败限速(每 IP 窗口计数,超限 429)。\n- 渲染用户内容必须走平台消毒管线(sanitizeHtml),禁止拼接未消毒 html。",
+      "merge_system_rule": true
+    },
+    {
+      "path": "app/src/loaders/**",
+      "rule": "匿名数据面域。此处读取的字段=匿名公开契约(docs/security-invariants.md §1/§6)。强制执行:\n\n- 新增读取任何凭据/敏感字段时必须改走隔离方案(site_secrets 模式),不得顺手加字段到公开集合。\n- 对上游遗留契约(如 legacy /api/public/* 垫片)的实现: 密码类校验必须服务端执行,不得以\"还原上游行为\"为由移植其数据暴露;上游服务端验证语义(shim 头部注释即原契约存证)必须保留执行侧。\n- 数据读取的可见性过滤复用统一表达式,禁止手写旁路。",
+      "merge_system_rule": true
+    },
+    {
+      "path": "scripts/dev/*shim*",
+      "rule": "匿名数据面域。垫片反映的 API 形状视为公开契约(docs/security-invariants.md §6)。强制执行:\n\n- 上游遗留契约(legacy /api/public/*)的实现: 密码类校验必须服务端执行(原版语义即错密 data:null),不得以\"还原上游行为\"为由移植其数据暴露;敏感字段(metadata/配置)不得透传匿名。\n- 新增透传字段前逐个确认匿名可见性。",
+      "merge_system_rule": true
+    },
+    {
+      "path": "vault/pb_hooks/*.js",
+      "rule": "JSVM 钩子域 [S5]。强制执行:\n\n- JSVM 钩子仅辅助: Go 层 app.Save 与迁移写入绕过 request 钩子;审计/校验逻辑只挂 JSVM 时必须注明覆盖边界,否则报覆盖缺口(本仓事故: Go 层路由写入绕过 JSVM 审计,internal/caddy/audit.go 注释自证)。\n- 钩子错误必须落日志;静默失败是已知事故形态(system.pb.js 不执行且无报错,lessons-learned §1)。",
+      "merge_system_rule": true
+    }
+  ]
+}
