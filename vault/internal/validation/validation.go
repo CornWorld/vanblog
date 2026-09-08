@@ -224,6 +224,13 @@ func recordValues(vm *goja.Runtime, record *core.Record) (*goja.Object, error) {
 		if dateTime, ok := value.(types.DateTime); ok {
 			value = dateTime.String()
 		}
+		// Unset fields surface as Go zero values ("" for text/relation) —
+		// map them to absent keys so zod `.optional()` applies. Otherwise
+		// `string().min(1).optional()` rejects the empty string an unset
+		// relation produces (this broke audit rows written with no actor).
+		if s, ok := value.(string); ok && s == "" {
+			continue
+		}
 
 		if field.Type() == core.FieldTypeJSON {
 			if raw, ok := value.(types.JSONRaw); ok && len(raw) > 0 {
@@ -444,7 +451,13 @@ func RegisterWithSources(app core.App, coreSource ModelSource, packs []NamedMode
 			}
 			return event.Next()
 		}
-		return fmt.Errorf("validation: collection %q is missing from all model sources", collection.Name)
+		// No model source declares this collection (e.g. internal collections
+		// like site_secrets/visits): nothing to validate via the bridge —
+		// pass through. PocketBase's own field validation still applies.
+		// Failing here instead would break every write to any collection the
+		// bundle does not model (this exact bug punched through the
+		// site_secrets park on the real write path).
+		return event.Next()
 	})
 	return nil
 }

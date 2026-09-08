@@ -8,6 +8,8 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/dop251/goja"
+	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
 )
 
@@ -300,4 +302,66 @@ func TestVMPoolConcurrentAccess(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+// Undeclared collections must pass the OnRecordValidate hook untouched.
+// Regression: the hook used to fail them ("missing from all model sources"),
+// which broke every write to internal collections like site_secrets and
+// punched through the credential-isolation park on the real write path.
+func TestHookSkipsUndeclaredCollection(t *testing.T) {
+	coreSource := &fixtureSource{script: `exports.models = { posts: { safeParse: function () { return { success: true }; } } };`}
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	if err := RegisterWithSources(app, coreSource, nil); err != nil {
+		t.Fatal(err)
+	}
+	col := core.NewCollection(core.CollectionTypeBase, "bridge_skip_probe")
+	col.Fields.Add(&core.TextField{Name: "name"})
+	if err := app.Save(col); err != nil {
+		t.Fatal(err)
+	}
+	rec := core.NewRecord(col)
+	rec.Set("name", "x")
+	if err := app.Save(rec); err != nil {
+		t.Fatalf("undeclared collection write should pass through, got: %v", err)
+	}
+	rec.Set("name", "") // whatever fields exist: bridge must not interfere
+	if err := app.Save(rec); err != nil {
+		t.Fatalf("undeclared collection write should pass through, got: %v", err)
+	}
+}
+
+// Unset fields surface as Go zero values ("" for text); recordValues must
+// omit them so zod `.optional()` applies instead of `min(1)` rejecting "".
+func TestRecordValuesOmitsEmptyStrings(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	col, err := app.FindCollectionByNameOrId("clients")
+	if err != nil {
+		t.Skipf("test app has no clients collection: %v", err)
+	}
+	rec := core.NewRecord(col)
+	vm := goja.New()
+	values, err := recordValues(vm, rec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range col.Fields {
+		if field.Type() != core.FieldTypeText {
+			continue
+		}
+		name := field.GetName()
+		if name == "" {
+			continue
+		}
+		if v := values.Get(name); v != nil && !goja.IsUndefined(v) {
+			t.Fatalf("empty text field %q should be absent, got %v", name, v)
+		}
+	}
 }
