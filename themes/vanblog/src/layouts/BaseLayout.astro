@@ -13,9 +13,9 @@ import themeMeta from '../../theme.json';
 
 import Footer from '../components/Footer.astro';
 import NavChrome from '../vendor/NavChrome';
-import ToastProviderIsland from '../vendor/ToastProvider';
 import BackToTopIsland from '../vendor/BackToTop';
 import ImageZoom from '../vendor/ImageZoom';
+import ToastProviderIsland from '../vendor/ToastProvider';
 
 interface Props {
   title?: string;
@@ -46,8 +46,9 @@ const DEFAULT_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000
 const siteName = site?.siteName || 'Vanblog';
 const siteDesc = description || site?.siteDesc || '';
 const baseUrl = site?.baseUrl || '';
-// 原版首页 <title> 仅站点名，其他页为「标题 - 站点名」。
-const pageTitle = title ? `${title} - ${siteName}` : siteName;
+// 上游 Layout `<title>{props.title}</title>` 裸输出:各页传什么渲染什么,
+// 不追加站名后缀(首页传 siteName,文章页传文章标题,实测上游文章页无后缀)。
+const pageTitle = title || siteName;
 
 // Canonical URL
 const canonicalURL = baseUrl && path ? `${baseUrl.replace(/\/$/, '')}${path}` : undefined;
@@ -242,8 +243,8 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
       });
     </script>
     </div>
-    <BackToTopIsland client:load />
     <ImageZoom client:load />
+    <BackToTopIsland client:load />
 
     {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (
       <script is:inline type="module" src={src} data-vanblog-pack-script></script>

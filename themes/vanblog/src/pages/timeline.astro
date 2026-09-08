@@ -34,7 +34,7 @@ const { data: wordPosts } = await safe(
 const wordTotal = (wordPosts ?? []).reduce((sum, p) => sum + (p.content?.length || 0), 0);
 const subtitle = `${authorCard.categoryNum} 分类 × ${authorCard.postNum} 文章 × ${authorCard.tagNum} 标签 × ${wordTotal} 字`;
 ---
-<BaseLayout title="时间轴" path="/timeline" sideBar>
+<BaseLayout title="时间线" path="/timeline" sideBar>
   {error ? (
     <ErrorState />
   ) : entries.length === 0 ? (
