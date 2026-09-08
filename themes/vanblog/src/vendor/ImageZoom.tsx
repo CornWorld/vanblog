@@ -9,7 +9,7 @@ import mediumZoom from "medium-zoom";
 
 export default function ImageZoom(props: { selector?: string }) {
   useEffect(() => {
-    const zoom = mediumZoom(props.selector ?? ".post-viewer img", {
+    const zoom = mediumZoom(props.selector ?? ".markdown-body img", {
       margin: 24,
       background: "rgba(0,0,0,0.8)",
     });

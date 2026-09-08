@@ -15,6 +15,7 @@ import Footer from '../components/Footer.astro';
 import NavChrome from '../vendor/NavChrome';
 import ToastProviderIsland from '../vendor/ToastProvider';
 import BackToTopIsland from '../vendor/BackToTop';
+import ImageZoom from '../vendor/ImageZoom';
 
 interface Props {
   title?: string;
@@ -217,8 +218,32 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
         </div>
       </div>
       <Footer site={site} />
+    <script>
+      // ── 全局 markdown 交互委托(上游 bytemd viewerEffect 语义,全页生效)──
+      // 代码复制:customCodeBlock btn → 最近 code;标题点击改 hash:headingPlugin。
+      // 事件委托覆盖首页概览/分页/文章/关于等全部 markdown 渲染面,island 后水合亦生效。
+      document.addEventListener('click', (e) => {
+        const t = e.target as HTMLElement;
+        const btn = t.closest?.('.code-copy-btn');
+        if (btn) {
+          const code = btn.closest('.code-block-wrapper')?.querySelector('code')?.textContent;
+          if (!code) return;
+          navigator.clipboard.writeText(code).then(() => {
+            btn.textContent = '✓';
+            setTimeout(() => (btn.textContent = ''), 1200);
+          });
+          return;
+        }
+        const h = t.closest?.('.markdown-heading');
+        if (h) {
+          const id = h.getAttribute('data-id');
+          if (id) window.location.hash = `#${id}`;
+        }
+      });
+    </script>
     </div>
     <BackToTopIsland client:load />
+    <ImageZoom client:load />
 
     {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (
       <script is:inline type="module" src={src} data-vanblog-pack-script></script>

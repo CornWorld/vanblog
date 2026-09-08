@@ -17,7 +17,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import ErrorNotice from '@vanblog/base/components/ErrorNotice.astro';
 import PostCard from '../../vendor/PostCard';
 import { TocCard } from '../../vendor/MarkdownTocBar';
-import ImageZoom from '../../vendor/ImageZoom';
 import { isAuthenticated, safe } from '@vanblog/sdk';
 import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
 import { normalizeMathDelimiters } from '@vanblog/base/lib/markdown/normalizeMathDelimiters';
@@ -204,7 +203,6 @@ const lp = getPostCardLayoutProps(site);
         commentsServer={lp.commentsServer}
         setContent={() => {}}
       />
-      <ImageZoom client:load />
     </Fragment>
   ) : (
     <ErrorNotice code="404" title="文章不存在" message="该文章可能已被删除、未发布，或你没有访问权限。" />
@@ -347,25 +345,6 @@ const lp = getPostCardLayoutProps(site);
     });
   }
 
-  // ── Code copy(上游 customCodeBlock 语义:btn → 最近 code,toast 反馈)──
-  document.querySelectorAll<HTMLElement>('.code-copy-btn').forEach((btn) => {
-    btn.onclick = () => {
-      const code = btn.closest('.code-block-wrapper')?.querySelector('code')?.textContent;
-      if (!code) return;
-      navigator.clipboard.writeText(code).then(() => {
-        btn.textContent = '✓';
-        setTimeout(() => (btn.textContent = ''), 1200);
-      });
-    };
-  });
-
-  // ── 标题点击改 hash(上游 heading viewerEffect 语义)──
-  document.querySelectorAll<HTMLElement>('.markdown-heading').forEach((h) => {
-    h.addEventListener('click', () => {
-      const id = h.getAttribute('data-id');
-      if (id) window.location.hash = `#${id}`;
-    });
-  });
 </script>
 
 <!-- Styles moved to global.css (Phase 4) -->
