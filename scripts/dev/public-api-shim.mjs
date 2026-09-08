@@ -215,12 +215,13 @@ const server = createServer(async (req, res) => {
     }
 
     if (p.startsWith("/api/public/article/viewer/")) {
-      const id = p.split("/").pop();
-      const post = await pbGet("posts", id);
+      // id 或 pathname 双解析(对齐上游 getArticleByIdOrPathname)
+      const id = decodeURIComponent(p.split("/").pop());
+      const posts = await fetchPosts();
+      const post = posts.find((a) => a.id === id || a.pathname === id);
       main(res, { statusCode: 200, data: { viewer: post?.viewCount ?? 0 } });
       return;
     }
-
     if (p === "/api/public/search") {
       const q = (url.searchParams.get("value") || "").toLowerCase();
       const posts = await fetchPosts();
@@ -278,9 +279,10 @@ const server = createServer(async (req, res) => {
     const articleMatch = p.match(/^\/api\/public\/article\/(.+)$/);
     if (articleMatch) {
       const id = decodeURIComponent(articleMatch[1]);
-      const raw = await pbGet("posts", id);
       const posts = await fetchPosts();
-      const idx = posts.findIndex((a) => a.id === id);
+      // id 或 pathname 双解析(对齐上游 getArticleByIdOrPathname)
+      const idx = posts.findIndex((a) => a.id === id || a.pathname === id);
+      const raw = idx >= 0 ? await pbGet("posts", posts[idx].id) : null;
       if (!raw || idx < 0) {
         return main(res, { statusCode: 404, data: null });
       }
