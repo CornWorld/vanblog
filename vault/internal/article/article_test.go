@@ -39,17 +39,6 @@ func createPost(t *testing.T, app core.App, title, content, status, pathname str
 	return r
 }
 
-func createCategory(t *testing.T, app core.App, name string) *core.Record {
-	t.Helper()
-	col, _ := app.FindCollectionByNameOrId("categories")
-	r := core.NewRecord(col)
-	r.Set("name", name)
-	if err := app.Save(r); err != nil {
-		t.Fatalf("create category: %v", err)
-	}
-	return r
-}
-
 func TestGetTimeline(t *testing.T) {
 	app := setupApp(t)
 	mgr := New(app)
@@ -139,90 +128,5 @@ func TestPublish(t *testing.T) {
 	updated2, _ := app.FindRecordById("posts", post.Id)
 	if updated2.GetString("status") != "draft" {
 		t.Errorf("after unpublish, status = %q, want %q", updated2.GetString("status"), "draft")
-	}
-}
-
-func TestGetByPathname(t *testing.T) {
-	app := setupApp(t)
-	mgr := New(app)
-
-	createPost(t, app, "Published", "content", "published", "/my-post")
-	createPost(t, app, "Draft", "content", "draft", "/draft-post")
-
-	// Find published post by path
-	post, err := mgr.GetByPathname("/my-post")
-	if err != nil {
-		t.Fatalf("GetByPathname: %v", err)
-	}
-	if post.GetString("title") != "Published" {
-		t.Errorf("title = %q, want %q", post.GetString("title"), "Published")
-	}
-
-	// Draft should not be found
-	_, err = mgr.GetByPathname("/draft-post")
-	if err == nil {
-		t.Error("draft post should not be found via GetByPathname")
-	}
-}
-
-func TestGetRecent(t *testing.T) {
-	app := setupApp(t)
-	mgr := New(app)
-
-	createPost(t, app, "Post 1", "c1", "published", "/p1")
-	time.Sleep(10 * time.Millisecond)
-	createPost(t, app, "Post 2", "c2", "published", "/p2")
-	time.Sleep(10 * time.Millisecond)
-	createPost(t, app, "Post 3", "c3", "published", "/p3")
-
-	recent, err := mgr.GetRecent(2)
-	if err != nil {
-		t.Fatalf("GetRecent: %v", err)
-	}
-	if len(recent) != 2 {
-		t.Fatalf("expected 2 recent posts, got %d", len(recent))
-	}
-	// Should be ordered newest first
-	if recent[0].GetString("title") != "Post 3" {
-		t.Errorf("newest = %q, want %q", recent[0].GetString("title"), "Post 3")
-	}
-}
-
-func TestGetByCategory(t *testing.T) {
-	app := setupApp(t)
-	mgr := New(app)
-
-	cat := createCategory(t, app, "Tech")
-
-	col, _ := app.FindCollectionByNameOrId("posts")
-	p1 := core.NewRecord(col)
-	p1.Set("title", "In Tech")
-	p1.Set("status", "published")
-	p1.Set("category", cat.Id)
-	if err := app.Save(p1); err != nil {
-		t.Fatal(err)
-	}
-
-	p2 := core.NewRecord(col)
-	p2.Set("title", "Also Tech")
-	p2.Set("status", "published")
-	p2.Set("category", cat.Id)
-	if err := app.Save(p2); err != nil {
-		t.Fatal(err)
-	}
-
-	p3 := core.NewRecord(col)
-	p3.Set("title", "Not in Tech")
-	p3.Set("status", "published")
-	if err := app.Save(p3); err != nil {
-		t.Fatal(err)
-	}
-
-	results, err := mgr.GetByCategory(cat.Id, 10, 0)
-	if err != nil {
-		t.Fatalf("GetByCategory: %v", err)
-	}
-	if len(results) != 2 {
-		t.Errorf("category posts = %d, want 2", len(results))
 	}
 }

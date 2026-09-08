@@ -4,11 +4,12 @@
  * 缩放进出动画全部上游原样。上游 fix → 对本文件 apply patch。
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useDebounce } from "react-use";
+import pkg from "react-use";
 import { searchArticles } from "./seams/search";
 import type { SearchHit } from "./seams/search";
 import ArticleList from "./ArticleList";
 import KeyCard from "./KeyCard";
+const { useDebounce } = pkg;
 
 export default function SearchCard(props: {
   visible: boolean;
