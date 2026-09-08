@@ -31,7 +31,7 @@
     "react-hot-toast": "^2.4.1",
     "react-photo-view": "^1.2.3",
     "react-tiny-popover": "^7.2.4",
-    "react-use": "^17.4.1",
+    "react-use": "17.6.1",
     "rehype-katex": "^7.0.1",
     "remark-directive": "^3.0.0",
     "remark-math": "^6.0.0",
