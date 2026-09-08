@@ -195,6 +195,15 @@ func TestHealSiteSecrets_MovesResidualPublicSecrets(t *testing.T) {
 		}
 	}
 
+	// Regression (2026-09-07): the healed row must remain SAVABLE — SQL NULL
+	// in the JSON columns fails PB JSONField validation on every subsequent
+	// save ("Invalid input" 400), which broke fresh-install setup and all
+	// admin site edits on healed databases.
+	reloaded.Set("siteName", "heal-save-probe")
+	if err := app.Save(reloaded); err != nil {
+		t.Fatalf("site save after heal: %v", err)
+	}
+
 	// Secrets live in the admin-only row under key "main".
 	secrets, err := app.FindFirstRecordByFilter("site_secrets", "key={:k}", map[string]any{"k": "main"})
 	if err != nil || secrets == nil {

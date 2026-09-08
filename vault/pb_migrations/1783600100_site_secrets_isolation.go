@@ -75,10 +75,11 @@ func init() {
 			}
 		}
 
-		// --- 3. visits: block anonymous creation (was CreateRule = nil = public) ---
-		// Public page counters go through POST /api/vanblog/visits/record (a
-		// Go handler with its own abuse checks); the generic REST create was
-		// an unbounded write + viewCount pump.
+		// Public counting goes through POST /api/vanblog/visits/record — a
+		// Go handler that validates the path key (length/prefix) but leaves
+		// view-count-pump throttling to the deployment layer (Caddy /
+		// reverse proxy rate limits). The generic REST create this rule
+		// blocks used to be an unbounded anonymous write + viewCount pump.
 		visitsCol, err := db.FindCollectionByNameOrId("visits")
 		if err != nil {
 			return err

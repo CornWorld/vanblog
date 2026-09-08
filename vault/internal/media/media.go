@@ -48,10 +48,12 @@ func New(app core.App) *Manager {
 	// `site` collection can never hold them again (defense in depth on top
 	// of the migration). Values are parked in the admin-only site_secrets row.
 	stripSiteSecrets := func(e *core.RecordRequestEvent) error {
-		if err := site.MoveSecretsFromRecord(m.app, e.Record); err != nil {
-			slog.Warn("[media] site write stripped, secrets write failed", "err", err)
-		}
-		return e.Next()
+		// Fail closed: if parking the secrets fails, rejecting the site write
+		// is the only safe outcome. Proceeding would persist the
+		// credential-bearing fields onto the publicly readable site row — the
+		// exact leak this isolation exists to close — while the client got a
+		// 200. The admin retries and sees the failure instead.
+		return site.MoveSecretsFromRecord(m.app, e.Record)
 	}
 	app.OnRecordCreateRequest("site").BindFunc(stripSiteSecrets)
 	app.OnRecordUpdateRequest("site").BindFunc(stripSiteSecrets)

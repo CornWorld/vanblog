@@ -16,6 +16,7 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 // secretsKey is the singleton row key inside site_secrets.
@@ -34,7 +35,16 @@ func secretsRecord(app core.App) (*core.Record, error) {
 		return nil, fmt.Errorf("site: site_secrets collection not found: %w", err)
 	}
 	rec, err := app.FindFirstRecordByFilter("site_secrets", "key={:k}", dbx.Params{"k": secretsKey})
-	if rec != nil && err == nil {
+	if err != nil {
+		// No row yet is the normal fresh-install case → fall through to the
+		// unsaved record. Any other lookup failure must propagate: silently
+		// writing a second row on a transient read error would corrupt the
+		// singleton contract.
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("site: read site_secrets row: %w", err)
+		}
+	}
+	if rec != nil {
 		return rec, nil
 	}
 	fresh := core.NewRecord(secCol)
@@ -95,18 +105,27 @@ func MoveSecretsFromRecord(app core.App, rec *core.Record) error {
 		}
 	}
 	for _, f := range secretJSONFields {
-		rec.Set(f, nil)
+		// JSON literal `null`, NOT Go nil: SQL NULL fails PB JSONField
+		// validation on every subsequent save ("Invalid input" 400).
+		rec.Set(f, json.RawMessage("null"))
 	}
 	rec.Set("syncRemote", "")
 	return nil
 }
 
-// HealSecrets guards against old backups restoring a public site row that
-// still carries credential fields (pre-1783600100 schema). The migration may
-// have already run on this DB, so it cannot rewrite history; instead, on
-// every server start, move any residual public-site secret values into
-// site_secrets and null the site fields. Idempotent no-op once the row is
-// clean.
+// HealSecrets runs at every server start and fixes two artifacts on the
+// public site row:
+//
+//  1. Residual credential values (old backups restoring the pre-1783600100
+//     schema) → moved into site_secrets.
+//  2. SQL NULL in the secretJSONFields columns — written by 1783600100
+//     itself on fresh installs — which PB 0.40 JSONField validation rejects
+//     on every subsequent site save ("Invalid input" 400; settings become
+//     unsavable). Normalized to the JSON literal `null` (valid JSON, renders
+//     as null on the wire, and the invariant templates/assertions treat it
+//     as "field empty").
+//
+// Idempotent no-op once the row is clean.
 func HealSecrets(app core.App) error {
 	siteRec, err := app.FindFirstRecordByFilter("site", "")
 	// No site row yet (fresh install before setup) is the normal no-op
@@ -127,27 +146,43 @@ func HealSecrets(app core.App) error {
 	if v := siteRec.GetString("syncRemote"); v != "" {
 		dirty = true
 	}
-	if !dirty {
-		return nil
-	}
-	secrets, err := secretsRecord(app)
-	if err != nil {
-		return err
-	}
-	for _, f := range secretJSONFields {
-		if raw := siteRec.GetString(f); raw != "" && raw != "null" {
-			secrets.Set(f, raw)
+	if dirty {
+		secrets, serr := secretsRecord(app)
+		if serr != nil {
+			return serr
+		}
+		for _, f := range secretJSONFields {
+			if raw := siteRec.GetString(f); raw != "" && raw != "null" {
+				secrets.Set(f, raw)
+			}
+		}
+		if v := siteRec.GetString("syncRemote"); v != "" {
+			secrets.Set("syncRemote", v)
+		}
+		if err := app.Save(secrets); err != nil {
+			return err
 		}
 	}
-	if v := siteRec.GetString("syncRemote"); v != "" {
-		secrets.Set("syncRemote", v)
-	}
-	if err := app.Save(secrets); err != nil {
-		return err
-	}
+	normalized := false
 	for _, f := range secretJSONFields {
-		siteRec.Set(f, nil)
+		// SQL NULL loads as an EMPTY types.JSONRaw whose GetString is
+		// "null" — indistinguishable from a real JSON null literal by
+		// string alone. Empty bytes = no JSON at all = the zod validation
+		// bridge chokes on it; rewrite as the literal.
+		if raw, ok := siteRec.Get(f).(types.JSONRaw); ok && len(raw) == 0 {
+			siteRec.Set(f, json.RawMessage("null"))
+			normalized = true
+		}
 	}
-	siteRec.Set("syncRemote", "")
+	if dirty {
+		for _, f := range secretJSONFields {
+			siteRec.Set(f, json.RawMessage("null"))
+		}
+		siteRec.Set("syncRemote", "")
+		normalized = true
+	}
+	if !normalized {
+		return nil
+	}
 	return app.Save(siteRec)
 }
