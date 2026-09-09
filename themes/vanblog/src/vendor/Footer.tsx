@@ -60,6 +60,9 @@ export default function ({
   since: string;
   version: string;
 }) {
+  // SEAM(本仓 patch): since 无效(迁移数据 site.created 可为空串)时起始年 NaN,
+  // 降级为只显示当前年。上游数据侧保证 since 有效,无此防御。
+  const startYear = new Date(since).getFullYear();
   return (
     <>
       <footer className="text-center text-sm space-y-1 mt-8 md:mt-12 dark:text-dark footer-icp-number">
@@ -108,7 +111,7 @@ export default function ({
         </p>
 
         <p className="select-none footer-copy-right">
-          © {new Date(since).getFullYear()} - {new Date().getFullYear()}
+          © {Number.isNaN(startYear) ? "" : `${startYear} - `}{new Date().getFullYear()}
         </p>
         <p className="select-none footer-viewer">
           <SiteViewer />
