@@ -34,42 +34,53 @@ const (
 	metricsRetention   = 7 * 24 * time.Hour
 	metricsFilePrefix  = "metrics-"
 	metricsFileSuffix  = ".jsonl"
-	metricsDateFormat = "20060102"
+	metricsDateFormat  = "20060102"
 	defaultSampleLimit = 120 // 1 hour at 30s interval
 	maxSampleLimit     = 1000
 )
 
 // sample is a single metrics data point written to JSONL.
 type sample struct {
-	Time        string `json:"t"`             // RFC3339 timestamp
-	HeapAlloc   uint64 `json:"heap_alloc"`   // runtime.MemStats.HeapAlloc (live heap bytes)
-	HeapSys     uint64 `json:"heap_sys"`     // runtime.MemStats.HeapSys (total heap bytes obtained)
-	TotalAlloc  uint64 `json:"total_alloc"`  // runtime.MemStats.TotalAlloc (cumulative)
-	Sys         uint64 `json:"sys"`           // runtime.MemStats.Sys (total from OS)
-	NumGC       uint32 `json:"num_gc"`        // runtime.MemStats.NumGC (cumulative GC count)
-	PauseTotalNs uint64 `json:"pause_total_ns"` // cumulative GC pause nanoseconds
-	LastPauseNs uint64 `json:"pause_ns"`     // last GC pause nanoseconds
-	RSS         uint64 `json:"rss"`          // process RSS from /proc/self/status (bytes), 0 if unavailable
-	GoMemLimit  int64  `json:"gomemlimit"`    // debug.SetMemoryLimit(-1) current value (MaxInt64 = unlimited)
-	GoGC        int    `json:"gogc"`          // debug.SetGCPercent(-1) current value (100 = default)
-	CgroupLimit uint64 `json:"cgroup_limit"` // cgroup memory.max (0 = no limit / unavailable)
-	Event       string `json:"event,omitempty"` // "gc" for GC-triggered samples, "" for periodic
+	Time         string `json:"t"`               // RFC3339 timestamp
+	HeapAlloc    uint64 `json:"heap_alloc"`      // runtime.MemStats.HeapAlloc (live heap bytes)
+	HeapSys      uint64 `json:"heap_sys"`        // runtime.MemStats.HeapSys (total heap bytes obtained)
+	TotalAlloc   uint64 `json:"total_alloc"`     // runtime.MemStats.TotalAlloc (cumulative)
+	Sys          uint64 `json:"sys"`             // runtime.MemStats.Sys (total from OS)
+	NumGC        uint32 `json:"num_gc"`          // runtime.MemStats.NumGC (cumulative GC count)
+	PauseTotalNs uint64 `json:"pause_total_ns"`  // cumulative GC pause nanoseconds
+	LastPauseNs  uint64 `json:"pause_ns"`        // last GC pause nanoseconds
+	RSS          uint64 `json:"rss"`             // process RSS from /proc/self/status (bytes), 0 if unavailable
+	GoMemLimit   int64  `json:"gomemlimit"`      // debug.SetMemoryLimit(-1) current value (MaxInt64 = unlimited)
+	GoGC         int    `json:"gogc"`            // GC target percent captured at collector startup (-1 = GC off)
+	CgroupLimit  uint64 `json:"cgroup_limit"`    // cgroup memory.max (0 = no limit / unavailable)
+	Event        string `json:"event,omitempty"` // "gc" for GC-triggered samples, "" for periodic
 }
 
 // metricsCollector runs in a background goroutine, sampling runtime memory
 // stats every 30s and appending them to a per-day JSONL file.
 type metricsCollector struct {
-	app      core.App
-	stopCh   chan struct{}
+	app    core.App
+	stopCh chan struct{}
 	// previousNumGC tracks the GC count at the last sample, so the GC-event
 	// detector can detect when a GC happened between periodic samples.
 	previousNumGC atomic.Uint32
+	// goGC is the GC target percent read once at startup. It must NOT be read
+	// per-sample: debug.SetGCPercent(-1) returns the old value but also
+	// DISABLES the GC (GOGC=off) as a side effect — polling it every 30s kept
+	// the collector off entirely and made the heap grow until OOM.
+	goGC int
 }
 
 func newMetricsCollector(app core.App) *metricsCollector {
+	// One-shot round-trip read: SetGCPercent(-1) returns the previous value
+	// (and disables GC), then we immediately restore it. debug has no
+	// side-effect-free getter for GCPercent, unlike SetMemoryLimit(-1).
+	prev := debug.SetGCPercent(-1)
+	debug.SetGCPercent(prev)
 	return &metricsCollector{
 		app:    app,
 		stopCh: make(chan struct{}),
+		goGC:   prev,
 	}
 }
 
@@ -120,7 +131,7 @@ func (mc *metricsCollector) readSample(event string) sample {
 		PauseTotalNs: ms.PauseTotalNs,
 		LastPauseNs:  ms.PauseNs[(ms.NumGC+255)%256],
 		GoMemLimit:   debug.SetMemoryLimit(-1),
-		GoGC:         debug.SetGCPercent(-1),
+		GoGC:         mc.goGC,
 		Event:        event,
 	}
 
