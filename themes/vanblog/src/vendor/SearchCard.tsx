@@ -4,18 +4,14 @@
  * 缩放进出动画全部上游原样。上游 fix → 对本文件 apply patch。
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import * as reactUse from "react-use";
-import type { useDebounce as useDebounceValue } from "react-use";
+// 搜索防抖:输入停 500ms 再发请求,新输入取消旧计时。
+// (原用 react-use 的 useDebounce;CJS 包的 named export 在 Node ESM
+// 命名空间导入下解析不出——三轮导入写法均无法在 SSR 运行时稳定,
+// 组件仅此一处用该库,直接内联替掉依赖。)
 import { searchArticles } from "./seams/search";
 import type { SearchHit } from "./seams/search";
 import ArticleList from "./ArticleList";
 import KeyCard from "./KeyCard";
-// react-use 双环境导入:CJS 包,裸具名 import 依赖 cjs-module-lexer 探测
-// (Node ESM 曾随包版本浮动而 SyntaxError);默认 import 又被 rollup ESM
-// 构建拒绝(其 esm 构建无 default 导出)。命名空间导入无语法级风险,
-// 具名属性访问由包类型标注,17.6.1 实测 CJS/ESM 双环境可用。
-type UseDebounce = typeof useDebounceValue;
-const useDebounce: UseDebounce = reactUse.useDebounce;
 
 export default function SearchCard(props: {
   visible: boolean;
@@ -57,15 +53,11 @@ export default function SearchCard(props: {
     setResult(resultFromServer);
     setLoading(false);
   };
-  useDebounce(
-    () => {
-      if (search.trim() !== "") {
-        onSearch(search);
-      }
-    },
-    500,
-    [search]
-  );
+  useEffect(() => {
+    if (search.trim() === "") return;
+    const t = setTimeout(() => onSearch(search), 500);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const showClear = useMemo(() => {
     return search.trim() !== "";
