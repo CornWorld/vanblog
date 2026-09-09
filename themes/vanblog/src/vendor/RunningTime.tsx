@@ -1,5 +1,6 @@
 /* UPSTREAM: packages/website/components/RunningTime/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
- * SEAM: 无 — 逐字搬运。上游 fix → apply patch。
+ * SEAM: 无 — 逐字搬运 + 本仓 patch:since 无效(dayjs invalid,如迁移数据 created="")时
+ * 渲染 null 而非 NaN 文案。上游数据侧保证 since 必有值,故无此防御;上游 fix 到位后对齐。
  */
 import { useEffect, useRef, useState } from "react";
 import dayjs from "dayjs";
@@ -8,6 +9,7 @@ export default function (props: { since: string }) {
   const { current } = useRef<any>({ timer: null });
   const since = dayjs(props.since);
   useEffect(() => {
+    if (!since.isValid()) return;
     current.timer = setInterval(() => {
       const now = dayjs();
       const days = now.diff(since, "days");
@@ -25,6 +27,7 @@ export default function (props: { since: string }) {
       clearInterval(current.timer);
     };
   });
+  if (!since.isValid()) return null;
   return (
     <p>
       <span>本站居然运行了</span>
