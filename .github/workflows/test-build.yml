@@ -25,6 +25,19 @@ jobs:
           go-version: stable
           cache-dependency-path: vault/go.sum
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # packcli TestBuildSchemaProducesLoadableArtifact spawns `node` on the
+      # workspace schema builder — needs installed deps, same as the js job.
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+
       - name: go test ./...
         working-directory: vault
         env:
@@ -140,4 +153,4 @@ jobs:
         with:
           version: v2.13.2
           working-directory: vault
-          args: run ./...
+          args: ./...
