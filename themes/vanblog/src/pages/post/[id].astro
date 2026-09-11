@@ -89,10 +89,10 @@ try {
     // Not found OR blocked by ViewRule even when authenticated.
     Astro.response.status = 404;
   } else {
-    // Anonymous visitor hitting a private/draft post → send to login so they
-    // can come back as the author/admin. Returning a bare 404 here would
-    // confuse authors who just toggled "private" in the editor.
-    return Astro.redirect(`/login?back=${encodeURIComponent(`/post/${id}`)}`);
+    // Anonymous visitor hitting a private/draft post → 平台管理后台(其自带
+    // 认证);返回后以 admin 身份重访即可见。注意 /login 页面在主题中不存在,
+    // 旧的重定向会落 404 死头(2026-09-11 parity 验证发现)。
+    return Astro.redirect('/admin/');
   }
 }
 // Sanitize the rendered HTML before injecting it into the page.
