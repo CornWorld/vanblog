@@ -4,7 +4,7 @@
 // syncRemote git URL credentials, outputConfig) lives in a dedicated
 // admin-only collection instead of the publicly-readable `site` row
 // (migration 1783600100_site_secrets_isolation.go). This package is the
-// single read/write seam for that row so no other domain has to know the
+// single read/write point for that row so no other domain has to know the
 // storage layout.
 package site
 
