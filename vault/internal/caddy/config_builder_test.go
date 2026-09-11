@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -233,6 +234,14 @@ func TestBuildFullConfig(t *testing.T) {
 	}
 	if matchPaths(srvHTTPS[0])[0] != "/api/*" {
 		t.Errorf("[0] path mismatch: %v", matchPaths(srvHTTPS[0]))
+	}
+	// 根 feed/sitemap 别名与 /api/* 同路由反代 pb(vendor RssButton/AuthorCard
+	// 的 /feed.xml 契约;pb 侧 internal/feed 注册同名路由)。
+	got := matchPaths(srvHTTPS[0])
+	for _, want := range feedRootPaths {
+		if !slices.Contains(got, want) {
+			t.Errorf("[0] missing feed alias %q in %v", want, got)
+		}
 	}
 
 	// 2. System pb admin.

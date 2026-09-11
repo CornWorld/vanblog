@@ -167,6 +167,14 @@ const (
 	systemAdminRouteID  = "vanblog-system-pb-admin"
 	systemArtalkRouteID = "vanblog-system-artalk"
 	systemFallbackID    = "vanblog-system-fallback"
+)
+
+// feedRootPaths:站点根的 feed/sitemap 别名,与 /api/* 一并反代到 pb。上游
+// 原版后端在根路径服务这些 URL(vendor RssButton/AuthorCard 的既有契约,且
+// 同列 ReservedPaths);pb 侧由 internal/feed 注册同名路由。
+var feedRootPaths = []string{"/feed.xml", "/atom.xml", "/sitemap.xml"}
+
+const (
 
 	// Bootstrap-stage @id values. Prefixed `vanblog-bootstrap-*` to match
 	// docker/bootstrap.json (the static self-bootstrapping config) so that
@@ -390,7 +398,7 @@ func buildFullRouteTable(opts BuildOpts, userRules []UserRule) ([]caddyadmin.Rou
 	routes = append(routes,
 		caddyadmin.Route{
 			ID:    systemAPIRouteID,
-			Match: []caddyadmin.MatchRule{{Path: []string{"/api/*"}}},
+			Match: []caddyadmin.MatchRule{{Path: append([]string{"/api/*"}, feedRootPaths...)}},
 			Handle: []caddyadmin.Handler{{
 				Handler:   "reverse_proxy",
 				Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
@@ -436,7 +444,7 @@ func buildFullRouteTable(opts BuildOpts, userRules []UserRule) ([]caddyadmin.Rou
 func buildManagementServerRoutes(opts BuildOpts) *caddyadmin.Server {
 	routes := []caddyadmin.Route{
 		{
-			Match: []caddyadmin.MatchRule{{Path: []string{"/api/*"}}},
+			Match: []caddyadmin.MatchRule{{Path: append([]string{"/api/*"}, feedRootPaths...)}},
 			Handle: []caddyadmin.Handler{{
 				Handler:   "reverse_proxy",
 				Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
