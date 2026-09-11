@@ -152,12 +152,7 @@ type SearchResult struct {
 // GetTimeline returns published articles grouped by year → month.
 // This replaces the original article.provider.ts getTimeLineInfo().
 func (m *Manager) GetTimeline() ([]TimelineEntry, error) {
-	records, err := m.app.FindRecordsByFilter(
-		"posts",
-		"status='published' && deleted=false",
-		"-created",
-		0, 0,
-	)
+	records, err := FindPublicPosts(m.app, "", "-created", 0, 0, nil)
 	if err != nil {
 		return nil, fmt.Errorf("article: timeline query failed: %w", err)
 	}
@@ -226,13 +221,8 @@ func (m *Manager) Search(query string, limit int) ([]SearchResult, error) {
 	}
 
 	// Search in title and content using OR
-	records, err := m.app.FindRecordsByFilter(
-		"posts",
-		"status='published' && deleted=false && password='' && (title~{:query} || content~{:query})",
-		"-created",
-		limit, 0,
-		dbx.Params{"query": query},
-	)
+	records, err := FindPublicPosts(m.app, "title~{:query} || content~{:query}",
+		"-created", limit, 0, dbx.Params{"query": query})
 	if err != nil {
 		return nil, fmt.Errorf("article: search query failed: %w", err)
 	}
@@ -273,56 +263,6 @@ func (m *Manager) Unpublish(postID string) error {
 
 	post.Set("status", "draft")
 	return m.app.Save(post)
-}
-
-// GetByPathname finds a published post by its custom URL path.
-func (m *Manager) GetByPathname(pathname string) (*core.Record, error) {
-	record, err := m.app.FindFirstRecordByFilter(
-		"posts",
-		"pathname={:path} && status='published' && deleted=false",
-		dbx.Params{"path": pathname},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("article: not found by path %q: %w", pathname, err)
-	}
-	return record, nil
-}
-
-// GetRecent returns the most recently published posts.
-func (m *Manager) GetRecent(limit int) ([]*core.Record, error) {
-	if limit <= 0 {
-		limit = 10
-	}
-
-	records, err := m.app.FindRecordsByFilter(
-		"posts",
-		"status='published' && deleted=false",
-		"-created",
-		limit, 0,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("article: recent query failed: %w", err)
-	}
-	return records, nil
-}
-
-// GetByCategory returns published posts in a specific category.
-func (m *Manager) GetByCategory(categoryID string, limit int, offset int) ([]*core.Record, error) {
-	if limit <= 0 {
-		limit = 20
-	}
-
-	records, err := m.app.FindRecordsByFilter(
-		"posts",
-		"status='published' && deleted=false && category={:cat}",
-		"-created",
-		limit, offset,
-		dbx.Params{"cat": categoryID},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("article: category query failed: %w", err)
-	}
-	return records, nil
 }
 
 // ListTrash returns soft-deleted posts (deleted=true), newest update first.

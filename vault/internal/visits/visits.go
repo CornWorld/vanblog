@@ -4,13 +4,13 @@ package visits
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/cornworld/vanblog/internal/article"
+	"github.com/pocketbase/dbx"
+	"github.com/pocketbase/pocketbase/core"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/core"
 )
 
 // Manager handles visit tracking operations.
@@ -249,18 +249,13 @@ func (m *Manager) AggregateDaily(date string) error {
 	return m.app.Save(existing)
 }
 
-// GetTopPosts returns the most viewed published posts.
+// GetTopPosts returns the most viewed public posts (via article.FindPublicPosts).
 func (m *Manager) GetTopPosts(limit int) ([]*core.Record, error) {
 	if limit <= 0 {
 		limit = 10
 	}
 
-	records, err := m.app.FindRecordsByFilter(
-		"posts",
-		"status='published' && deleted=false",
-		"-viewCount",
-		limit, 0,
-	)
+	records, err := article.FindPublicPosts(m.app, "", "-viewCount", limit, 0, nil)
 	if err != nil {
 		return nil, fmt.Errorf("visits: top posts query failed: %w", err)
 	}

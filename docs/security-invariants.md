@@ -25,13 +25,15 @@
 
 **不变量 I1**：匿名 list 任何集合，响应字段里不得出现凭据（AK/SK/sshKey/密码/token/内嵌凭证 URL）。
 **不变量 I2**：匿名读 `posts` 时，`hasPassword=true` 的行 `content === "" && password === ""`。
+**策略映射**：上表是 A 面（REST，per-request rules）。B 面（公开工件：RSS/Atom/sitemap/timeline/search/top-posts，无观看者上下文、锁定/私有整体剔除）唯一 owner 是 `article.FindPublicPosts`（`internal/article/visibility.go` 头注释有 A/B/C/D 全图）；C（管理/导出，全保真）、D（键解析，无内容出站）豁免。
 
 ## 2. 锁定内容的服务端执行
 
 - "锁定/解锁/验证密码"语义**必须在服务端完整执行**。匿名 SSR/客户端能从 pb REST 读到的行 = 攻击者可见；任何只依赖 UI 形态的锁定都是装饰（事故：posts.password 泄漏，2026-09-07 修复）。
 - 解锁凭证必须是**服务端签名的不可伪造 token**（HMAC，密钥不出服务器），禁止字面量哨兵值（如 `"true"` cookie）。
 - 解锁端点必须：无 oracle（缺失/未发布/无密码文章统一 404）；密码比对常数时间；失败限速（每 IP 窗口计数）。
-- 文章内容的所有消费方（feed/atom、search、timeline、sitemap）复用同一套可见性过滤（`status='published' && deleted=false && password=''`），禁止各自手写 filter 造成旁路（事故：feed 泄漏 200 字摘要）。
+- 文章内容的所有消费方（feed/atom、sitemap、search、timeline、visits top）**必须经 `article.FindPublicPosts`**（`internal/article/visibility.go`）。谓词**从 posts.ListRule 匿名求值机械推导**（`FindRecordsByFilter` 传 nil requestInfo ⇒ `@request.auth.*` 绑 NULL）再叠唯一增量 `password=''`——可见性变更只改迁移里的 rules，所有调用点自动跟随（漂移测试：`TestFeedsFollowListRule`）。禁止各自手写 filter 造成旁路（事故：feed 泄漏 200 字摘要；audit 2026-09：四处手写 filter 全部漏 `private=false`）。注意 filter 语法 `&&` 优先于 `||`：拼接规则必须先括号包裹。
+- 解锁端点同受 private 语义约束：private 文章对匿名 404，即使密码正确（端点绕过 API rules 直读，规则不兜底）。
 
 ## 3. 凭据存放
 

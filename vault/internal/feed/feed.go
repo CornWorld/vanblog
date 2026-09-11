@@ -1,26 +1,29 @@
 // Package feed generates RSS/Atom feeds and sitemap data from posts.
 // It combines article data + site config into feed-ready structures.
+//
+// All post queries go through article.FindPublicPosts — the single
+// definition of public visibility (published + non-deleted + non-private +
+// non-locked). Feeds must never hand-roll visibility filters.
 package feed
 
 import (
 	"cmp"
 
+	"github.com/cornworld/vanblog/internal/article"
 	"github.com/cornworld/vanblog/internal/rss"
 	"github.com/cornworld/vanblog/internal/site"
 	"github.com/cornworld/vanblog/internal/sitemap"
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// GenerateRSS builds an RSS 2.0 feed from published posts + site config.
+// GenerateRSS builds an RSS 2.0 feed from public posts + site config.
 func GenerateRSS(app core.App, limit int) ([]byte, error) {
 	info, err := site.GetInfo(app)
 	if err != nil {
 		info = &site.Info{SiteName: "Vanblog", Description: "Vanblog"}
 	}
 
-	posts, err := app.FindRecordsByFilter(
-		"posts", "status='published' && deleted=false && password=''", "-created", limit, 0,
-	)
+	posts, err := article.FindPublicPosts(app, "", "-created", limit, 0, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +56,7 @@ func GenerateAtom(app core.App, limit int) ([]byte, error) {
 		info = &site.Info{SiteName: "Vanblog", Description: "Vanblog"}
 	}
 
-	posts, err := app.FindRecordsByFilter(
-		"posts", "status='published' && deleted=false && password=''", "-created", limit, 0,
-	)
+	posts, err := article.FindPublicPosts(app, "", "-created", limit, 0, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +82,7 @@ func GenerateAtom(app core.App, limit int) ([]byte, error) {
 	})
 }
 
-// GenerateSitemap builds a sitemap.xml from published posts + site config.
+// GenerateSitemap builds a sitemap.xml from public posts + site config.
 func GenerateSitemap(app core.App) ([]byte, error) {
 	info, err := site.GetInfo(app)
 	baseURL := ""
@@ -89,9 +90,7 @@ func GenerateSitemap(app core.App) ([]byte, error) {
 		baseURL = info.BaseURL
 	}
 
-	posts, _ := app.FindRecordsByFilter(
-		"posts", "status='published' && deleted=false", "", 0, 0,
-	)
+	posts, _ := article.FindPublicPosts(app, "", "", 0, 0, nil)
 
 	urls := make([]sitemap.URL, 0, len(posts)+1)
 	if baseURL != "" {

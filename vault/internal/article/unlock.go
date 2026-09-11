@@ -172,7 +172,7 @@ func (m *Manager) setUnlockCookie(e *core.RequestEvent, postID, basePath string)
 // Body (both fields optional): {"password": "...", "basePath": "/x"}.
 // Success → 200 {content: "<markdown>"} + Set-Cookie unlock token.
 // Wrong/no password without valid cookie → 401; too many failures → 429;
-// missing/deleted/unpublished/no-password post → 404 (no oracle about
+// missing/deleted/private/unpublished/no-password post → 404 (no oracle about
 // which case applies).
 func (m *Manager) handleUnlock(e *core.RequestEvent) error {
 	postID := e.Request.PathValue("id")
@@ -186,8 +186,12 @@ func (m *Manager) handleUnlock(e *core.RequestEvent) error {
 	post, err := m.app.FindRecordById("posts", postID)
 	if err != nil ||
 		post.GetBool("deleted") ||
+		post.GetBool("private") ||
 		post.GetString("status") != "published" ||
 		post.GetString("password") == "" {
+		// private: the endpoint reads records server-side, bypassing the API
+		// rules that hide private posts from anonymous readers — without this
+		// check, a private+locked post's content is redeemable by password.
 		return e.JSON(http.StatusNotFound, map[string]string{"message": "文章不存在"})
 	}
 

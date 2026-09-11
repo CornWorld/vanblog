@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/cornworld/vanblog/internal/feed"
 	_ "github.com/cornworld/vanblog/pb_migrations"
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -263,26 +262,88 @@ func TestUnlockEndpoint_NoOracleForMissingPosts(t *testing.T) {
 	}
 }
 
-func TestFeedAndSearchExcludeLockedPosts(t *testing.T) {
+// TestUnlockEndpoint_RejectsPrivatePost proves the unlock endpoint cannot
+// redeem a private post's content: it reads records server-side, bypassing
+// the API rules that hide private posts from anonymous readers (audit
+// repro: private+locked once returned 200 with full content).
+func TestUnlockEndpoint_RejectsPrivatePost(t *testing.T) {
+	app := setupApp(t)
+	mux := buildRouter(t, app)
+
+	col, err := app.FindCollectionByNameOrId("posts")
+	if err != nil {
+		t.Fatalf("find posts: %v", err)
+	}
+	r := core.NewRecord(col)
+	r.Set("title", "PrivateLocked")
+	r.Set("content", "PRIVATE-SECRET-BODY")
+	r.Set("status", "published")
+	r.Set("pathname", "/private-locked")
+	r.Set("password", "pw123")
+	r.Set("private", true)
+	if err := app.Save(r); err != nil {
+		t.Fatalf("create private locked post: %v", err)
+	}
+
+	rec := postUnlock(t, mux, r.Id, `{"password":"pw123"}`, "")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("private post unlock = %d, want 404; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+// TestPublicDomainSurfacesExcludeLockedAndPrivate pins the public-visibility
+// contract for the article-domain surfaces (search, timeline): locked and
+// private posts must not appear, matching article.FindPublicPosts.
+func TestPublicDomainSurfacesExcludeLockedAndPrivate(t *testing.T) {
 	app := setupApp(t)
 	buildRouter(t, app)
 	createLockedPost(t, app, "/locked", "pw")
+
+	col, err := app.FindCollectionByNameOrId("posts")
+	if err != nil {
+		t.Fatalf("find posts: %v", err)
+	}
+	priv := core.NewRecord(col)
+	priv.Set("title", "PrivateTitle")
+	priv.Set("content", "PRIVATE-SECRET-BODY")
+	priv.Set("status", "published")
+	priv.Set("pathname", "/priv")
+	priv.Set("private", true)
+	if err := app.Save(priv); err != nil {
+		t.Fatalf("create private post: %v", err)
+	}
 	createPost(t, app, "Open", "open body", "published", "/open")
 
-	rss, err := feed.GenerateRSS(app, 20)
-	if err != nil {
-		t.Fatalf("rss: %v", err)
+	mgr := &Manager{app: app}
+
+	for _, q := range []string{"SECRETBODY", "PRIVATE-SECRET", "PrivateTitle"} {
+		results, err := mgr.Search(q, 10)
+		if err != nil {
+			t.Fatalf("search %q: %v", q, err)
+		}
+		if len(results) != 0 {
+			t.Errorf("search %q hits hidden post: %+v", q, results)
+		}
 	}
-	if strings.Contains(string(rss), "SECRETBODY") {
-		t.Error("RSS leaks locked post content")
+	results, err := mgr.Search("open body", 10)
+	if err != nil {
+		t.Fatalf("search open: %v", err)
+	}
+	if len(results) != 1 {
+		t.Errorf("search open = %d hits, want 1", len(results))
 	}
 
-	mgr := &Manager{app: app}
-	results, err := mgr.Search("SECRETBODY", 10)
+	timeline, err := mgr.GetTimeline()
 	if err != nil {
-		t.Fatalf("search: %v", err)
+		t.Fatalf("timeline: %v", err)
 	}
-	if len(results) != 0 {
-		t.Errorf("search hits locked post content: %+v", results)
+	for _, e := range timeline {
+		for _, m := range e.Months {
+			for _, p := range m.Titles {
+				if p.Title == "Locked" || p.Title == "PrivateTitle" {
+					t.Errorf("timeline leaks hidden post %q", p.Title)
+				}
+			}
+		}
 	}
 }
