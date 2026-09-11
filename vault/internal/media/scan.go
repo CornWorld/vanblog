@@ -101,4 +101,3 @@ func (m *Manager) ReadFileContent(record *core.Record) ([]byte, error) {
 
 	return io.ReadAll(r)
 }
-

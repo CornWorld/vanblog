@@ -126,8 +126,8 @@ func withFastBackoffs(t *testing.T) {
 // mockAdmin is a minimal Caddy admin API for BootstrapSync tests.
 type mockAdmin struct {
 	mu                    sync.Mutex
-	loadFailuresRemaining int // number of /load (non-validate) calls left to fail
-	loadCalls             int // counts non-validate /load calls
+	loadFailuresRemaining int    // number of /load (non-validate) calls left to fail
+	loadCalls             int    // counts non-validate /load calls
 	lastConfig            []byte // body of the most recent non-validate /load call
 }
 

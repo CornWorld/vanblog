@@ -66,9 +66,9 @@ func (m *Manager) handleIngestImages(e *core.RequestEvent) error {
 	ingested, failed, err := m.IngestExternalImages(id)
 	if err != nil {
 		return e.JSON(http.StatusInternalServerError, map[string]any{
-			"error":     err.Error(),
-			"ingested":  ingested,
-			"failed":    failed,
+			"error":    err.Error(),
+			"ingested": ingested,
+			"failed":   failed,
 		})
 	}
 	return e.JSON(http.StatusOK, map[string]int{

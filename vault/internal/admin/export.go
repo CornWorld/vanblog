@@ -8,8 +8,8 @@ import (
 	"log/slog"
 	"path"
 
-	"github.com/cornworld/vanblog/internal/migrationschema"
 	"github.com/cornworld/vanblog/internal/mediaurl"
+	"github.com/cornworld/vanblog/internal/migrationschema"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem"
 )

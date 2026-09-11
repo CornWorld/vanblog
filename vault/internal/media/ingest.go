@@ -94,7 +94,7 @@ func (m *Manager) downloadAndStore(
 		return fmt.Sprintf("/api/files/%s/%s",
 			existing.BaseFilesPath(), filename), nil
 	}
-req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, imgURL, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, imgURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("create request: %w", err)
 	}

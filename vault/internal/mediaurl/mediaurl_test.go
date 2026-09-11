@@ -62,15 +62,15 @@ func TestIsInternalURL(t *testing.T) {
 		url  string
 		want bool
 	}{
-		{"/api/files/x/y/a.png", true},                 // relative path
-		{"./images/a.png", true},                       // relative path
-		{"https://host/api/files/x/y/a.png", true},     // pb file behind host
-		{"https://host/static/style.css", true},        // static behind host
-		{"https://host/api/files/", true},              // pb path even bare
-		{"http://external.com/a.png", false},           // external
-		{"https://cdn.example.com/b.jpg", false},       // external
-		{"https://host/api/notfiles/x", false},         // not a file path
-		{"//protocol-relative.com/x.png", false},       // not matched by internal rules
+		{"/api/files/x/y/a.png", true},             // relative path
+		{"./images/a.png", true},                   // relative path
+		{"https://host/api/files/x/y/a.png", true}, // pb file behind host
+		{"https://host/static/style.css", true},    // static behind host
+		{"https://host/api/files/", true},          // pb path even bare
+		{"http://external.com/a.png", false},       // external
+		{"https://cdn.example.com/b.jpg", false},   // external
+		{"https://host/api/notfiles/x", false},     // not a file path
+		{"//protocol-relative.com/x.png", false},   // not matched by internal rules
 	}
 	for _, tc := range cases {
 		if got := IsInternalURL(tc.url); got != tc.want {

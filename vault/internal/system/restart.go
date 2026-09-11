@@ -85,9 +85,9 @@ func (m *Manager) handleRestart(e *core.RequestEvent) error {
 		remaining := restartCooldown - time.Since(m.lastRestart)
 		m.mu.Unlock()
 		return e.JSON(http.StatusTooManyRequests, map[string]any{
-			"accepted":  false,
-			"message":   "restart cooldown active",
-			"retry_in":  int(remaining.Seconds()),
+			"accepted": false,
+			"message":  "restart cooldown active",
+			"retry_in": int(remaining.Seconds()),
 		})
 	}
 	m.lastRestart = time.Now()
