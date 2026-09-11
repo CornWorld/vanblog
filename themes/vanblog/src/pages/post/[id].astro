@@ -66,7 +66,7 @@ try {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            cookie: Astro.cookies.toString() || '',
+            cookie: Astro.request.headers.get('cookie') || '',
           },
           body: JSON.stringify({ basePath }),
         });
@@ -170,11 +170,14 @@ const lp = getPostCardLayoutProps(site);
 ---
 
 <BaseLayout title={data?.title || '文章不存在'} post={data && safeHtml !== null ? data : undefined} path={`/post/${id}`} sideBar={hasToc} keywords={data && safeHtml !== null ? [data.title, categoryName, ...Object.values(tagMap)].filter(Boolean).join(',') : undefined}>
-  {data && safeHtml !== null ? (
+  {data && (safeHtml !== null || locked) ? (
     <Fragment>
       {/* 卡片本体 = UPSTREAM PostCard(index/title/bottom + AlertCard/TocMobile/
           Reward/CopyRight/UnLockCard/CommentArtalk 子件);锁态由服务端 resolved
-          locked 驱动(匿名+密码 → UnLockCard;管理员/已解锁 → 正文)。 */}
+          locked 驱动(匿名+密码 → UnLockCard;管理员/已解锁 → 正文)。
+          解锁成功 → Go 已签发 path 限定解锁 cookie(Astro 端点中继),reload 让
+          SSR 凭 cookie 渲染全文;PostCard 无本地正文的 content state,
+          setContent 在本仓是 cookie 重载语义。 */}
       <PostCard
         client:load
         showEditButton={isAuthenticated(pb) && site?.displayOptions?.showEditButton !== false}
@@ -198,10 +201,7 @@ const lp = getPostCardLayoutProps(site);
         pre={prePost ?? undefined}
         next={nextPost ?? undefined}
         enableComment={lp.enableComment}
-        hideDonate={site?.displayOptions?.showDonateButton === false}
-        hideCopyRight={site?.displayOptions?.showCopyRight === false}
-        commentsServer={lp.commentsServer}
-        setContent={() => {}}
+        setContent={() => location.reload()}
       />
     </Fragment>
   ) : (
