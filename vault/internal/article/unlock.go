@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -184,6 +185,15 @@ func (m *Manager) handleUnlock(e *core.RequestEvent) error {
 	}
 
 	post, err := m.app.FindRecordById("posts", postID)
+	if err != nil {
+		// id 或 pathname 双解析(对齐上游 getArticleByIdOrPathname):主题
+		// UnLockCard 发的 id 是 articlePath(pathname, id) 的 URL 形态。
+		// pathname 存储混用 "/slug"/"slug",双形态匹配;slug 未命中与
+		// id 未命中同文案 404,不构成 oracle。
+		post, err = m.app.FindFirstRecordByFilter("posts",
+			"(pathname={:raw} || pathname={:slashed}) && deleted=false",
+			dbx.Params{"raw": postID, "slashed": "/" + postID})
+	}
 	if err != nil ||
 		post.GetBool("deleted") ||
 		post.GetBool("private") ||

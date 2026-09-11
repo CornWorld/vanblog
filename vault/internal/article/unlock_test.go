@@ -347,3 +347,27 @@ func TestPublicDomainSurfacesExcludeLockedAndPrivate(t *testing.T) {
 		}
 	}
 }
+
+// The theme's UnLockCard posts articlePath(pathname, id) — the URL/slug form —
+// so the endpoint must resolve pathname too (upstream
+// getArticleByIdOrPathname double resolution). Slug miss shares the same 404
+// as id miss (no oracle).
+func TestUnlockEndpoint_ResolvePathname(t *testing.T) {
+	app := setupApp(t)
+	createLockedPost(t, app, "/locked", "pw")
+	mux := buildRouter(t, app)
+
+	for _, seg := range []string{"locked"} {
+		rec := postUnlock(t, mux, seg, `{"password":"pw"}`, "")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("unlock by pathname %q: got %d, want 200", seg, rec.Code)
+		}
+		if !strings.Contains(rec.Body.String(), "SECRETBODY") {
+			t.Errorf("unlock by pathname %q: body missing content", seg)
+		}
+	}
+
+	if rec := postUnlock(t, mux, "no-such-slug", `{"password":"pw"}`, ""); rec.Code != http.StatusNotFound {
+		t.Errorf("unknown slug: got %d, want 404", rec.Code)
+	}
+}
