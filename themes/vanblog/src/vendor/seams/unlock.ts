@@ -1,4 +1,4 @@
-/* UPSTREAM: (seam 文件,无上游对应 — 契约见 .snow/plan/vendor-upstream-islands-parity.md)
+/* UPSTREAM: (seam 文件,无上游对应;契约即本文件导出类型)
  * SEAM: 数据层。unlockPost → POST /api/unlock;服务端(src/pages/api/unlock.ts)复用
  * 文章页同款密码校验 + 平台 markdown 渲染/消毒管线。上游 fix → 不涉及本文件。
  */

@@ -1,4 +1,4 @@
-/* UPSTREAM: (seam 文件;对应上游 packages/website/api/search.ts@4b488500be8100b19772ec00d8315f343a6ac21e)
+/* UPSTREAM: packages/website/api/search.ts@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: 数据层 — 包 GET /api/vanblog/search(平台 Go 层,vault/internal/article)。
  * 计划契约:SearchHit{id,title,summary,category?,createdAt}。平台返回
  * {id,title,path,createdAt}(Go SearchResult,createdAt 为本波扩展);path 为

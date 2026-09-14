@@ -1,4 +1,6 @@
 /* UPSTREAM: packages/website/components/ArticleList/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/utils/getArticlePath.ts@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/components/Link/tools.ts@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: 1) next/link → <a>(MPA 整页导航);2) 上游 /post/{pathname||id} → 平台
  * /post/{id}(对齐上游文章路由形态);3) 上游 Article 类型 → seams/search.ts SearchHit
  * (仅消费 id/title/createdAt,与上游用到的字段一致);4) utils/getArticlePath、

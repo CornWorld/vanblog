@@ -1,5 +1,5 @@
 /* UPSTREAM: packages/website/components/BackToTop/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
- *          + styles/back-to-top.module.css(→ ./back-to-top.module.css)
+ * UPSTREAM: packages/website/styles/back-to-top.module.css@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: utils/scroll 复用本目录 vendor/scroll.ts;getScrollTop/scrollToTop 内联
  * (单调用点)。throttle 500ms 捕获阶段监听原样。上游 fix → 对本文件 apply patch。
  */

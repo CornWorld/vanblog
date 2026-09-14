@@ -1,4 +1,5 @@
 /* UPSTREAM: packages/website/components/Footer/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/components/Viewer/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: Viewer(全站访客 GlobalContext)→ SiteViewer(visits/summary);其余逐字。上游 fix → apply patch。
  */
 import ImageBox from "./ImageBox";

@@ -1,4 +1,5 @@
-/* UPSTREAM: packages/website/components/ThemeButton/{index,core}.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+/* UPSTREAM: packages/website/components/ThemeButton/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/components/ThemeButton/core.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: ThemeContext → seams/theme.ts(模块级 store + useRealTheme)。
  * 与上游差异:计时器/持久化并入 seam(上游 core 内联的 setTheme/clearTimer/setTimer),
  * light→dark→auto 切换循环、auto 文案、图标、hasInit 初始化均原样。

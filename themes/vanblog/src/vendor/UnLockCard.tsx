@@ -1,5 +1,5 @@
 /* UPSTREAM: packages/website/components/UnLockCard/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
- *          + packages/website/components/Loading/index.tsx(内联为 Loading,原样)
+ * UPSTREAM: packages/website/components/Loading/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: 数据层 — 上游 getArticleByIdOrPathnameWithPassword(SWR/fetch 整篇内容)
  * → seams/unlock.ts unlockPost(POST /api/unlock,服务端渲染消毒后返回 html)。
  * toast 反馈/加载态/输入交互原样。上游 fix → 对本文件 apply patch。

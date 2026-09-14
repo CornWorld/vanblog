@@ -1,5 +1,7 @@
-/* UPSTREAM: packages/website/components/MarkdownTocBar/{index,core,tools}.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
- *          + packages/website/components/Toc/index.tsx(同 SHA,导出为 TocCard)
+/* UPSTREAM: packages/website/components/MarkdownTocBar/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/components/MarkdownTocBar/core.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/components/MarkdownTocBar/tools.ts@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/components/Toc/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: 数据层 props 化 — 上游 index.tsx 在客户端 parseNavStructure(content) 洗刷原始
  * markdown 再解析标题;平台 remark/rehype 管线已在服务端产出唯一 id 锚点,由
  * src/lib/toc.ts extractHeadings(html) 提取后经 items props 注入。

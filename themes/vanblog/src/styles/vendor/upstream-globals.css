@@ -1,5 +1,4 @@
 /* UPSTREAM: packages/website/styles/globals.css@4b488500be8100b19772ec00d8315f343a6ac21e
- *          (仅 vendor islands 需要且主题 global.css 尚未提供的类)
  * SEAM: 颜色映射语义 var;@apply 改写为等价普通 CSS(v4 @import 链内不依赖 tailwind
  * 处理顺序)。上游 fix → 对本文件 apply patch。
  */

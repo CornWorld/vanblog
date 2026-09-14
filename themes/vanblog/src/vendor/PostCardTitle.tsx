@@ -1,4 +1,7 @@
 /* UPSTREAM: packages/website/components/PostCard/title.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/utils/getArticlePath.ts@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/utils/encode.ts@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/components/Link/tools.ts@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: 1) next/link → <a> + withBase(平台 /post/{pathname||id});2) utils/encode
  * encodeQuerystring、Link/tools getTarget 内联(逐字符同式);3) utils/auth checkLogin
  * (上游恒 return true)→ showEditButton 由 Astro 服务端鉴权经 props 传入;4) PostViewer

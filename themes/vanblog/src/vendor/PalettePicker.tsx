@@ -1,5 +1,4 @@
-/* UPSTREAM: (无上游对应 — 平台原子调色盘特性,自 themes/vanblog/src/components/Nav.astro
- *          的调色盘面板移植为 React;上游 fix → 不涉及本文件)
+/* UPSTREAM: (平台文件,无上游对应)
  * SEAM: 平台 palette 模型 UI。getPalette/fetchPalettes/applyPalette/SYSTEM_PALETTE
  * 均来自 @vanblog/sdk/browser(SDK 负责 localStorage/html.dark/palette.css/渐进过渡)。
  * 与 vendor ThemeButton 的交互:applyPalette 派发 darkmodechange,seams/theme 监听

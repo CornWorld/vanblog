@@ -1,4 +1,5 @@
-/* UPSTREAM: packages/website/utils/theme.ts + utils/themeContext.ts@4b488500be8100b19772ec00d8315f343a6ac21e
+/* UPSTREAM: packages/website/utils/theme.ts@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/utils/themeContext.ts@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: ThemeContext 砍掉(多 island 无共享 Provider)→ 模块级单例 store +
  * useSyncExternalStore;主题态仍落 localStorage("theme",与上游同 key,上游 fix 兼容)
  * + html.dark + 平台 darkmodechange 事件(sdk/src/theme.ts applyPalette 同款)。

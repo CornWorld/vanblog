@@ -1,4 +1,5 @@
-/* UPSTREAM: packages/website/components/RssButton/index.tsx + RssLogo/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+/* UPSTREAM: packages/website/components/RssButton/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/components/RssLogo/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: RssLogo 内联进本文件(仅 RssButton 一处消费;上游独立文件,搬运时注意)。
  * react-copy-to-clipboard + toast 反馈原样;/feed.xml 为平台 RSS 路径。
  * 上游 fix → 对本文件 apply patch。

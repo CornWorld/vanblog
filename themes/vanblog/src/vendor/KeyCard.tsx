@@ -1,4 +1,5 @@
 /* UPSTREAM: packages/website/components/KeyCard/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/utils/ua.ts@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: utils/ua isMac 内联(platform 探测一行,不值得跨文件)。其余原样。
  * 上游 fix → 对本文件 apply patch。
  */

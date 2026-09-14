@@ -1,9 +1,4 @@
-/* UPSTREAM: packages/website/styles/github-markdown.css@4b48850
- * 适配:fg/canvas/border/accent 灰阶与链接色映射语义 var(--text|--text-muted|
- * --bg|--surface-soft|--border|--accent|--hover);prettylights 语法色、danger/attention、
- * --color-neutral-muted 半透明色保留 upstream literal;mermaid 底色映射 var(--surface)。
- * 原版 .light 作用域改为 html:not(.dark);--color-text-primary 上游无定义为悬空引用,已改 var(--text)。
- * 上游 fix → 对本文件 apply patch。
+/* UPSTREAM: packages/website/styles/github-markdown.css@4b488500be8100b19772ec00d8315f343a6ac21e
  */
 .dark .markdown-body {
   color-scheme: dark;

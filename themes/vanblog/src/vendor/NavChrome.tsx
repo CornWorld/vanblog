@@ -1,5 +1,4 @@
 /* UPSTREAM: packages/website/components/Layout/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
- *          (isOpen 状态所有权 — 原版由 Layout 持有并分发给 NavBar/NavBarMobile)
  * SEAM: 布局 — Astro 跨 island 不能传函数,桌面 NavBar 与移动抽屉合并为单一 island。
  * palettePicker 插位:平台原子调色盘 UI(上游无对应),渲染在 ThemeButton 之后。
  * 上游 fix → 对本文件 apply patch。

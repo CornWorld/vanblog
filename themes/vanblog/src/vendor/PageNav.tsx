@@ -1,4 +1,6 @@
-/* UPSTREAM: packages/website/components/PageNav/{core.ts,index.tsx,render.tsx}@4b488500be8100b19772ec00d8315f343a6ac21e
+/* UPSTREAM: packages/website/components/PageNav/core.ts@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/components/PageNav/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/components/PageNav/render.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: next/link → <a> + withBase(base/more href 统一走主题根);其余逐字。
  * 上游 fix → 对本文件 apply patch。
  */

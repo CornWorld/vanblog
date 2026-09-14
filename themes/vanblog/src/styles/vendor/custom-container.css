@@ -1,9 +1,4 @@
-/* UPSTREAM: packages/website/styles/custom-container.css@4b48850
- * 适配:info/note/tip/warning/danger 五类标题/底色/描边为刻意设计的类型色
- * (非灰阶语义色,且 ::before 内联 SVG data-URI fill 无法引用 CSS var),整块保留
- * upstream literal;暗色段沿用 .dark 选择器(本主题同为 html.dark)。
- * --detail-bg/--detail-text 灰阶在文件内无消费点,暂保留原值。
- * 上游 fix → 对本文件 apply patch。
+/* UPSTREAM: packages/website/styles/custom-container.css@4b488500be8100b19772ec00d8315f343a6ac21e
  */
 .custom-container {
   --info-title-color: #193c47;

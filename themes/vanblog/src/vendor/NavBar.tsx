@@ -1,4 +1,6 @@
 /* UPSTREAM: packages/website/components/NavBar/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/api/getAllData.ts@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/utils/encode.ts@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: 1) next/link → <a>;2) ThemeContext → seams/theme.ts useRealTheme(logo 明暗
  * 切换语义不变);3) utils/encode encodeQuerystring 内联;4) categories prop 改
  * {id,name}[] 并按上游形态 /category/{name} 链接;

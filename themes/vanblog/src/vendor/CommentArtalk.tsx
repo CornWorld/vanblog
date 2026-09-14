@@ -1,4 +1,4 @@
-/* UPSTREAM: packages/website/components/Waline/core.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+/* UPSTREAM: packages/website/components/WaLine/core.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: 评论(唯一刻意分叉)— Waline → Artalk(平台 site.commentsProvider='artalk')。
  * props 形状兼容 Waline/core.tsx({server, path});dark 联动监听平台 darkmodechange
  * 事件(与 src/components/Comments.astro 内联脚本一致)。上游 fix → 对本文件 apply patch。

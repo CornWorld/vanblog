@@ -1,4 +1,7 @@
 /* UPSTREAM: packages/website/components/PostCard/bottom.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/utils/getArticlePath.ts@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/utils/encode.ts@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/components/Link/tools.ts@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: next/link → <a> + withBase;utils/getArticlePath、utils/encode、
  * Link/tools getTarget 内联(逐字符同式)。上游 fix → 对本文件 apply patch。
  */

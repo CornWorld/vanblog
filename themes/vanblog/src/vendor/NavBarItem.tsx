@@ -1,4 +1,5 @@
 /* UPSTREAM: packages/website/components/NavBar/item.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
+ * UPSTREAM: packages/website/api/getAllData.ts@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: next/link → <a>(MPA 整页导航;style={{height:"100%"}} 随迁到 <a>)。
  * MenuItem 内联(与上游 api/getAllData.ts MenuItem 同形;NavBar.tsx 导出供本文件引用)。
  * 上游 fix → 对本文件 apply patch。

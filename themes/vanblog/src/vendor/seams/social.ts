@@ -1,4 +1,5 @@
-/* SEAM: 上游 types SocialItem(api/getAllData 内联形状)。
+/* UPSTREAM: packages/website/api/getAllData.ts@4b488500be8100b19772ec00d8315f343a6ac21e
+ * SEAM: 上游 types SocialItem(api/getAllData 内联形状)。
  * dark = wechat-dark 变体二维码(与 SocialCard 的合并逻辑配套)。 */
 export interface SocialItem {
   type: string;

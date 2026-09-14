@@ -1,6 +1,4 @@
-/* UPSTREAM: packages/website/styles/toc.css@4b48850
- * 适配:单值灰阶映射 var(--text)/var(--text-muted)/var(--hover);6 级标题灰阶渐变
- * (level1-6 递减灰度)为刻意设计,保留 upstream literal。上游 fix → 对本文件 apply patch。
+/* UPSTREAM: packages/website/styles/toc.css@4b488500be8100b19772ec00d8315f343a6ac21e
  */
 /* dark 6 级标题灰阶渐变,保留 upstream literal */
 .dark .markdown-navigation .title-level1 {
