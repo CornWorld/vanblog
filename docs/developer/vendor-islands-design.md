@@ -7,7 +7,7 @@
 
 **把原版交互组件按文件原样 vendor 进内置主题(`themes/vanblog/src/vendor/`),以 React islands 运行;原版 Next.js 整站不进生产。**
 
-- 上游 React 组件逐文件复制,行为级 1:1;每个文件头记 `UPSTREAM: packages/website/components/<Path>@<sha>`,上游 fix 可直接对本文件 apply patch。
+- 上游 React 组件逐文件复制,行为级 1:1。血缘与偏离的**单一事实源是 [`themes/vanblog/src/vendor/upstream.manifest.json`](../../themes/vanblog/src/vendor/upstream.manifest.json)**(52 本地件 × 上游 107 文件全覆盖,机器校验);vendor 文件头 `UPSTREAM:` 行是 manifest 的冗余视图(`scripts/dev/vendor-sync.mjs sync-headers` 再生成)。上游 fix 按「上游跟踪治理」一节的策略处置,不再默认盲 apply。
 - 不手搓复刻交互,也不整站迁移 Next.js。
 
 ## 兼容层原则(2026-09-07 裁定)
@@ -16,7 +16,7 @@
 
 - **行为**指用户可见面:URL 形态、渲染结果、交互响应、时序可见性(如发布即可见)。
 - **实现**指框架机制与内部结构:Astro/React、渲染时机、取数路径、组件拆分。
-- 每处实现偏离必须**可解释**:vendor 文件头 `SEAM` 注释,或下方对照表登记;不允许无记录的静默分叉。
+- 每处实现偏离必须**可解释**:manifest 条目(`rewrites`/`patches`/`contract`)+ vendor 文件头 `SEAM` 注释叙述,或下方对照表登记;不允许无记录的静默分叉。
 - 每处行为等价必须**可 compare**:用验证基线一节的手段(同源数据垫片、URL 探活、截图)可重复检验,不靠"看起来像"。
 
 ### 实现偏离对照表
@@ -88,33 +88,57 @@
 - **props 类型内联各 vendor 文件**(与上游一致),不建共享 types。
 ## 验证基线(parity shim)
 
-`scripts/dev/public-api-shim.mjs`(dev-only,零依赖):在 :3000 把原版 legacy `/api/public/*` 十个端点映射到本仓库 PocketBase,使**原版 Next 站点**(`refs/mereithhh-original/packages/website`,`pnpm dev` 监听 3001,dev rewrite 已指 3000)与**本主题**在同一份种子数据上渲染。垫片不进生产镜像。复现命令见 `.snow/artifacts/parity-report-2026-09-05.md`(gitignored,报告含已知有意偏差清单)。
+垫片不进生产镜像。复现:一端跑 `node scripts/dev/public-api-shim.mjs`(:3000),另一端在上游目录 `pnpm dev`(:3001),按下方三件套执行;已知有意偏差以 manifest `patches[]` 与本表为准。
 
 **可 compare 三件套**(按兼容层原则可重复执行):
 1. **同源数据**:垫片使两站读同一份 PB 数据,渲染差异只可能来自前端。
 2. **URL 探活**:`Accept: text/html` 逐 URL 探状态(curl 默认 `*/*` 会吃到 dev fallback 假 200,必须带真实浏览器头);首页全部内链闭环探活。
 3. **全页截图**:关键页(首页/文章/时间轴/搜索/分页)两站对比,交互(暗色、⌘K、TOC、解锁)走真实浏览器点击流。
 
-## 上游同步协议
+## 上游跟踪治理(manifest,2026-09-14 裁定)
+
+结构化事实(血缘/偏离类别/策略/缺席理由)入 [`upstream.manifest.json`](../../themes/vanblog/src/vendor/upstream.manifest.json),机器可校验;叙述(为什么、等价性论证)留文件头 `SEAM:` 与本表(行为轴)。两轴互链,不互替。
+
+### 词汇(derivation 封闭枚举)与派生策略
+
+| derivation | 语义 | 条目 | 同步策略(派生,不落盘) |
+| --- | --- | --- | --- |
+| `verbatim` | 逐字拷贝(可带登记 patch) | 11 | `direct` 盲 apply;有 patch → `manual` |
+| `mechanical` | 拷贝 + 登记过的确定性改写(`rewrites`) | 23 | `replay`:patch 后按规则重放 |
+| `merged` | 多上游文件合并 | 10 | `replay`:逐源 patch |
+| `contract` | 数据/边界契约化,`contract` 指向 `seams/*.ts` 类型签名 | 5 | `manual`:上游变动=契约信号 |
+| `fork` | 行为分叉,上游文件=行为规格 | 2 | `manual`:跑 parity 三件套 |
+| `platform` | 平台自有,无上游 | 1 | `none` |
+| (skipped) | 上游有、本仓无,缺席台账 + 理由 | 44 | 信号:复核理由是否仍成立 |
+
+「pin 符号不 pin 行号」:血缘记 `path@sha` + 符号名;行内偏离点用 `SEAM(<rewrite-id>)` 锚点(前瞻,`check` 校验引用)。
+
+### 工具(零依赖,`scripts/dev/vendor-sync.mjs`)
 
 ```bash
-git remote add upstream https://github.com/Mereithhh/vanblog.git
-git fetch upstream
-git diff HEAD...upstream/master -- packages/website/components
-# 命中 vendor 文件 → 按文件头定位本主题对应文件,apply patch;行为差异跑一遍下方验证
+node scripts/dev/vendor-sync.mjs check                      # 台账↔磁盘↔头注释一致 + 上游覆盖率 + 规则引用;提交前必跑
+node scripts/dev/vendor-sync.mjs affected 4b488500..<ref>   # 上游区间 → direct/replay/manual/none/skipped-hit/untriaged 分组
+node scripts/dev/vendor-sync.mjs sync-headers               # 再生成全部文件头 UPSTREAM 视图
+node scripts/dev/vendor-sync.mjs metrics [--json]           # 审计指标(下表可复算)
 ```
 
-- 触发:上游爆发日(批量 `fix:`)后 diff 一次即可,平时静默期无需跟踪。
-- 影响面判断沿用 L0/L1/L2:vendor 文件属主题内 L2(上游行为即规格);seam 与 `base-overrides` 锁定路径不受 vendor 更新影响。
-- 上游若改数据面字段,同步改 Go 端 `SearchResult`/页面 props,不改 seam 签名。
+上游爆发日(批量 `fix:`)流程:`git -C refs/mereithhh-original fetch` → `affected <pinned>..<HEAD>` → direct 盲 apply;replay patch+按 `rewrites` 重放;manual 读信号、不盲 apply、跑下方 parity 三件套;skipped-hit 复核缺席理由;UNTRIAGED(上游新文件)先补台账再动手。影响面判断沿用 L0/L1/L2:vendor 属主题内 L2(上游行为即规格);seam 与 `base-overrides` 锁定路径不受 vendor 更新影响。上游改数据面字段:同步改 Go 端 `SearchResult`/页面 props,不改 seam 签名。
+
+### 审计指标(2026-09-14 基线,`metrics` 可复算)
+
+| 指标 | 基线值 | 读法 |
+| --- | --- | --- |
+| 上游覆盖占比(可 vendor 面) | 文件 68.5%(63/92);LOC 81.1% | components/utils/styles/api/types 被收录比例;LOC 高于文件数 = 大文件优先收录 |
+| 上游覆盖占比(整个前台) | 文件 58.9%;LOC 63.7% | 含 pages/public;pages 由 Astro 原生重写,稀释是有意的 |
+| 保真度(本地 LOC 按 derivation) | mechanical 50.1% / merged 27.6% / verbatim 12.3% / contract 6.2% / fork 1.7% / platform 2.1% | 与上游的代码贴近度分布;改写占比高 = 重放成本,受 `rewrites` 登记约束 |
+| 偏离密度 | 72 标记,均值 1.38/条目;top:PostCardTitle 6、PostCard 5、seams/theme 5 | 同步风险热点,即 affected 里 replay/manual 大户 |
+| 同步策略分布 | direct 9 / replay 29 / manual 12 / none 2 | 盲 apply 面仅 9 件 |
+| 漂移敞口 | 0(上游 HEAD = pinned `4b48850`) | 上游未评估提交数;非零即跑 `affected` |
 
 ## 重评触发
 
 满足以下之一再议「生产 vendored Next」:连续 3–6 个月出现人类(非 AI 批量)提交且方向与本仓库兼容;或 pack 生态需求超出 islands 模型能力。
 
-## 文件清单(2026-09-05)
+## 文件清单
 
-- `themes/vanblog/src/vendor/`:21 个文件(组件 + `seams/` + `scroll.ts` + module.css)。计划外新增:`NavChrome.tsx`(跨岛 isOpen 状态)、`PalettePicker.tsx`(平台调色盘 React 化)、`PostLock.tsx`(锁定态包装)。
-- 删除的手搓件:`Nav.astro`、`Toc.astro`、`TocMobile.astro`、`BackToTop.astro`(被 vendor 岛替换)。
-- Go 端:`SearchResult` 增 `createdAt`(vendor ArticleList 日期列)。
-- 已知有意偏差记录在各 vendor 文件头(SEAM 注释),如折叠 ± 文案、分类按 id 路由。
+权威账 = `upstream.manifest.json`(52 本地件 + 44 skipped,`check` 机器校验),历史快照不再手工维护。2026-09-05 首批 21 文件;计划外新增:`NavChrome.tsx`(跨岛 isOpen 状态)、`PalettePicker.tsx`(平台调色盘 React 化)。已删手搓件:`Nav.astro`、`Toc.astro`、`TocMobile.astro`、`BackToTop.astro`(被 vendor 岛替换)。Go 端:`SearchResult` 增 `createdAt`(vendor ArticleList 日期列)。已知有意偏差:manifest `patches[]` 登记(如 RunningTime since 守卫),叙述性偏差(折叠 ± 文案等)在各文件头 `SEAM:`。

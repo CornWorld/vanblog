@@ -1,7 +1,7 @@
 // Dev-only parity shim:在 3000 端口把原版 mereithhh/website 的 legacy
 // `/api/public/*` 数据面映射到本仓库 PocketBase(vault)的真实数据。
 //
-// 用途(计划 .snow/plan/vendor-upstream-islands-parity.md §Wave4):
+// 用途(parity 验证基线,见 docs/developer/vendor-islands-design.md「验证基线」节):
 //   原版 Next 站点(`refs/mereithhh-original/packages/website`,`pnpm dev`
 //   监听 3001,dev rewrite 已指向 http://127.0.0.1:3000)以此为后端跑起来,
 //   与本仓库 Astro 主题做同数据源的截图/行为对比。**不进生产**。
