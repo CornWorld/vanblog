@@ -32,8 +32,9 @@ const site = await Astro.locals.getSite();
 
 const { id } = Astro.params;
 if (!id) return Astro.redirect('/404');
-// 密码解锁走 vendor UnLockCard → POST /api/unlock(服务端渲染+消毒+下发
-// path 限定 cookie);本页不再接收表单 POST。
+// 密码解锁走 vendor UnLockCard → POST <base>/api/unlock(服务端渲染+消毒+
+// 下发 path 限定 cookie;base 前缀必带,裸 /api/* 会被 caddy 反代到 pb —
+// 见 seams/unlock.ts);本页不再接收表单 POST。
 let data: Post | null = null;
 let html: string | null = null;
 // 密码锁语义:匿名读者拿到的行已被平台遮蔽(content/password 空,hasPassword
