@@ -77,18 +77,18 @@ func New(app core.App) *Manager {
 func (m *Manager) dedupeOnUpload(e *core.RecordEvent) error {
 	record := e.Record
 	if record.GetString("file") == "" {
-		return nil // skip external URL records
+		return e.Next() // skip external URL records
 	}
 	content, err := m.ReadFileContent(record)
 	if err != nil {
 		slog.Warn("[media] dedup: failed to read file", "err", err)
-		return nil
+		return e.Next()
 	}
 	sign := ComputeSign(content)
 	record.Set("sign", sign)
 	if err := m.app.Save(record); err != nil {
 		slog.Warn("[media] dedup: failed to save sign", "err", err)
-		return nil
+		return e.Next()
 	}
 
 	existing, err := m.CheckDuplicate(content)
@@ -97,7 +97,7 @@ func (m *Manager) dedupeOnUpload(e *core.RecordEvent) error {
 		return nil
 	}
 	if existing == nil || existing.Id == record.Id {
-		return nil
+		return e.Next()
 	}
 
 	// Deterministic winner: keep the older record (smaller created time).
@@ -116,7 +116,7 @@ func (m *Manager) dedupeOnUpload(e *core.RecordEvent) error {
 			slog.Warn("[media] dedup: failed to delete duplicate", "existing", existing.Id, "removed", record.Id, "err", err)
 		}
 	}
-	return nil
+	return e.Next()
 }
 
 // scanPostImages links <img src> in post HTML to media records.
@@ -132,7 +132,7 @@ func (m *Manager) scanPostImages(e *core.RecordEvent) error {
 			slog.Warn("[media] scan: failed for post", "post", e.Record.Id, "err", err)
 		}
 	}()
-	return nil
+	return e.Next()
 }
 
 // reapplyS3Backend pushes site.s3Config into pb settings on site update,

@@ -85,15 +85,15 @@ func (m *Manager) handlePostsCacheInvalidation(app core.App) {
 	invalidate := func() { go revalidateAstroCache([]string{"posts", "feed"}) }
 	app.OnRecordAfterCreateSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
 		invalidate()
-		return nil
+		return e.Next()
 	})
 	app.OnRecordAfterUpdateSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
 		invalidate()
-		return nil
+		return e.Next()
 	})
 	app.OnRecordAfterDeleteSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
 		invalidate()
-		return nil
+		return e.Next()
 	})
 }
 
