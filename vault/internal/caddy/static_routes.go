@@ -83,10 +83,25 @@ func buildStaticRoutes(opts BuildOpts) []caddyadmin.Route {
 		client := clientByTheme[name]
 		prefix := "/themes/" + name
 		// Content-hashed route first — Caddy evaluates routes in order, so the
-		// specific /_astro/* route wins over the broad stable-file route below.
+		// specific /_astro/* route keeps its immutable cache tier at Caddy.
 		routes = append(routes,
 			staticFileRoute("vanblog-static-theme-"+name+"-astro", prefix+"/_astro/*", client, prefix, CacheImmutable),
-			staticFileRoute("vanblog-static-theme-"+name, prefix+"/*", client, prefix, CacheStable),
+		)
+		// Broad theme route → reverse_proxy to Astro. Astro standalone serves
+		// dist/client statics itself, so proxying everything (SSR pages, theme
+		// API endpoints like /themes/<name>/api/unlock, non-hashed files) is
+		// always correct. The file_server route this replaced 404'd every
+		// non-file request — 2026-09-15 e2e: browser unlock flow dead and all
+		// home card links (withBase-prefixed) 404.
+		routes = append(routes,
+			caddyadmin.Route{
+				ID:    "vanblog-theme-" + name + "-ssr",
+				Match: []caddyadmin.MatchRule{{Path: []string{prefix + "/*"}}},
+				Handle: []caddyadmin.Handler{{
+					Handler:   "reverse_proxy",
+					Upstreams: []caddyadmin.Upstream{{Dial: opts.AstroTarget}},
+				}},
+			},
 		)
 	}
 	return routes

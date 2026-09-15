@@ -66,25 +66,31 @@ func TestBuildStaticRoutes_MergeUserWins(t *testing.T) {
 		BuiltinThemesDir: builtin,
 	})
 
-	// Collect theme-route client roots by @id.
+	// Collect theme-route identities by @id: the _astro file_server route
+	// (static, has Root) plus the SSR proxy route (no Root — it dials astro).
+	themeRouteIDs := map[string]bool{}
 	clientByID := map[string]string{}
 	for _, r := range routes {
-		if !strings.HasPrefix(r.ID, "vanblog-static-theme-") {
-			continue
+		if strings.HasPrefix(r.ID, "vanblog-static-theme-") {
+			themeRouteIDs[r.ID] = true
+			clientByID[r.ID] = r.Handle[len(r.Handle)-1].Root
 		}
-		clientByID[r.ID] = r.Handle[len(r.Handle)-1].Root
+		if strings.HasPrefix(r.ID, "vanblog-theme-") &&
+			strings.HasSuffix(r.ID, "-ssr") {
+			themeRouteIDs[r.ID] = true
+		}
 	}
 
-	// "dup" must appear exactly once as a route pair (astro + stable), not
+	// "dup" must appear exactly once as a route pair (astro + ssr proxy), not
 	// doubled by the builtin copy.
 	dupCount := 0
-	for id := range clientByID {
+	for id := range themeRouteIDs {
 		if strings.Contains(id, "theme-dup") {
 			dupCount++
 		}
 	}
 	if dupCount != 2 {
-		t.Fatalf("want exactly 2 dup routes (astro + stable), got %d: %v", dupCount, clientByID)
+		t.Fatalf("want exactly 2 dup routes (astro + ssr proxy), got %d: %v", dupCount, themeRouteIDs)
 	}
 	for id, root := range clientByID {
 		if !strings.Contains(id, "theme-dup") {
@@ -133,15 +139,15 @@ func TestBuildStaticRoutes_Full(t *testing.T) {
 		assertStaticHandle(t, r, adminClient, "", tc.cache)
 	}
 
-	// --- Theme static: merged view, _astro before broad, user shadows builtin ---
+	// --- Theme routes: merged view, _astro before ssr proxy, user shadows builtin ---
 	for _, name := range themeNames {
 		astroID := "vanblog-static-theme-" + name + "-astro"
-		broadID := "vanblog-static-theme-" + name
-		if pos[astroID] == 0 || pos[broadID] == 0 {
-			t.Fatalf("theme %s routes missing: astro=%d broad=%d", name, pos[astroID], pos[broadID])
+		ssrID := "vanblog-theme-" + name + "-ssr"
+		if pos[astroID] == 0 || pos[ssrID] == 0 {
+			t.Fatalf("theme %s routes missing: astro=%d ssr=%d", name, pos[astroID], pos[ssrID])
 		}
-		if pos[astroID] >= pos[broadID] {
-			t.Errorf("theme %s: _astro route (%d) must precede broad route (%d)", name, pos[astroID], pos[broadID])
+		if pos[astroID] >= pos[ssrID] {
+			t.Errorf("theme %s: _astro route (%d) must precede ssr route (%d)", name, pos[astroID], pos[ssrID])
 		}
 
 		prefix := "/themes/" + name
@@ -152,12 +158,15 @@ func TestBuildStaticRoutes_Full(t *testing.T) {
 		}
 		// Theme URLs carry the /themes/<name> prefix → a rewrite strips it.
 		assertStaticHandle(t, byID[astroID], client, prefix, CacheImmutable)
-		assertStaticHandle(t, byID[broadID], client, prefix, CacheStable)
 
-		// The broad route must match the whole theme prefix so theme public/
-		// files (e.g. /themes/base/favicon.ico) are served.
-		if got := byID[broadID].Match[0].Path[0]; got != prefix+"/*" {
-			t.Errorf("theme %s broad route: expected %s/*, got %s", name, prefix, got)
+		// The ssr route must match the whole theme prefix and proxy to Astro:
+		// non-file requests (SSR pages, theme API endpoints) reached astro,
+		// the file_server variant this replaced 404'd them (2026-09-15 e2e).
+		if got := byID[ssrID].Match[0].Path[0]; got != prefix+"/*" {
+			t.Errorf("theme %s ssr route: expected %s/*, got %s", name, prefix, got)
+		}
+		if len(byID[ssrID].Handle) != 1 || byID[ssrID].Handle[0].Handler != "reverse_proxy" {
+			t.Errorf("theme %s ssr route: want a single reverse_proxy handler, got %+v", name, byID[ssrID].Handle)
 		}
 	}
 }

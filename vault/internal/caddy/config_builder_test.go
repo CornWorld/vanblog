@@ -221,7 +221,7 @@ func TestBuildFullConfig(t *testing.T) {
 	//   [3] vanblog-static-admin-emoji          /emoji-data.json     → file_server (admin client)
 	//   [4] vanblog-static-admin-robots         /robots.txt          → file_server (admin client)
 	//   [5] vanblog-static-theme-base-astro     /themes/base/_astro/*→ file_server
-	//   [6] vanblog-static-theme-base           /themes/base/*       → file_server
+	//   [6] vanblog-theme-base-ssr             /themes/base/*       → reverse_proxy (astro)
 	//   [7] test-proxy                          /my/*                → user upstream (3000)
 	//   [8] vanblog-system-fallback             (catch-all)          → Astro (4321)
 	if len(srvHTTPS) != 9 {
@@ -259,7 +259,7 @@ func TestBuildFullConfig(t *testing.T) {
 		{"vanblog-static-admin-emoji", "/emoji-data.json"},
 		{"vanblog-static-admin-robots", "/robots.txt"},
 		{"vanblog-static-theme-base-astro", "/themes/base/_astro/*"},
-		{"vanblog-static-theme-base", "/themes/base/*"},
+		{"vanblog-theme-base-ssr", "/themes/base/*"},
 	} {
 		idx := 2 + i
 		if srvHTTPS[idx].ID != tc.id {
@@ -268,6 +268,12 @@ func TestBuildFullConfig(t *testing.T) {
 		if matchPaths(srvHTTPS[idx])[0] != tc.path {
 			t.Errorf("[%d] path mismatch: expected %s, got %v", idx, tc.path, matchPaths(srvHTTPS[idx]))
 		}
+	}
+
+	// 6. Theme SSR proxy — the broad theme route must reach astro, not the
+	// file_server (file_server 404'd SSR pages and theme API endpoints).
+	if srvHTTPS[6].Handle[0].Handler != "reverse_proxy" || srvHTTPS[6].Handle[0].Upstreams[0].Dial != "127.0.0.1:4321" {
+		t.Errorf("[6] theme ssr proxy mismatch: %+v", srvHTTPS[6])
 	}
 
 	// 8. User rule.

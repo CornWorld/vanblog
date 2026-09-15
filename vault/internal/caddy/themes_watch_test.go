@@ -47,7 +47,7 @@ func waitFor(t *testing.T, timeout time.Duration, cond func() bool) bool {
 }
 
 // configContainsRoute reports whether the most recent /load body pushed to the
-// mock Caddy contains a route with the given ID (e.g. "vanblog-static-theme-x").
+// mock Caddy contains a route with the given ID (e.g. "vanblog-theme-x-ssr").
 func configContainsRoute(m *mockAdmin, routeID string) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -111,7 +111,7 @@ func TestThemeWatcher_AddThemeTriggersResync(t *testing.T) {
 	// Baseline: add alpha → watcher auto-resyncs and its route appears.
 	writeThemeDir(themesDir, "alpha")
 	if !waitFor(t, 5*time.Second, func() bool {
-		return configContainsRoute(m, "vanblog-static-theme-alpha")
+		return configContainsRoute(m, "vanblog-theme-alpha-ssr")
 	}) {
 		t.Fatal("new theme alpha route not resynced into Caddy config")
 	}
@@ -119,7 +119,7 @@ func TestThemeWatcher_AddThemeTriggersResync(t *testing.T) {
 	// Add beta → its route appears without any manual reload.
 	writeThemeDir(themesDir, "beta")
 	if !waitFor(t, 5*time.Second, func() bool {
-		return configContainsRoute(m, "vanblog-static-theme-beta")
+		return configContainsRoute(m, "vanblog-theme-beta-ssr")
 	}) {
 		t.Fatal("new theme beta route not resynced into Caddy config")
 	}
@@ -130,7 +130,7 @@ func TestThemeWatcher_RemoveThemeTriggersResync(t *testing.T) {
 
 	writeThemeDir(themesDir, "alpha")
 	if !waitFor(t, 5*time.Second, func() bool {
-		return configContainsRoute(m, "vanblog-static-theme-alpha")
+		return configContainsRoute(m, "vanblog-theme-alpha-ssr")
 	}) {
 		t.Fatal("baseline alpha route missing")
 	}
@@ -140,7 +140,7 @@ func TestThemeWatcher_RemoveThemeTriggersResync(t *testing.T) {
 		t.Fatalf("remove theme: %v", err)
 	}
 	if !waitFor(t, 5*time.Second, func() bool {
-		return !configContainsRoute(m, "vanblog-static-theme-alpha")
+		return !configContainsRoute(m, "vanblog-theme-alpha-ssr")
 	}) {
 		t.Fatal("removed theme alpha route still present after resync")
 	}
@@ -156,7 +156,7 @@ func TestThemeWatcher_BurstSettlesWithAllThemes(t *testing.T) {
 	}
 	ok := waitFor(t, 5*time.Second, func() bool {
 		for i := 0; i < 5; i++ {
-			if !configContainsRoute(m, fmt.Sprintf("vanblog-static-theme-t%d", i)) {
+			if !configContainsRoute(m, fmt.Sprintf("vanblog-theme-t%d-ssr", i)) {
 				return false
 			}
 		}
@@ -201,7 +201,7 @@ func TestThemeWatcher_CloseStopsResyncs(t *testing.T) {
 
 	writeThemeDir(themesDir, "alpha")
 	if !waitFor(t, 5*time.Second, func() bool {
-		return configContainsRoute(m, "vanblog-static-theme-alpha")
+		return configContainsRoute(m, "vanblog-theme-alpha-ssr")
 	}) {
 		t.Fatal("baseline alpha route missing")
 	}
@@ -213,7 +213,7 @@ func TestThemeWatcher_CloseStopsResyncs(t *testing.T) {
 	// A later theme change must NOT be pushed (Close is idempotent).
 	writeThemeDir(themesDir, "beta")
 	time.Sleep(300 * time.Millisecond)
-	if configContainsRoute(m, "vanblog-static-theme-beta") {
+	if configContainsRoute(m, "vanblog-theme-beta-ssr") {
 		t.Fatal("watcher kept resyncing after Close")
 	}
 }
@@ -231,7 +231,7 @@ func TestThemeWatcher_StagedInstallSettlesWithRoute(t *testing.T) {
 	}) {
 		t.Fatal("no resync after creating a bare theme dir")
 	}
-	if configContainsRoute(m, "vanblog-static-theme-staged") {
+	if configContainsRoute(m, "vanblog-theme-staged-ssr") {
 		t.Fatal("route emitted before dist/client existed")
 	}
 
@@ -239,7 +239,7 @@ func TestThemeWatcher_StagedInstallSettlesWithRoute(t *testing.T) {
 	// up and the route appears. This is the realistic staged-install path.
 	_ = os.MkdirAll(filepath.Join(themesDir, "staged", "dist", "client"), 0o755)
 	if !waitFor(t, 5*time.Second, func() bool {
-		return configContainsRoute(m, "vanblog-static-theme-staged")
+		return configContainsRoute(m, "vanblog-theme-staged-ssr")
 	}) {
 		t.Fatal("route not emitted after dist/client appeared in a later stage")
 	}
