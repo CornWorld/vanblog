@@ -14,126 +14,133 @@
 // so actor/IP/UA information is not available (RecordEvent has no request).
 // For now, audit entries will have empty actor/ip/ua — acceptable for
 // a personal CMS.
+//
+// ⚠️ 两条硬约束,新增钩子前必读:
+// 1. 每个回调必须以 e.next() 归还链。After*Success 也是显式链,不归还
+//    会静默终止整条链,饿死在其后注册的处理器。事故 2026-09-15:审计
+//    钩子未归还链,Go 侧 article 的 SSR 缓存失效 webhook 永不执行,首
+//    页停在陈旧快照直至缓存自然过期。
+// 2. 回调会被 jsvm 序列化成字符串后重编译,闭包变量全部丢失 — 回调内
+//    只能引用参数(e)、全局(require/$app/__hooks),库一律在回调体内
+//    require(),不要抽共享辅助函数闭包。
 // ============================================================================
 
 // ----------------------------------------------------------------------------
 // Posts
 // ----------------------------------------------------------------------------
 
-onRecordAfterCreateSuccess(
-  (e) =>
-    require(__hooks + "/lib/vanblog-audit.js").postAction("post.create", e),
-  "posts"
-);
-onRecordAfterUpdateSuccess(
-  (e) =>
-    require(__hooks + "/lib/vanblog-audit.js").postAction("post.update", e),
-  "posts"
-);
-onRecordAfterDeleteSuccess(
-  (e) =>
-    require(__hooks + "/lib/vanblog-audit.js").postAction("post.delete", e),
-  "posts"
-);
+onRecordAfterCreateSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").postAction("post.create", e);
+  e.next();
+}, "posts");
+
+onRecordAfterUpdateSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").postAction("post.update", e);
+  e.next();
+}, "posts");
+
+onRecordAfterDeleteSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").postAction("post.delete", e);
+  e.next();
+}, "posts");
 
 // ----------------------------------------------------------------------------
 // Tags
 // ----------------------------------------------------------------------------
 
-onRecordAfterCreateSuccess(
-  (e) => require(__hooks + "/lib/vanblog-audit.js").tagAction("tag.create", e),
-  "tags"
-);
-onRecordAfterUpdateSuccess(
-  (e) => require(__hooks + "/lib/vanblog-audit.js").tagAction("tag.update", e),
-  "tags"
-);
-onRecordAfterDeleteSuccess(
-  (e) => require(__hooks + "/lib/vanblog-audit.js").tagAction("tag.delete", e),
-  "tags"
-);
+onRecordAfterCreateSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").tagAction("tag.create", e);
+  e.next();
+}, "tags");
+
+onRecordAfterUpdateSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").tagAction("tag.update", e);
+  e.next();
+}, "tags");
+
+onRecordAfterDeleteSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").tagAction("tag.delete", e);
+  e.next();
+}, "tags");
 
 // ----------------------------------------------------------------------------
 // Categories
 // ----------------------------------------------------------------------------
 
-onRecordAfterCreateSuccess(
-  (e) =>
-    require(__hooks + "/lib/vanblog-audit.js").categoryAction(
-      "category.create",
-      e
-    ),
-  "categories"
-);
-onRecordAfterUpdateSuccess(
-  (e) =>
-    require(__hooks + "/lib/vanblog-audit.js").categoryAction(
-      "category.update",
-      e
-    ),
-  "categories"
-);
-onRecordAfterDeleteSuccess(
-  (e) =>
-    require(__hooks + "/lib/vanblog-audit.js").categoryAction(
-      "category.delete",
-      e
-    ),
-  "categories"
-);
+onRecordAfterCreateSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").categoryAction(
+    "category.create",
+    e
+  );
+  e.next();
+}, "categories");
+
+onRecordAfterUpdateSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").categoryAction(
+    "category.update",
+    e
+  );
+  e.next();
+}, "categories");
+
+onRecordAfterDeleteSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").categoryAction(
+    "category.delete",
+    e
+  );
+  e.next();
+}, "categories");
 
 // ----------------------------------------------------------------------------
 // Media
 // ----------------------------------------------------------------------------
 
-onRecordAfterCreateSuccess(
-  (e) =>
-    require(__hooks + "/lib/vanblog-audit.js").mediaAction("media.create", e),
-  "media"
-);
-onRecordAfterUpdateSuccess(
-  (e) =>
-    require(__hooks + "/lib/vanblog-audit.js").mediaAction("media.update", e),
-  "media"
-);
-onRecordAfterDeleteSuccess(
-  (e) =>
-    require(__hooks + "/lib/vanblog-audit.js").mediaAction("media.delete", e),
-  "media"
-);
+onRecordAfterCreateSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").mediaAction("media.create", e);
+  e.next();
+}, "media");
+
+onRecordAfterUpdateSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").mediaAction("media.update", e);
+  e.next();
+}, "media");
+
+onRecordAfterDeleteSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").mediaAction("media.delete", e);
+  e.next();
+}, "media");
 
 // ----------------------------------------------------------------------------
 // Users
 // ----------------------------------------------------------------------------
 
-onRecordAfterCreateSuccess(
-  (e) =>
-    require(__hooks + "/lib/vanblog-audit.js").userAction("user.create", e),
-  "users"
-);
-onRecordAfterUpdateSuccess(
-  (e) =>
-    require(__hooks + "/lib/vanblog-audit.js").userAction(
-      "user.update",
-      e,
-      true
-    ),
-  "users"
-);
-onRecordAfterDeleteSuccess(
-  (e) =>
-    require(__hooks + "/lib/vanblog-audit.js").userAction("user.delete", e),
-  "users"
-);
+onRecordAfterCreateSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").userAction("user.create", e);
+  e.next();
+}, "users");
+
+onRecordAfterUpdateSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").userAction(
+    "user.update",
+    e,
+    true
+  );
+  e.next();
+}, "users");
+
+onRecordAfterDeleteSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").userAction("user.delete", e);
+  e.next();
+}, "users");
 
 // ----------------------------------------------------------------------------
 // Site
 // ----------------------------------------------------------------------------
 
-onRecordAfterUpdateSuccess(
-  (e) => require(__hooks + "/lib/vanblog-audit.js").siteAction(e),
-  "site"
-);
+onRecordAfterUpdateSuccess((e) => {
+  require(__hooks + "/lib/vanblog-audit.js").siteAction(e);
+  e.next();
+}, "site");
 
 // ----------------------------------------------------------------------------
 // Daily visits aggregation (cron)
