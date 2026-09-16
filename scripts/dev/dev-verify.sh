@@ -14,13 +14,37 @@ source "$SCRIPT_DIR/../lib/common.sh"
 CONTAINER_NAME="${CONTAINER_NAME:-vanblog-dev}"
 IMAGE_NAME="${IMAGE_NAME:-vanblog:dev-test}"
 HOST_PORT="${HOST_PORT:-8080}"
+# Volume suffix + E2E instance tag follow the container name: a renamed
+# container gets its own data volumes and credential/assert temp paths, so a
+# second dev-verify can run concurrently with the default one. The default
+# name keeps the prod-compose volume names (empty suffix).
+VOLUME_SUFFIX=""
+if [ "$CONTAINER_NAME" != "vanblog-dev" ]; then VOLUME_SUFFIX="-${CONTAINER_NAME}"; fi
+export E2E_INSTANCE="${CONTAINER_NAME}"
+
+# Same default slot must not run twice (both would stomp the same container).
+# mkdir is atomic on macOS/BSD too (no flock there); a stale lock from a dead
+# holder is taken over via its pid.
+LOCK_DIR="/tmp/vanblog-dev-verify${VOLUME_SUFFIX}.lock"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  OLD_PID="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
+  if [ -n "$OLD_PID" ] && ! kill -0 "$OLD_PID" 2>/dev/null; then
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR"
+  else
+    echo "dev-verify 已有同槽实例在跑(容器=$CONTAINER_NAME)。并发请换名: CONTAINER_NAME=<name> $0"
+    exit 1
+  fi
+fi
+echo $$ > "$LOCK_DIR/pid"
+trap 'rm -rf "$LOCK_DIR" 2>/dev/null' EXIT
 SUPERUSER_EMAIL="${SUPERUSER_EMAIL:-admin@test.com}"
 SUPERUSER_PASSWORD="${SUPERUSER_PASSWORD:-password123}"
 
 # === Step 1: Clean up ===
 header "Step 1/7: Stop & remove old container + data"
-stop_container "$CONTAINER_NAME"
-clean_data_dir
+clean_data_dir "$VOLUME_SUFFIX"
+header "Step 2/7: Build dev image"
 
 # === Step 2: Build dev image ===
 echo ""
@@ -30,7 +54,7 @@ build_dev_image "$IMAGE_NAME"
 # === Step 3: Start fresh container ===
 echo ""
 header "Step 3/7: Start fresh dev container"
-start_dev_container "$IMAGE_NAME" "$CONTAINER_NAME" "$HOST_PORT" "$SUPERUSER_EMAIL"
+start_dev_container "$IMAGE_NAME" "$CONTAINER_NAME" "$HOST_PORT" "$SUPERUSER_EMAIL" "$VOLUME_SUFFIX"
 
 # === Step 4: Wait for services ===
 echo ""

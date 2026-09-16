@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BASE = process.argv[2] || 'http://localhost:8080';
 const EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@test.com';
-const PW_FILE = `/tmp/vanblog-e2e-admin-${EMAIL}.env`;
+const PW_FILE = `/tmp/vanblog-e2e-admin-${EMAIL}${process.env.E2E_INSTANCE ? `-${process.env.E2E_INSTANCE}` : ''}.env`;
 // 凭据惰性解析:全新实例的密码文件由内置 journey 的 setup 阶段写出,
 // 必须在 journey 跑完后再读(脚本启动时读会拿到空值)。
 const resolvePassword = () => process.env.E2E_ADMIN_PASSWORD

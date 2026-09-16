@@ -67,39 +67,53 @@ stop_container() {
 # reset must drop them too (not just the legacy repo dirs). Keep the names in
 # one place — clean_data_dir and start_dev_container both derive from it so
 # they cannot drift.
+#
+# Concurrent dev-verify instances must NOT share volumes (two PocketBase
+# processes writing one SQLite file corrupts both). Pass a suffix derived from
+# the container name to give each instance its own volume set; the default
+# (no suffix) keeps the prod-compose names untouched.
 DEV_VOLUMES=(vanblog_dev_pb_data vanblog_dev_caddy_data vanblog_dev_themes_data vanblog_dev_pack_data)
 
+dev_volumes() {
+  local suffix="${1:-}"
+  local v out=()
+  for v in "${DEV_VOLUMES[@]}"; do out+=("${v}${suffix}"); done
+  printf '%s\n' "${out[@]}"
+}
+
 # Remove local pb_data and caddy_data directories, plus the dev data volumes.
-# Usage: clean_data_dir
+# Usage: clean_data_dir [volume_suffix]
 clean_data_dir() {
   local root; root="$(project_root)"
   info "Removing old pb_data and caddy_data..."
   rm -rf "$root/pb_data" "$root/caddy_data" 2>/dev/null || true
   local v
-  for v in "${DEV_VOLUMES[@]}"; do
+  while IFS= read -r v; do
     if ! docker volume rm "$v" >/dev/null 2>&1; then
       warn "Volume $v still in use (stale container?) — not removed"
     fi
-  done
+  done < <(dev_volumes "${1:-}")
   ok "Data directories and dev volumes cleaned"
 }
 
 # Start a dev container with standard options. Dev is a prod substitute, so it
 # mounts the SAME data volumes as the prod compose (pb_data / caddy_data /
 # themes_data / pack_data) — no image symlinks, identical runtime layout.
-# Usage: start_dev_container <image_name> <container_name> <host_port> [email]
+# Usage: start_dev_container <image_name> <container_name> <host_port> [email] [volume_suffix]
 start_dev_container() {
-  local image="$1" name="$2" port="$3" email="${4:-test@example.com}"
+  local image="$1" name="$2" port="$3" email="${4:-test@example.com}" suffix="${5:-}"
+  local vols=()
+  while IFS= read -r v; do vols+=("$v"); done < <(dev_volumes "$suffix")
   docker run -d \
     --name "$name" \
     -p "${port}:8080" \
     -e VANBLOG_HTTP_ONLY=1 \
     -e VANBLOG_EMAIL="$email" \
     -e VANBLOG_PACKS_DIR=/var/lib/vanblog/packs \
-    -v "${DEV_VOLUMES[0]}:/pb_data" \
-    -v "${DEV_VOLUMES[1]}:/data/caddy" \
-    -v "${DEV_VOLUMES[2]}:/var/lib/vanblog/themes" \
-    -v "${DEV_VOLUMES[3]}:/var/lib/vanblog/packs" \
+    -v "${vols[0]}:/pb_data" \
+    -v "${vols[1]}:/data/caddy" \
+    -v "${vols[2]}:/var/lib/vanblog/themes" \
+    -v "${vols[3]}:/var/lib/vanblog/packs" \
     "$image"
   ok "Container started: $name"
   info "Waiting for initial bootstrap (Caddy + PocketBase + Astro)..."

@@ -18,6 +18,17 @@
 set -uo pipefail
 BASE="${1:-http://localhost:8080}"
 E2E_ADMIN_EMAIL="${E2E_ADMIN_EMAIL:-e2e@vanblog.local}"
+# Concurrent instances (separate containers/ports) share /tmp: tag credential
+# and assertion artifacts with E2E_INSTANCE (dev-verify exports the container
+# name) so runs cannot stomp each other's files.
+E2E_INSTANCE="${E2E_INSTANCE:-}"
+E2E_TAG="${E2E_INSTANCE:+-${E2E_INSTANCE}}"
+PW_FILE="/tmp/vanblog-e2e-admin-${E2E_ADMIN_EMAIL}${E2E_TAG}.env"
+ART_PNG="/tmp/vb-e2e${E2E_TAG}.png"
+ART_DL="/tmp/vb-e2e-dl${E2E_TAG}.png"
+ART_PATCH="/tmp/vb-e2e-patch${E2E_TAG}.json"
+ART_CSS="/tmp/vb-e2e-palette${E2E_TAG}.css"
+export E2E_ADMIN_PASSWORD PW_FILE
 PASS=0; FAIL=0
 ok()   { PASS=$((PASS+1)); echo "  ✓ $1"; }
 bad()  { FAIL=$((FAIL+1)); echo "  ✗ $1"; }
@@ -25,7 +36,6 @@ check(){ local cond="$1" label="$2"; if eval "$cond"; then ok "$label"; else bad
 
 # ── 0. setup(未初始化走 setup/complete;已初始化取 env 密码或凭据文件) ──
 STATUS=$(curl -s "$BASE/api/vanblog/setup/status")
-PW_FILE="/tmp/vanblog-e2e-admin-${E2E_ADMIN_EMAIL}.env"
 if echo "$STATUS" | jq -e '.bootstrap == true' >/dev/null; then
   PASSWD="$(openssl rand -hex 16)"
   printf '%s' "$PASSWD" > "$PW_FILE"
@@ -173,16 +183,16 @@ check "wait_theme '$ACTIVE' 15" "T12 切回 $ACTIVE 恢复基线"
 # ── 6. 媒体 / 编辑器保存管线 / 调色盘 ──
 echo "== 媒体与编辑器 =="
 # M1 图片上传(pb multipart;media.file 字段)
-printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > /tmp/vb-e2e.png
-BYTES=$(wc -c < /tmp/vb-e2e.png | tr -d ' ')
+printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > "$ART_PNG"
+BYTES=$(wc -c < "$ART_PNG" | tr -d ' ')
 # 裸上传(不带 meta)钉住校验桥修复:零值 JSONRaw 曾被当作字节对象
 # 喂给 zod 判 "Invalid input",validation.go recordValues 现归一为字段缺席。
 MEDIA=$(curl -s -X POST "$BASE/api/collections/media/records" \
-  -H "Authorization: $TOKEN" -F "file=@/tmp/vb-e2e.png;type=image/png")
+  -H "Authorization: $TOKEN" -F "file=@${ART_PNG};type=image/png")
 check "echo \"\$MEDIA\" | jq -e '.id and .file' >/dev/null" "M1 图片上传 → media 记录含 id/file"
 MCID=$(echo "$MEDIA" | jq -r '.collectionId'); MFID=$(echo "$MEDIA" | jq -r '.id'); MFILE=$(echo "$MEDIA" | jq -r '.file')
 # M2 图片公开访问(经 caddy,字节级往返)
-MGET=$(curl -s -o /tmp/vb-e2e-dl.png -w '%{http_code} %{content_type}' "$BASE/api/files/$MCID/$MFID/$MFILE")
+MGET=$(curl -s -o "$ART_DL" -w '%{http_code} %{content_type}' "$BASE/api/files/$MCID/$MFID/$MFILE")
 MEDIA_ID=$(echo "$MEDIA" | jq -r '.id')
 # E1 编辑保存管线:PATCH 带 markdown 边界(代码块 + 内联脚本)
 CODE_MD='普通正文
@@ -192,9 +202,9 @@ console.log("e2e-code-marker");
 ```
 
 <script>alert(1)</script>'
-jq -n --arg c "$CODE_MD" '{content: $c}' > /tmp/vb-e2e-patch.json
+jq -n --arg c "$CODE_MD" '{content: $c}' > "$ART_PATCH"
 EPATCH=$(curl -s -X PATCH "$BASE/api/collections/posts/records/$NORMAL_ID" \
-  -H "Authorization: $TOKEN" -H 'Content-Type: application/json' -d @/tmp/vb-e2e-patch.json)
+  -H "Authorization: $TOKEN" -H 'Content-Type: application/json' -d @"$ART_PATCH")
 check "echo \"\$EPATCH\" | jq -e '.id' >/dev/null" "E1 编辑保存管线:PATCH markdown 200"
 sleep 2
 EDETAIL=$(curl -s "$BASE/post/e2e-normal")
@@ -207,8 +217,8 @@ check "echo \"\$REV\" | jq -e '.items | length >= 1' >/dev/null" "E3 修订快�
 # P1/P2 调色盘
 PALS=$(curl -s "$BASE/api/palettes")
 check "echo \"\$PALS\" | jq -e '[.palettes[].name] | index(\"default\") and index(\"catppuccin\")' >/dev/null" "P1 /api/palettes 枚举(default+catppuccin)"
-PCSS=$(curl -s -o /tmp/vb-e2e-palette.css -w '%{http_code}' "$BASE/api/palette.css?name=catppuccin")
-check "[ \"\$PCSS\" = 200 ] && grep -q -- '--color-' /tmp/vb-e2e-palette.css" "P2 /api/palette.css?name=catppuccin → 200 + --color-* 变量"
+PCSS=$(curl -s -o "$ART_CSS" -w '%{http_code}' "$BASE/api/palette.css?name=catppuccin")
+check "[ \"\$PCSS\" = 200 ] && grep -q -- '--color-' \"\$ART_CSS\"" "P2 /api/palette.css?name=catppuccin → 200 + --color-* 变量"
 
 # ── 7. 写规则回归(R):admin 页经 pb REST 直写 tags/categories ──
 # 1783700000 之前 tags/categories 写规则为 nil(仅 superuser),而管理端以
@@ -242,7 +252,7 @@ if [ "$USERTOKEN" != "null" ] && [ -n "$USERTOKEN" ]; then
     -H 'Content-Type: application/json' -d '{"name":"e2e-anon"}')
   check "[ \"$ANON_CODE\" != \"200\" ]" "R2 匿名建 tag 被拒(HTTP $ANON_CODE)"
 fi
-rm -f /tmp/vb-e2e.png /tmp/vb-e2e-dl.png /tmp/vb-e2e-patch.json /tmp/vb-e2e-palette.css
+rm -f "$ART_PNG" "$ART_DL" "$ART_PATCH" "$ART_CSS"
 
 echo "════ 容器旅程(HTTP 断言面): PASS=$PASS FAIL=$FAIL ════"
 [ "$FAIL" -eq 0 ]
