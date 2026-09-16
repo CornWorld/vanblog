@@ -144,6 +144,7 @@ jobs:
   #    have caught the 2026-09-15 hook-chain + caddy-topology breaks: unit
   #    fixtures compose differently from production wiring. ──
   e2e:
+    needs: docker
     runs-on: ubuntu-latest
     permissions:
       contents: read
