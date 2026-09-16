@@ -30,7 +30,9 @@ COPY sdk/package.json ./sdk/package.json
 COPY app/package.json ./app/package.json
 COPY themes/base/package.json ./themes/base/package.json
 COPY themes/vanblog/package.json ./themes/vanblog/package.json
-RUN pnpm config set store-dir /pnpm/store && \
+RUN \
+    --mount=type=cache,target=/pnpm/store \
+    pnpm config set store-dir /pnpm/store && \
     if [ -n "$NPM_MIRROR" ]; then \
       pnpm config set registry "$NPM_MIRROR"; \
     fi && \
@@ -224,9 +226,24 @@ RUN apk add --no-cache npm git && npm install -g pnpm@latest-10
 # OpenCode Zen free models (no API key needed). See refs/agent-platform-selection.md.
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
-# Keep the dev workspace layout identical to the source workspace so Astro can
+# Keep dev workspace layout identical to the source workspace so Astro can
 # resolve app/integrations, root packs/, themes/, and the workspace SDK consistently.
+WORKDIR /workspace
+
+# Workspace manifests first, then install: the dependency layer must only
+# rerun when the lockfile/deps change, not when any source file does (a full
+# workspace install is ~6 min). Same pattern as workspace-deps above.
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc /workspace/
+COPY sdk/package.json /workspace/sdk/package.json
+COPY app/package.json /workspace/app/package.json
+COPY lab/package.json /workspace/lab/package.json
+COPY themes/base/package.json /workspace/themes/base/package.json
+COPY themes/vanblog/package.json /workspace/themes/vanblog/package.json
+RUN \
+    --mount=type=cache,target=/pnpm/store \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm install --frozen-lockfile
+
 COPY sdk/ /workspace/sdk/
 COPY app/ /workspace/app/
 COPY packs/ /workspace/packs/
@@ -244,8 +261,6 @@ COPY AGENTS.md /workspace/AGENTS.md
 # at container startup (run from entrypoint.dev.sh).
 COPY .pi/ /workspace/.pi/
 COPY .agents/ /workspace/.agents/
-WORKDIR /workspace
-RUN pnpm install --frozen-lockfile
 
 # Copy dev entrypoint (bootstrap.json was already COPYed in the prod stage)
 COPY docker/entrypoint.dev.sh /entrypoint.sh
@@ -260,7 +275,18 @@ ENTRYPOINT ["/entrypoint.sh"]
 FROM prod-artalk AS dev-artalk
 RUN apk add --no-cache npm git && npm install -g pnpm@latest-10
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+# Manifests first (see dev stage note): install only reruns on lockfile change.
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc /workspace/
+COPY sdk/package.json /workspace/sdk/package.json
+COPY app/package.json /workspace/app/package.json
+COPY lab/package.json /workspace/lab/package.json
+COPY themes/base/package.json /workspace/themes/base/package.json
+COPY themes/vanblog/package.json /workspace/themes/vanblog/package.json
+WORKDIR /workspace
+RUN \
+    --mount=type=cache,target=/pnpm/store \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm install --frozen-lockfile
 COPY sdk/ /workspace/sdk/
 COPY app/ /workspace/app/
 COPY packs/ /workspace/packs/
@@ -271,8 +297,6 @@ COPY docs/ /workspace/docs/
 COPY AGENTS.md /workspace/AGENTS.md
 COPY .pi/ /workspace/.pi/
 COPY .agents/ /workspace/.agents/
-WORKDIR /workspace
-RUN pnpm install --frozen-lockfile
 COPY docker/entrypoint.dev.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENV VANBLOG_MODE=dev

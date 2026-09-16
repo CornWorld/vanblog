@@ -55,10 +55,28 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
     exit 1
   fi
 fi
-echo $$ > "$LOCK_DIR/pid"
-trap 'rm -rf "$LOCK_DIR" 2>/dev/null' EXIT
 SUPERUSER_EMAIL="${SUPERUSER_EMAIL:-admin@test.com}"
 SUPERUSER_PASSWORD="${SUPERUSER_PASSWORD:-password123}"
+
+# --- Phase timing: per-phase seconds printed live, appended to a JSONL ledger
+# --- at exit (even on failure) so trends are comparable across runs.
+TIMING_FILE="${TIMING_FILE:-${TMPDIR:-/tmp}/vanblog-dev-verify-timing${VOLUME_SUFFIX}.jsonl}"
+RUN_T0=$(date +%s); PHASE_T0=$RUN_T0
+PHASES=()
+phase_done() {
+  local name="$1" now; now=$(date +%s)
+  PHASES+=("\"${name}\":$((now - PHASE_T0))")
+  info "${name} 耗时 $((now - PHASE_T0))s"
+  PHASE_T0=$now
+}
+write_timing() {
+  local verdict="ok"; [ "${VERDICT:-}" = "fail" ] && verdict="fail"
+  [ "$CLEAN" = 1 ] && return 0
+  printf '{"ts":"%s","slot":"%s","verdict":"%s","total":%d,"phases":{%s}}\n' \
+    "$(date -u +%FT%TZ)" "$CONTAINER_NAME" "$verdict" "$(( $(date +%s) - RUN_T0 ))" \
+    "$(printf '%s,' "${PHASES[@]}" | sed 's/,$//')" >> "$TIMING_FILE" 2>/dev/null || true
+}
+trap 'VERDICT="${VERDICT:-fail}"; write_timing; rm -rf "$LOCK_DIR" 2>/dev/null' EXIT
 
 # === --clean: tear the slot down to zero residue, then exit ===
 # Removes the container, this slot's four volumes, and its credential/assert
@@ -87,12 +105,12 @@ fi
 
 # === Step 1: Clean up ===
 header "Step 1/7: Stop & remove old container + data"
-clean_data_dir "$VOLUME_SUFFIX"
+clean_data_dir "$VOLUME_SUFFIX"; phase_done cleanup
 
 # === Step 2: Build dev image ===
 echo ""
 header "Step 2/7: Build dev Docker image"
-build_dev_image "$IMAGE_NAME"
+build_dev_image "$IMAGE_NAME"; phase_done build
 
 # === Step 3: Start fresh container ===
 echo ""
@@ -104,7 +122,7 @@ echo ""
 header "Step 4/7: Wait for services"
 wait_for_url "http://localhost:${HOST_PORT}/api/health" "PocketBase API" 120
 wait_for_url "http://localhost:${HOST_PORT}/" "Blog Frontend" 60
-check_hooks_loaded "$CONTAINER_NAME"
+check_hooks_loaded "$CONTAINER_NAME"; phase_done start_and_wait
 
 # === Step 5: Verify key endpoints ===
 echo ""
@@ -119,19 +137,15 @@ check_endpoint "/_/"            "PocketBase admin"
 # === Step 6: E2E journey ===
 echo ""
 header "Step 6/7: E2E journey (theme/unlock/feed/visibility/freshness)"
-E2E_ADMIN_EMAIL="$SUPERUSER_EMAIL" bash "$SCRIPT_DIR/../test/e2e-journey.sh" "http://localhost:${HOST_PORT}"
+E2E_ADMIN_EMAIL="$SUPERUSER_EMAIL" bash "$SCRIPT_DIR/../test/e2e-journey.sh" "http://localhost:${HOST_PORT}"; phase_done journey
 
-# === Step 7: Browser journey (real Chrome) ===
-echo ""
-header "Step 7/7: Browser journey (dark mode / clickability / editor UI)"
-# 需要系统 Chrome;缺失时跳过并提示(本地无 Chrome 的环境只跑 HTTP 断言面)
 if [ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ] || command -v google-chrome >/dev/null 2>&1 || command -v google-chrome-stable >/dev/null 2>&1; then
   E2E_ADMIN_EMAIL="$SUPERUSER_EMAIL" node "$SCRIPT_DIR/../test/e2e-browser.mjs" "http://localhost:${HOST_PORT}"
+  phase_done browser
 else
   echo "[SKIP] 未检测到系统 Chrome——浏览器旅程只在 CI/有 Chrome 的机器上跑"
 fi
 
 # === Summary ===
+VERDICT=ok
 print_summary "$HOST_PORT" "$SUPERUSER_EMAIL" "$SUPERUSER_PASSWORD"
-echo -e "  ${CYAN}残留资源(可复用于手动调试):${NC} 容器 $CONTAINER_NAME · 卷 vanblog_dev_*${VOLUME_SUFFIX}(4) · 凭据 /tmp/vanblog-e2e-admin-*${VOLUME_SUFFIX}.env"
-echo -e "  ${CYAN}彻底清除:${NC} $0 --clean(同槽互斥,验证运行中会被拒绝)"
