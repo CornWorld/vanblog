@@ -74,6 +74,16 @@ for id in "$NORMAL_ID" "$LOCKED_ID" "$PRIVATE_ID"; do
 done
 echo "seeded: normal=$NORMAL_ID locked=$LOCKED_ID private=$PRIVATE_ID"
 
+MEDIA_ID="null"
+cleanup() {
+  for id in "$NORMAL_ID" "$LOCKED_ID" "$PRIVATE_ID" "$FRESH_ID"; do
+    delete_post "$id"
+  done
+  if [ -n "$MEDIA_ID" ] && [ "$MEDIA_ID" != "null" ]; then
+    curl -s -X DELETE "$BASE/api/collections/media/records/$MEDIA_ID" -H "Authorization: $TOKEN" >/dev/null
+  fi
+}
+
 if [ "${E2E_KEEP_SEED:-0}" = "1" ]; then
   # 浏览器套件以本脚本做种子时保留数据,由其结尾再跑一次本脚本完成清理
   echo "种子保留(E2E_KEEP_SEED=1),清理交由后续流程"
@@ -156,8 +166,10 @@ echo "== 媒体与编辑器 =="
 # M1 图片上传(pb multipart;media.file 字段)
 printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > /tmp/vb-e2e.png
 BYTES=$(wc -c < /tmp/vb-e2e.png | tr -d ' ')
+# meta 必须带合法 JSON:pb 0.40 multipart 缺省 json 字段会以 nil 参与校验
+# 而被拒("meta: Invalid input"),管理端 UI 恒带合法 JSON,这里对齐。
 MEDIA=$(curl -s -X POST "$BASE/api/collections/media/records" \
-  -H "Authorization: $TOKEN" -F "file=@/tmp/vb-e2e.png;type=image/png" -F 'meta=null')
+  -H "Authorization: $TOKEN" -F "file=@/tmp/vb-e2e.png;type=image/png" -F "meta={}")
 check "echo \"\$MEDIA\" | jq -e '.id and .file' >/dev/null" "M1 图片上传 → media 记录含 id/file"
 MCID=$(echo "$MEDIA" | jq -r '.collectionId'); MFID=$(echo "$MEDIA" | jq -r '.id'); MFILE=$(echo "$MEDIA" | jq -r '.file')
 # M2 图片公开访问(经 caddy,字节级往返)
