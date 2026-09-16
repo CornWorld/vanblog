@@ -45,9 +45,13 @@ build_version() {
 build_dev_image() {
   local image="$1"
   local root; root="$(project_root)"
+  local -a args=(--target dev -t "$image" --build-arg "BUILD_VERSION=$(build_version)")
+  # Dockerfile 文档化的镜像加速入口(注释示例即此用法);仅设置时透传,
+  # 只失效对应下载层,不影响其他缓存。
+  [ -n "${GOPROXY:-}" ] && args+=(--build-arg "GOPROXY=$GOPROXY")
+  [ -n "${NPM_MIRROR:-}" ] && args+=(--build-arg "NPM_MIRROR=$NPM_MIRROR")
   info "Building --target dev as ${image} ..."
-  (cd "$root" && docker build --target dev -t "$image" \
-    --build-arg "BUILD_VERSION=$(build_version)" .) || { err "Docker build failed"; return 1; }
+  (cd "$root" && docker build "${args[@]}" .) || { err "Docker build failed"; return 1; }
   ok "Image built: $image"
 }
 
