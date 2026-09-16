@@ -5,12 +5,30 @@
 # 2. Build a fresh dev Docker image
 # 3. Start the container
 # 4. Wait for services and verify key endpoints
+# 5. E2E journey + browser journey
+#
+# Usage:
+#   bash dev-verify.sh                 # run full verification on slot vanblog-dev
+#   CONTAINER_NAME=foo HOST_PORT=8081 bash dev-verify.sh   # concurrent slot
+#   bash dev-verify.sh --clean         # tear the slot down to zero residue
+#
+# Slots: the container name identifies a slot. A renamed slot gets its own
+# data volumes and credential/assert temp paths, so multiple dev-verify
+# instances can run concurrently. Same-slot operations (two verifies, or a
+# verify and a --clean) are mutually exclusive via a lock.
 # ==============================================================================
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
 
 # --- Configuration ---
+CLEAN=0
+for arg in "$@"; do
+  case "$arg" in
+    --clean) CLEAN=1 ;;
+    *) echo "未知参数: $arg(支持: --clean)"; exit 2 ;;
+  esac
+done
 CONTAINER_NAME="${CONTAINER_NAME:-vanblog-dev}"
 IMAGE_NAME="${IMAGE_NAME:-vanblog:dev-test}"
 HOST_PORT="${HOST_PORT:-8080}"
@@ -22,9 +40,10 @@ VOLUME_SUFFIX=""
 if [ "$CONTAINER_NAME" != "vanblog-dev" ]; then VOLUME_SUFFIX="-${CONTAINER_NAME}"; fi
 export E2E_INSTANCE="${CONTAINER_NAME}"
 
-# Same default slot must not run twice (both would stomp the same container).
-# mkdir is atomic on macOS/BSD too (no flock there); a stale lock from a dead
-# holder is taken over via its pid.
+# Same-slot operations (a verify run and a --clean, or two verifies) are
+# mutually exclusive: both stomp the same container/volumes. mkdir is atomic
+# on macOS/BSD too (no flock there); a stale lock from a dead holder is taken
+# over via its pid.
 LOCK_DIR="/tmp/vanblog-dev-verify${VOLUME_SUFFIX}.lock"
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   OLD_PID="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
@@ -32,7 +51,7 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
     rm -rf "$LOCK_DIR"
     mkdir "$LOCK_DIR"
   else
-    echo "dev-verify 已有同槽实例在跑(容器=$CONTAINER_NAME)。并发请换名: CONTAINER_NAME=<name> $0"
+    echo "同槽操作互斥:$LOCK_DIR 已被 pid=$OLD_PID 持有(容器=$CONTAINER_NAME)。并发请换名: CONTAINER_NAME=<name> $0"
     exit 1
   fi
 fi
@@ -41,10 +60,34 @@ trap 'rm -rf "$LOCK_DIR" 2>/dev/null' EXIT
 SUPERUSER_EMAIL="${SUPERUSER_EMAIL:-admin@test.com}"
 SUPERUSER_PASSWORD="${SUPERUSER_PASSWORD:-password123}"
 
+# === --clean: tear the slot down to zero residue, then exit ===
+# Removes the container, this slot's four volumes, and its credential/assert
+# temp files. Holds the same slot lock as a running verify, so it can never
+# race a live run — it either takes over a stale lock or refuses while the
+# holder is alive.
+if [ "$CLEAN" = 1 ]; then
+  header "Clean slot: $CONTAINER_NAME"
+  stop_container "$CONTAINER_NAME"
+  for v in $(dev_volumes "$VOLUME_SUFFIX"); do
+    if docker volume rm "$v" >/dev/null 2>&1; then
+      echo "  removed volume: $v"
+    fi
+  done
+  for email in "$SUPERUSER_EMAIL" "e2e@vanblog.local"; do
+    f="/tmp/vanblog-e2e-admin-${email}${VOLUME_SUFFIX}.env"
+    [ -f "$f" ] && { rm -f "$f"; echo "  removed credential: $f"; }
+  done
+  for f in "/tmp/vb-e2e${VOLUME_SUFFIX}.png" "/tmp/vb-e2e-dl${VOLUME_SUFFIX}.png" \
+           "/tmp/vb-e2e-patch${VOLUME_SUFFIX}.json" "/tmp/vb-e2e-palette${VOLUME_SUFFIX}.css"; do
+    [ -f "$f" ] && { rm -f "$f"; echo "  removed artifact: $f"; }
+  done
+  ok "槽 $CONTAINER_NAME 已清零(容器/卷/凭据/断言产物)"
+  exit 0
+fi
+
 # === Step 1: Clean up ===
 header "Step 1/7: Stop & remove old container + data"
 clean_data_dir "$VOLUME_SUFFIX"
-header "Step 2/7: Build dev image"
 
 # === Step 2: Build dev image ===
 echo ""
@@ -73,8 +116,9 @@ check_endpoint "/setup"         "Setup page (should be closed after superuser)"
 check_endpoint "/api/health"    "Health API"
 check_endpoint "/_/"            "PocketBase admin"
 
-header "Step 6/7: E2E journey (theme/unlock/feed/visibility/freshness)"
+# === Step 6: E2E journey ===
 echo ""
+header "Step 6/7: E2E journey (theme/unlock/feed/visibility/freshness)"
 E2E_ADMIN_EMAIL="$SUPERUSER_EMAIL" bash "$SCRIPT_DIR/../test/e2e-journey.sh" "http://localhost:${HOST_PORT}"
 
 # === Step 7: Browser journey (real Chrome) ===
@@ -89,3 +133,5 @@ fi
 
 # === Summary ===
 print_summary "$HOST_PORT" "$SUPERUSER_EMAIL" "$SUPERUSER_PASSWORD"
+echo -e "  ${CYAN}残留资源(可复用于手动调试):${NC} 容器 $CONTAINER_NAME · 卷 vanblog_dev_*${VOLUME_SUFFIX}(4) · 凭据 /tmp/vanblog-e2e-admin-*${VOLUME_SUFFIX}.env"
+echo -e "  ${CYAN}彻底清除:${NC} $0 --clean(同槽互斥,验证运行中会被拒绝)"
