@@ -70,11 +70,12 @@ phase_done() {
   PHASE_T0=$now
 }
 write_timing() {
-  local verdict="ok"; [ "${VERDICT:-}" = "fail" ] && verdict="fail"
-  [ "$CLEAN" = 1 ] && return 0
-  printf '{"ts":"%s","slot":"%s","verdict":"%s","total":%d,"phases":{%s}}\n' \
-    "$(date -u +%FT%TZ)" "$CONTAINER_NAME" "$verdict" "$(( $(date +%s) - RUN_T0 ))" \
-    "$(printf '%s,' "${PHASES[@]}" | sed 's/,$//')" >> "$TIMING_FILE" 2>/dev/null || true
+  local verdict="ok"; [ "${VERDICT:-}" = "fail" ] && verdict="fail" || true
+  if [ "$CLEAN" != 1 ]; then
+    printf '{"ts":"%s","slot":"%s","verdict":"%s","total":%d,"phases":{%s}}\n' \
+      "$(date -u +%FT%TZ)" "$CONTAINER_NAME" "$verdict" "$(( $(date +%s) - RUN_T0 ))" \
+      "$(printf '%s,' "${PHASES[@]}" | sed 's/,$//')" >> "$TIMING_FILE"
+fi
 }
 trap 'VERDICT="${VERDICT:-fail}"; write_timing; rm -rf "$LOCK_DIR" 2>/dev/null' EXIT
 
