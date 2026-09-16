@@ -23,7 +23,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const BASE = process.argv[2] || 'http://localhost:8080';
 const EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@test.com';
 const PW_FILE = `/tmp/vanblog-e2e-admin-${EMAIL}.env`;
-const PASSWORD = process.env.E2E_ADMIN_PASSWORD
+// 凭据惰性解析:全新实例的密码文件由内置 journey 的 setup 阶段写出,
+// 必须在 journey 跑完后再读(脚本启动时读会拿到空值)。
+const resolvePassword = () => process.env.E2E_ADMIN_PASSWORD
   ?? (existsSync(PW_FILE) ? readFileSync(PW_FILE, 'utf8').trim() : '');
 
 let passed = 0, failed = 0;
@@ -272,6 +274,7 @@ await assert('U1 锁定文错误密码 → toast「密码错误」', async () =>
 // ── 编辑器 UI ──
 console.log('== 编辑器 UI ==');
 await assert('ED1 /login 登录进入 /admin', async () => {
+  const PASSWORD = resolvePassword();
   if (!PASSWORD) throw new Error('缺 E2E_ADMIN_PASSWORD/PW_FILE');
   await gotoClean('/login');
   await page.fill('input[name=email]', EMAIL);
