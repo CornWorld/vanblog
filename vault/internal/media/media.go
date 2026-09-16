@@ -53,7 +53,14 @@ func New(app core.App) *Manager {
 		// credential-bearing fields onto the publicly readable site row — the
 		// exact leak this isolation exists to close — while the client got a
 		// 200. The admin retries and sees the failure instead.
-		return site.MoveSecretsFromRecord(m.app, e.Record)
+		if err := site.MoveSecretsFromRecord(m.app, e.Record); err != nil {
+			return err
+		}
+		// Request hooks MUST hand the chain back: stopping here short-circuits
+		// pb's default handler — 200 with an empty body and nothing persisted.
+		// Found by the e2e journey theme-switch assertions: every admin
+		// site-settings save (incl. activeTheme) was silently lost.
+		return e.Next()
 	}
 	app.OnRecordCreateRequest("site").BindFunc(stripSiteSecrets)
 	app.OnRecordUpdateRequest("site").BindFunc(stripSiteSecrets)
