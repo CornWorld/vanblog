@@ -418,7 +418,9 @@ func TestRealCoreSchemaBareMediaCreatePasses(t *testing.T) {
 	}
 	js, err := os.ReadFile(filepath.Join("..", "..", "..", "runtime", "core-schema", "models.js"))
 	if err != nil {
-		t.Fatalf("read core schema: %v", err)
+		// models.js 是构建产物(gitignore):本地未跑 pnpm build:models
+		// 时跳过;CI test job 显式生成。
+		t.Skipf("core schema bundle not found: %v", err)
 	}
 	if err := RegisterWithSources(app, &fixtureSource{script: string(js)}, nil); err != nil {
 		t.Fatalf("register: %v", err)

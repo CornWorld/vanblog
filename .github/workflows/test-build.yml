@@ -38,6 +38,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
 
+      # validation 桥的真实 zod 测试需要生成产物 models.js(gitignore)
+      - name: Generate core schema artifact
+        run: pnpm build:models
+
       - name: go test ./...
         working-directory: vault
         env:
