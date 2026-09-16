@@ -132,6 +132,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64
+          cache-from: type=gha,scope=build-${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=build-${{ matrix.target }}
 
   # ── Full-stack e2e journey: boot the freshly built dev image, run the
   #    macro assertion suite (caddy routing / theme SSR / unlock / visibility /
@@ -139,7 +141,6 @@ jobs:
   #    have caught the 2026-09-15 hook-chain + caddy-topology breaks: unit
   #    fixtures compose differently from production wiring. ──
   e2e:
-    needs: docker
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -159,7 +160,7 @@ jobs:
           docker run -d --name vanblog-e2e \
             -p 8080:8080 \
             -e VANBLOG_HTTP_ONLY=1 \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-${{ github.sha }}
+            "ghcr.io/${GITHUB_REPOSITORY,,}:dev-${{ github.sha }}"
 
       - name: Wait for services
         run: |
