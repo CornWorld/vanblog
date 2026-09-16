@@ -120,7 +120,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix=${{ matrix.target }}-
+            type=sha,prefix=${{ matrix.target }}-,format=long
             type=raw,value=${{ matrix.target }}-edge
 
       - name: Build & push
@@ -132,6 +132,57 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64
+
+  # ── Full-stack e2e journey: boot the freshly built dev image, run the
+  #    macro assertion suite (caddy routing / theme SSR / unlock / visibility /
+  #    write-hook freshness / theme switching). This is the layer that would
+  #    have caught the 2026-09-15 hook-chain + caddy-topology breaks: unit
+  #    fixtures compose differently from production wiring. ──
+  e2e:
+    needs: docker
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Boot dev container (image built in this run)
+        run: |
+          docker run -d --name vanblog-e2e \
+            -p 8080:8080 \
+            -e VANBLOG_HTTP_ONLY=1 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev-${{ github.sha }}
+
+      - name: Wait for services
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:8080/api/health; then
+              echo "ready after ~$((i*2))s"; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::container not ready in 120s"
+          docker logs vanblog-e2e 2>&1 | tail -60
+          exit 1
+
+      - name: E2E journey
+        run: bash scripts/test/e2e-journey.sh http://localhost:8080
+
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs vanblog-e2e 2>&1 | tail -120
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f -v vanblog-e2e || true
 
   # ── Lint Go backend (go vet -all + golangci-lint gate) ──
   lint:
