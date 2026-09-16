@@ -24,6 +24,9 @@ importers:
       eslint:
         specifier: ^10.6.0
         version: 10.6.0(jiti@2.7.0)
+      playwright:
+        specifier: ^1.63.0
+        version: 1.63.0
       typescript-eslint:
         specifier: ^8.62.1
         version: 8.62.1(eslint@10.6.0(jiti@2.7.0))(typescript@5.9.3)
@@ -3566,6 +3569,16 @@ packages:
   picomatch@4.0.4:
     resolution: {integrity: sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A==}
     engines: {node: '>=12'}
+
+  playwright-core@1.63.0:
+    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.63.0:
+    resolution: {integrity: sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   pocketbase@0.26.9:
     resolution: {integrity: sha512-Tiv1/hNuUzRdvT0d8hF03dfzuefQ1WdSRp1A1q3wzFC/WYhQcbU/Qlaubl/3ZDo6xvFXBS8JAgBS/L+ms7nkVQ==}
@@ -8702,6 +8715,12 @@ snapshots:
   picomatch@2.3.2: {}
 
   picomatch@4.0.4: {}
+
+  playwright-core@1.63.0: {}
+
+  playwright@1.63.0:
+    dependencies:
+      playwright-core: 1.63.0
 
   pocketbase@0.26.9: {}
 

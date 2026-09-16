@@ -24,6 +24,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.6.0",
+    "playwright": "^1.63.0",
     "typescript-eslint": "^8.62.1",
     "vite": "^7.3.6"
   }

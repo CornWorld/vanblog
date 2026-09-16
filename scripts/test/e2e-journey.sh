@@ -40,12 +40,29 @@ else
   echo "实例已初始化但缺密码(设 E2E_ADMIN_PASSWORD 或提供 $PW_FILE)"; exit 2
 fi
 
-# ── 1. 登录 + 种子(可重复执行:先清理上一轮) ──
+# delete_post <id>:先删子记录(revisions.target 是必需关系,先删文会被
+# pb 关系约束 400 拒绝),再删文章本体。供预清理与最终清理共用。
+delete_post() {
+  local pid="$1" rid
+  [ -n "$pid" ] && [ "$pid" != "null" ] || return 0
+  for rid in $(curl -s -G "$BASE/api/collections/revisions/records" \
+      --data-urlencode "filter=(target='$pid')" --data-urlencode 'perPage=50' \
+      -H "Authorization: $TOKEN" | jq -r '.items[].id'); do
+    [ -n "$rid" ] && curl -s -X DELETE "$BASE/api/collections/revisions/records/$rid" \
+      -H "Authorization: $TOKEN" >/dev/null
+  done
+  curl -s -X DELETE "$BASE/api/collections/posts/records/$pid" -H "Authorization: $TOKEN" >/dev/null
+}
+
+# ── 1. 登录 + 种子(可重复执行:先清理上一轮,含历史残留) ──
 TOKEN=$(curl -s -X POST "$BASE/api/collections/_superusers/auth-with-password" \
   -H 'Content-Type: application/json' -d "{\"identity\":\"$E2E_ADMIN_EMAIL\",\"password\":\"$PASSWD\"}" | jq -r '.token')
-[ -n "$TOKEN" ] && [ "$TOKEN" != "null" ] || { echo "登录失败"; exit 2; }
+if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+  echo "登录失败(identity=$E2E_ADMIN_EMAIL)。若 \$PW_FILE 是旧实例遗留凭据,删除后重试,或改设 E2E_ADMIN_PASSWORD。"
+  exit 2
+fi
 OLD=$(curl -s "$BASE/api/collections/posts/records?filter=(pathname~'/e2e-')&perPage=50" -H "Authorization: $TOKEN" | jq -r '.items[].id')
-for id in $OLD; do curl -s -X DELETE "$BASE/api/collections/posts/records/$id" -H "Authorization: $TOKEN" >/dev/null; done
+for id in $OLD; do delete_post "$id"; done
 
 seed() { curl -s -X POST "$BASE/api/collections/posts/records" \
   -H "Authorization: $TOKEN" -H 'Content-Type: application/json' -d "$1"; }
@@ -57,12 +74,12 @@ for id in "$NORMAL_ID" "$LOCKED_ID" "$PRIVATE_ID"; do
 done
 echo "seeded: normal=$NORMAL_ID locked=$LOCKED_ID private=$PRIVATE_ID"
 
-cleanup() {
-  for id in "$NORMAL_ID" "$LOCKED_ID" "$PRIVATE_ID" "$FRESH_ID"; do
-    [ -n "$id" ] && [ "$id" != "null" ] && curl -s -X DELETE "$BASE/api/collections/posts/records/$id" -H "Authorization: $TOKEN" >/dev/null
-  done
-}
-trap cleanup EXIT
+if [ "${E2E_KEEP_SEED:-0}" = "1" ]; then
+  # 浏览器套件以本脚本做种子时保留数据,由其结尾再跑一次本脚本完成清理
+  echo "种子保留(E2E_KEEP_SEED=1),清理交由后续流程"
+else
+  trap cleanup EXIT
+fi
 
 # ── 2. caddy 路由面 ──
 echo "== caddy 路由 =="
@@ -133,6 +150,45 @@ sleep 12
 check "[ \"\$(curl -s \"$BASE/__theme_host_health\" | jq -r '.activeTheme')\" = \"$OTHER\" ]" "T11 切换不存在的主题名:加载失败回退保持原主题"
 patch_theme "$ACTIVE"
 check "wait_theme '$ACTIVE' 15" "T12 切回 $ACTIVE 恢复基线"
+
+# ── 6. 媒体 / 编辑器保存管线 / 调色盘 ──
+echo "== 媒体与编辑器 =="
+# M1 图片上传(pb multipart;media.file 字段)
+printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > /tmp/vb-e2e.png
+BYTES=$(wc -c < /tmp/vb-e2e.png | tr -d ' ')
+MEDIA=$(curl -s -X POST "$BASE/api/collections/media/records" \
+  -H "Authorization: $TOKEN" -F "file=@/tmp/vb-e2e.png;type=image/png" -F 'meta=null')
+check "echo \"\$MEDIA\" | jq -e '.id and .file' >/dev/null" "M1 图片上传 → media 记录含 id/file"
+MCID=$(echo "$MEDIA" | jq -r '.collectionId'); MFID=$(echo "$MEDIA" | jq -r '.id'); MFILE=$(echo "$MEDIA" | jq -r '.file')
+# M2 图片公开访问(经 caddy,字节级往返)
+MGET=$(curl -s -o /tmp/vb-e2e-dl.png -w '%{http_code} %{content_type}' "$BASE/api/files/$MCID/$MFID/$MFILE")
+MEDIA_ID=$(echo "$MEDIA" | jq -r '.id')
+# E1 编辑保存管线:PATCH 带 markdown 边界(代码块 + 内联脚本)
+CODE_MD='普通正文
+
+```js
+console.log("e2e-code-marker");
+```
+
+<script>alert(1)</script>'
+jq -n --arg c "$CODE_MD" '{content: $c}' > /tmp/vb-e2e-patch.json
+EPATCH=$(curl -s -X PATCH "$BASE/api/collections/posts/records/$NORMAL_ID" \
+  -H "Authorization: $TOKEN" -H 'Content-Type: application/json' -d @/tmp/vb-e2e-patch.json)
+check "echo \"\$EPATCH\" | jq -e '.id' >/dev/null" "E1 编辑保存管线:PATCH markdown 200"
+sleep 2
+EDETAIL=$(curl -s "$BASE/post/e2e-normal")
+check "echo \"\$EDETAIL\" | grep -q 'e2e-code-marker'" "E2 代码块 SSR 渲染(remark 管线)"
+check "! echo \"\$EDETAIL\" | grep -q '<script>alert(1)'" "E2 内联脚本已消毒(无可执行形态)"
+# E3 修订快照(revisions 请求钩子链)
+REV=$(curl -s -G "$BASE/api/collections/revisions/records" \
+  --data-urlencode "filter=(target='$NORMAL_ID')" -H "Authorization: $TOKEN")
+check "echo \"\$REV\" | jq -e '.items | length >= 1' >/dev/null" "E3 修订快照落库(revisions 请求钩子链)"
+# P1/P2 调色盘
+PALS=$(curl -s "$BASE/api/palettes")
+check "echo \"\$PALS\" | jq -e '[.palettes[].name] | index(\"default\") and index(\"catppuccin\")' >/dev/null" "P1 /api/palettes 枚举(default+catppuccin)"
+PCSS=$(curl -s -o /tmp/vb-e2e-palette.css -w '%{http_code}' "$BASE/api/palette.css?name=catppuccin")
+check "[ \"\$PCSS\" = 200 ] && grep -q -- '--color-' /tmp/vb-e2e-palette.css" "P2 /api/palette.css?name=catppuccin → 200 + --color-* 变量"
+rm -f /tmp/vb-e2e.png /tmp/vb-e2e-dl.png /tmp/vb-e2e-patch.json /tmp/vb-e2e-palette.css
 
 echo "════ 容器旅程(HTTP 断言面): PASS=$PASS FAIL=$FAIL ════"
 [ "$FAIL" -eq 0 ]
