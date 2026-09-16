@@ -44,6 +44,29 @@ function loadSsrConfig() {
 
 const CONFIG = { ...DEFAULT_CONFIG, ...(loadSsrConfig() || {}) };
 
+// ─── Widget runtime error guard ───────────────────────────────
+// live2d-widgets@1.0.1 的 followPointer 在模型未就绪时读 null.hitTest
+// 抛 TypeError(快速指针移动/合成点击均可触发,上游未设防)。在 window
+// 捕获阶段拦下该包抛出的错误:阻止默认上报,只提示一次。升级 widget
+// 依赖修复后此守卫可移除。
+(function guardWidgetErrors() {
+  let warned = false;
+  window.addEventListener(
+    "error",
+    (ev) => {
+      if (!ev.filename || !ev.filename.includes("live2d-widgets")) return;
+      ev.preventDefault();
+      if (!warned) {
+        warned = true;
+        console.warn(
+          "[live2d-companion] widget runtime error suppressed (known live2d-widgets@1.0.1 followPointer issue)"
+        );
+      }
+    },
+    true
+  );
+})();
+
 // ─── State ────────────────────────────────────────────────────
 const NAMESPACE = "live2d-companion";
 const ROOT_SELECTOR = `[data-vanblog-pack="${NAMESPACE}"]`;
