@@ -51,7 +51,13 @@ if (process.env.E2E_SKIP_JOURNEY !== '1') {
 }
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
-const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+const ctx = await browser.newContext({
+  viewport: { width: 1280, height: 900 },
+  // 钉死浅色:无头 Chrome 会继承宿主 OS 的深色模式(实测 macOS 深色下
+  // prefers-color-scheme: dark),theme=auto 初始即暗色,D2/D3 的
+  // light→dark 前后对比就失去基线。CI 的 ubuntu 默认 light 才碰巧绿。
+  colorScheme: 'light',
+});
 // 屏蔽外部 CDN(live2d 从 fastly.jsdelivr.net 加载):测试保持 hermetic,
 // CDN 抖动不再污染断言;装饰性组件缺席不影响行为检查。
 await ctx.route(/jsdelivr\.net|unpkg\.com|cdn\./, (r) => r.abort());
@@ -114,6 +120,11 @@ async function sampledStyles() {
 
 console.log('== 暗色模式 ==');
 await gotoClean('/');
+// 基线必须显式钉 light:getAutoTheme 按钟点判昼夜(hour>18||hour<8 为夜,
+// 上游 seam 行为),18 点后跑套件时 auto 初始即暗色,light 样本失真,
+// D2/D3 的前后对比必挂——CI 曾靠 UTC 时段碰巧绿。
+await page.evaluate(() => { localStorage.setItem('theme', 'light'); });
+await page.reload({ waitUntil: 'load' });
 await page.waitForTimeout(2000); // 让 island 水合竞态的错误先浮出,避免误记到点击头上
 const light = await sampledStyles();
 // H1(诊断位,非门禁): 锁定页 React 水合竞态(已登记缺陷,待修复后转门禁)

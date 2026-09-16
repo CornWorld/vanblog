@@ -233,7 +233,15 @@ func recordValues(vm *goja.Runtime, record *core.Record) (*goja.Object, error) {
 		}
 
 		if field.Type() == core.FieldTypeJSON {
-			if raw, ok := value.(types.JSONRaw); ok && len(raw) > 0 {
+			if raw, ok := value.(types.JSONRaw); ok {
+				if len(raw) == 0 {
+					// NewRecord 预填的零值 JSONRaw(nil)(GetRaw fallback 到
+					// originalData):等同字段缺席。必须跳过,让 zod 的
+					// nullable/optional 语义生效——把空 []byte 直接喂给
+					// goja 会变成非 null 非对象值,被 zod 判 "Invalid
+					// input",裸 multipart 上传(缺省 meta)整体 400。
+					continue
+				}
 				parsed, err := vm.RunString("(" + string(raw) + ")")
 				if err != nil {
 					if setErr := values.Set(name, string(raw)); setErr != nil {

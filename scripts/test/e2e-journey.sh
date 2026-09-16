@@ -75,12 +75,21 @@ done
 echo "seeded: normal=$NORMAL_ID locked=$LOCKED_ID private=$PRIVATE_ID"
 
 MEDIA_ID="null"
+E2E_TAG_ID="null"
+E2E_TAG_USER="null"
 cleanup() {
   for id in "$NORMAL_ID" "$LOCKED_ID" "$PRIVATE_ID" "$FRESH_ID"; do
     delete_post "$id"
   done
   if [ -n "$MEDIA_ID" ] && [ "$MEDIA_ID" != "null" ]; then
     curl -s -X DELETE "$BASE/api/collections/media/records/$MEDIA_ID" -H "Authorization: $TOKEN" >/dev/null
+  fi
+  # R 断言副作用清理:专用 users admin + 其所建 tag
+  if [ "$E2E_TAG_ID" != "null" ]; then
+    curl -s -X DELETE "$BASE/api/collections/tags/records/$E2E_TAG_ID" -H "Authorization: $USERTOKEN" >/dev/null
+  fi
+  if [ "$E2E_TAG_USER" != "null" ]; then
+    curl -s -X DELETE "$BASE/api/collections/users/records/$E2E_TAG_USER" -H "Authorization: $TOKEN" >/dev/null
   fi
 }
 
@@ -166,10 +175,10 @@ echo "== 媒体与编辑器 =="
 # M1 图片上传(pb multipart;media.file 字段)
 printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > /tmp/vb-e2e.png
 BYTES=$(wc -c < /tmp/vb-e2e.png | tr -d ' ')
-# meta 必须带合法 JSON:pb 0.40 multipart 缺省 json 字段会以 nil 参与校验
-# 而被拒("meta: Invalid input"),管理端 UI 恒带合法 JSON,这里对齐。
+# 裸上传(不带 meta)钉住校验桥修复:零值 JSONRaw 曾被当作字节对象
+# 喂给 zod 判 "Invalid input",validation.go recordValues 现归一为字段缺席。
 MEDIA=$(curl -s -X POST "$BASE/api/collections/media/records" \
-  -H "Authorization: $TOKEN" -F "file=@/tmp/vb-e2e.png;type=image/png" -F "meta={}")
+  -H "Authorization: $TOKEN" -F "file=@/tmp/vb-e2e.png;type=image/png")
 check "echo \"\$MEDIA\" | jq -e '.id and .file' >/dev/null" "M1 图片上传 → media 记录含 id/file"
 MCID=$(echo "$MEDIA" | jq -r '.collectionId'); MFID=$(echo "$MEDIA" | jq -r '.id'); MFILE=$(echo "$MEDIA" | jq -r '.file')
 # M2 图片公开访问(经 caddy,字节级往返)
@@ -200,6 +209,39 @@ PALS=$(curl -s "$BASE/api/palettes")
 check "echo \"\$PALS\" | jq -e '[.palettes[].name] | index(\"default\") and index(\"catppuccin\")' >/dev/null" "P1 /api/palettes 枚举(default+catppuccin)"
 PCSS=$(curl -s -o /tmp/vb-e2e-palette.css -w '%{http_code}' "$BASE/api/palette.css?name=catppuccin")
 check "[ \"\$PCSS\" = 200 ] && grep -q -- '--color-' /tmp/vb-e2e-palette.css" "P2 /api/palette.css?name=catppuccin → 200 + --color-* 变量"
+
+# ── 7. 写规则回归(R):admin 页经 pb REST 直写 tags/categories ──
+# 1783700000 之前 tags/categories 写规则为 nil(仅 superuser),而管理端以
+# users(role=admin)登录,直写必被拒。此断言用真实 users admin 令牌验证
+# 写规则放行 role=admin,且匿名仍被拒。注意:种子段的 $TOKEN 是
+# _superusers,会绕过规则,不能用来验证规则面。
+echo "== 写规则回归 =="
+# 预清理:KEEP_SEED 模式跳过 EXIT 清理,上轮 R 断言的用户/标签可能残留,
+# 唯一索引会让 R0 撞 400。与种子预清理同思路,先删后建保证可重复执行。
+for uid in $(curl -s "$BASE/api/collections/users/records?filter=(email='e2e-rules@vanblog.local')" -H "Authorization: $TOKEN" | jq -r '.items[].id'); do
+  curl -s -X DELETE "$BASE/api/collections/users/records/$uid" -H "Authorization: $TOKEN" >/dev/null
+done
+for tid in $(curl -s "$BASE/api/collections/tags/records?filter=(name='E2E-RULES-TAG')" -H "Authorization: $TOKEN" | jq -r '.items[].id'); do
+  curl -s -X DELETE "$BASE/api/collections/tags/records/$tid" -H "Authorization: $TOKEN" >/dev/null
+done
+E2E_TAG_USER=$(curl -s -X POST "$BASE/api/collections/users/records" \
+  -H "Authorization: $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"username":"e2e-rules-admin","email":"e2e-rules@vanblog.local","password":"E2ERULESPW1","passwordConfirm":"E2ERULESPW1","role":"admin"}' | jq -r '.id')
+check "[ \"$E2E_TAG_USER\" != \"null\" ] && [ -n \"$E2E_TAG_USER\" ]" "R0 superuser 建 users role=admin 测试账号"
+USERTOKEN=$(curl -s -X POST "$BASE/api/collections/users/auth-with-password" \
+  -H 'Content-Type: application/json' \
+  -d '{"identity":"e2e-rules@vanblog.local","password":"E2ERULESPW1"}' | jq -r '.token')
+check "[ \"$USERTOKEN\" != \"null\" ] && [ -n \"$USERTOKEN\" ]" "R0b users admin 密码登录成功"
+if [ "$USERTOKEN" != "null" ] && [ -n "$USERTOKEN" ]; then
+  RTAG=$(curl -s -X POST "$BASE/api/collections/tags/records" \
+    -H "Authorization: $USERTOKEN" -H 'Content-Type: application/json' \
+    -d '{"name":"E2E-RULES-TAG"}')
+  E2E_TAG_ID=$(echo "$RTAG" | jq -r '.id // "null"')
+  check "[ \"$E2E_TAG_ID\" != \"null\" ]" "R1 users admin REST 建 tag(tags 写规则放行 role=admin)"
+  ANON_CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/api/collections/tags/records" \
+    -H 'Content-Type: application/json' -d '{"name":"e2e-anon"}')
+  check "[ \"$ANON_CODE\" != \"200\" ]" "R2 匿名建 tag 被拒(HTTP $ANON_CODE)"
+fi
 rm -f /tmp/vb-e2e.png /tmp/vb-e2e-dl.png /tmp/vb-e2e-patch.json /tmp/vb-e2e-palette.css
 
 echo "════ 容器旅程(HTTP 断言面): PASS=$PASS FAIL=$FAIL ════"

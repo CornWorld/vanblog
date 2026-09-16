@@ -2,12 +2,15 @@ package validation
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"testing/fstest"
 
+	_ "github.com/cornworld/vanblog/pb_migrations"
 	"github.com/dop251/goja"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
@@ -363,5 +366,70 @@ func TestRecordValuesOmitsEmptyStrings(t *testing.T) {
 		if v := values.Get(name); v != nil && !goja.IsUndefined(v) {
 			t.Fatalf("empty text field %q should be absent, got %v", name, v)
 		}
+	}
+}
+
+// JSON zero-value regressions: NewRecord prefills originalData with each
+// field's zero value — for a json field that is the zero types.JSONRaw(nil)
+// (PrepareValue(nil) → ParseJSONRaw(nil)). recordValues must map that to an
+// ABSENT payload key so zod nullable/optional semantics apply; feeding the
+// empty []byte to goja produces a non-null non-object value that fails
+// safeParse with "Invalid input" — which 400'd every bare multipart create
+// that omitted meta (found by the container e2e journey's media assertions).
+func TestRecordValuesOmitsZeroJSONRaw(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	col := core.NewCollection(core.CollectionTypeBase, "json_zero_probe")
+	col.Fields.Add(&core.JSONField{Name: "meta"})
+	if err := app.Save(col); err != nil {
+		t.Fatalf("save collection: %v", err)
+	}
+	rec := core.NewRecord(col) // prefills originalData["meta"] = zero JSONRaw
+
+	values, err := recordValues(goja.New(), rec)
+	if err != nil {
+		t.Fatalf("recordValues: %v", err)
+	}
+	if v := values.Get("meta"); v != nil && !goja.IsUndefined(v) {
+		t.Fatalf("zero JSONRaw should map to absent key, got %v", v)
+	}
+}
+
+// Bridge-level regression: a create that omits the json field must pass the
+// OnRecordValidate bridge (the zero JSONRaw is normalized to absent before
+// zod). Mirrors the failed bare multipart upload: 400 "media validation
+// failed: meta: Invalid input" while the admin UI (which always sends valid
+// JSON meta) kept working. The fixture mimics real zod v4: undefined/null
+// pass; goja's export of the zero JSONRaw ([]byte → ArrayBuffer/typed view)
+// is a non-plain object and gets rejected with "Invalid input".
+func TestRealCoreSchemaBareMediaCreatePasses(t *testing.T) {
+	app, err := tests.NewTestApp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Cleanup()
+	// vault migrations create the real media collection; runtime/models.js
+	// is the exact core schema bundle production validates against.
+	if err := app.RunAppMigrations(); err != nil {
+		t.Fatalf("vault migrations: %v", err)
+	}
+	js, err := os.ReadFile(filepath.Join("..", "..", "..", "runtime", "core-schema", "models.js"))
+	if err != nil {
+		t.Fatalf("read core schema: %v", err)
+	}
+	if err := RegisterWithSources(app, &fixtureSource{script: string(js)}, nil); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	mediaCol, err := app.FindCollectionByNameOrId("media")
+	if err != nil {
+		t.Fatalf("find media: %v", err)
+	}
+	rec := core.NewRecord(mediaCol) // meta absent: zero JSONRaw in originalData
+	if err := app.Save(rec); err != nil {
+		t.Fatalf("bare media create should pass the real zod bridge, got: %v", err)
 	}
 }
