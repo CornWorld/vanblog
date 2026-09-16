@@ -49,6 +49,7 @@
 | 容器标题/行内代码类 | 容器插件产 `<p class="custom-container-title {type}">` 与 `<code class="code-inline">`;div 另带 `type="用户标题"` 属性 | `upstreamDom` 后处理补齐标题类型类与 code-inline;type 属性(用户文案,平台管线未保留,无 CSS/JS 消费)与 katex 的 math-inline/math-display 包裹(无 CSS 依赖)不补(登记) | 修复容器标题图标(::before 依赖类型类)与配色缺失;行内代码 DOM 与上游同构 |
 | 锁定卡加密提示 | 列表 API 保留锁定文并置 `content:undefined, private:true`(server `getByOption` 公开路径);PostCard 对 private overview 卡客户端合成提示文案「该文章已加密，点击 \`阅读全文\` 并输入密码后方可查看。」经 Markdown 渲染 | 同一字面串经平台 remark/rehype 管线 SSR 预渲染为 `encryptedHtml`(`lib/home.ts`),锁定卡(`hasPassword`)经 props 下发渲染,DOM 同构 | 提示卡文案与渲染对齐(2026-09-15 复核,对照上游 PostCard `calContent` 与 server `article.provider.getByOption`);修正 09-11 误登记「上游为裸卡」——上游 UI 层本就产提示文本。**有意偏离**:private(非密码)文上游列表保留 teaser 卡,本仓 ListRule 收敛 `private=false` 整卡缺席,已注册为 A 面安全定义(`docs/security-invariants.md` 匿名可读面清单),非本表待办 |
 | 解锁成功后内容下发 | `UnLockCard.setContent(html)` 收 AJAX 解锁的整篇 HTML,`setLock(false)` 客户端切换正文 | PostCard 无本地正文 state,`setContent` 接通为 `location.reload()`:Go 签发 path 限定解锁 cookie → 重载后 SSR 凭 cookie 渲染全文 | 行为面等价:解锁后同 URL 即见全文;cookie 免密重看/分享语义反而覆盖上游;依赖 unlock 端点 id/pathname 双解析(vault 8ca484ed)与 cookie 转发修正(theme 018ee6c2) |
+| 锁定文详情水合 | 上游客户端整体水合,锁定态→解锁切换在客户端完成 | SSR 锁定态占位 + island 水合;e2e-browser「B(锁定文详情)可见 button/a 全部可点击」在 dev-verify 8083/8084 两次运行中同断言失败:点击后 React #425(server/client markup 不匹配) | 未解决,登记在案:SSR 面 journey 31/0 全绿(渲染输出正确),失败仅在客户端水合;同镜像 CI browser 12/12 过,指向 dev 容器内时序/环境因子(待查:HMR 探针或 theme host 注入顺序) |
 
 ## 背景(2026-09 量化)
 
