@@ -189,6 +189,66 @@ jobs:
         if: always()
         run: docker rm -f -v vanblog-e2e || true
 
+  # ── Browser journey: real Chrome over the freshly built dev image.
+  #    Dark-mode computed styles, visible-button clickability (incl. hydrated
+  #    islands), unlock interaction, editor UI. ubuntu-latest ships Chrome,
+  #    so playwright runs with channel:'chrome' (no browser download). ──
+  browser:
+    needs: docker
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Boot dev container (image built in this run)
+        run: |
+          docker run -d --name vanblog-e2e \
+            -p 8080:8080 \
+            -e VANBLOG_HTTP_ONLY=1 \
+            "ghcr.io/${GITHUB_REPOSITORY,,}:dev-${{ github.sha }}"
+
+      - name: Wait for services
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:8080/api/health; then
+              echo "ready after ~$((i*2))s"; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::container not ready in 120s"
+          docker logs vanblog-e2e 2>&1 | tail -60
+          exit 1
+
+      - name: Browser journey
+        run: node scripts/test/e2e-browser.mjs http://localhost:8080
+
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs vanblog-e2e 2>&1 | tail -120
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f -v vanblog-e2e || true
+
   # ── Lint Go backend (go vet -all + golangci-lint gate) ──
   lint:
     runs-on: ubuntu-latest
