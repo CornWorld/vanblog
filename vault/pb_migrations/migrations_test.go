@@ -51,4 +51,26 @@ func TestMigrationsCreateExpectedCollections(t *testing.T) {
 			t.Error("posts missing 'deleted' bool field")
 		}
 	}
+
+	// tags/categories 写规则必须 admin-only(1783700000):管理页经 pb REST
+	// 直写,nil 规则 = 仅 superuser,role=admin 反而被拒。读规则保持公开。
+	adminWrite := `@request.auth.role = "admin"`
+	for _, name := range []string{"tags", "categories"} {
+		col, err := app.FindCollectionByNameOrId(name)
+		if err != nil {
+			t.Errorf("collection %s missing: %v", name, err)
+			continue
+		}
+		for _, r := range []struct {
+			field string
+			rule  *string
+		}{{"CreateRule", col.CreateRule}, {"UpdateRule", col.UpdateRule}, {"DeleteRule", col.DeleteRule}} {
+			if r.rule == nil || *r.rule != adminWrite {
+				t.Errorf("%s.%s = %v, want %q", name, r.field, r.rule, adminWrite)
+			}
+		}
+		if col.ListRule == nil || *col.ListRule != "" {
+			t.Errorf("%s.ListRule = %v, want public empty string", name, col.ListRule)
+		}
+	}
 }
