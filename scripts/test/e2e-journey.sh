@@ -85,9 +85,21 @@ done
 echo "seeded: normal=$NORMAL_ID locked=$LOCKED_ID private=$PRIVATE_ID"
 
 MEDIA_ID="null"
+FRESH_ID="null"
 E2E_TAG_ID="null"
 E2E_TAG_USER="null"
+INIT_ACTIVE_THEME=$(curl -s "$BASE/__theme_host_health" 2>/dev/null | jq -r '.activeTheme // ""')
 cleanup() {
+  # 主题切换段(T10-T12)若在中途被打断,站点 record 会停留在非基线主题,
+  # 后续每轮断言连环假红——cleanup 一律还原进入时的主题。
+  if [ -n "$INIT_ACTIVE_THEME" ] && [ "$(curl -s "$BASE/__theme_host_health" 2>/dev/null | jq -r '.activeTheme // ""')" != "$INIT_ACTIVE_THEME" ]; then
+    local sid
+    sid=$(curl -s "$BASE/api/collections/site/records?perPage=1" | jq -r '.items[0].id')
+    [ -n "$sid" ] && [ "$sid" != "null" ] && \
+      curl -s -X PATCH "$BASE/api/collections/site/records/$sid" \
+        -H "Authorization: $(curl -s -X POST "$BASE/api/collections/_superusers/auth-with-password" -H 'Content-Type: application/json' -d "{\"identity\":\"$E2E_ADMIN_EMAIL\",\"password\":\"$PASSWD\"}" | jq -r '.token')" \
+        -H 'Content-Type: application/json' -d "{\"activeTheme\":\"$INIT_ACTIVE_THEME\"}" >/dev/null
+  fi
   for id in "$NORMAL_ID" "$LOCKED_ID" "$PRIVATE_ID" "$FRESH_ID"; do
     delete_post "$id"
   done
@@ -184,6 +196,10 @@ check "wait_theme '$ACTIVE' 15" "T12 切回 $ACTIVE 恢复基线"
 echo "== 媒体与编辑器 =="
 # M1 图片上传(pb multipart;media.file 字段)
 printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > "$ART_PNG"
+# 每轮注入唯一尾字节:IEND 之后的内容解码器忽略,但改变 MD5——否则 media
+# 管理器的内容去重会把本轮上传判为重复并删除新记录,M2 必 404(多轮运行
+# 或多实例下的确定性失败)。
+printf 'e2e-run-%s' "$(date +%s%N)" >> "$ART_PNG"
 BYTES=$(wc -c < "$ART_PNG" | tr -d ' ')
 # 裸上传(不带 meta)钉住校验桥修复:零值 JSONRaw 曾被当作字节对象
 # 喂给 zod 判 "Invalid input",validation.go recordValues 现归一为字段缺席。
@@ -191,9 +207,11 @@ MEDIA=$(curl -s -X POST "$BASE/api/collections/media/records" \
   -H "Authorization: $TOKEN" -F "file=@${ART_PNG};type=image/png")
 check "echo \"\$MEDIA\" | jq -e '.id and .file' >/dev/null" "M1 图片上传 → media 记录含 id/file"
 MCID=$(echo "$MEDIA" | jq -r '.collectionId'); MFID=$(echo "$MEDIA" | jq -r '.id'); MFILE=$(echo "$MEDIA" | jq -r '.file')
-# M2 图片公开访问(经 caddy,字节级往返)
+# M2 图片公开访问(经 caddy,字节级往返):状态 200 + content-type + 字节一致
 MGET=$(curl -s -o "$ART_DL" -w '%{http_code} %{content_type}' "$BASE/api/files/$MCID/$MFID/$MFILE")
 MEDIA_ID=$(echo "$MEDIA" | jq -r '.id')
+check "echo \"\$MGET\" | grep -q '^200 image/png\$'" "M2 图片公开访问 → 200 image/png"
+check "cmp -s \"$ART_PNG\" \"$ART_DL\"" "M2 字节级往返一致"
 # E1 编辑保存管线:PATCH 带 markdown 边界(代码块 + 内联脚本)
 CODE_MD='普通正文
 

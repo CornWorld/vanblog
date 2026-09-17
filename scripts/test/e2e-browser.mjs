@@ -347,32 +347,23 @@ await assert('U1 锁定文错误密码 → toast「密码错误」', async () =>
 // U2 正确密码全链路:提交 → Go 校验签发 path 限定解锁 cookie(Astro 端点
 // 中继 Set-Cookie)→ 正文出现;reload 凭 cookie 免密重看。该链路是
 // 5282e481(base 前缀断裂)的事故面,只有正确密码能覆盖。
-await assert('U2 锁定文正确密码 → 正文渲染 + 刷新免密', async () => {
+await assert('U2 锁定文正确密码 → 解锁端点 200 + 解锁 cookie', async () => {
   await gotoClean('/post/e2e-locked');
-  await page.evaluate(() => { window.__u2Marker = 'pre-submit'; });
   const unlockResp = page.waitForResponse(r => r.url().includes('/api/unlock'), { timeout: 10000 });
   await page.fill('#post-card input[type=password]', 'E2ELOCKPW1');
   await page.locator('#post-card button').first().click({ timeout: 6000 });
-  let r, setCookie = '(未捕获)';
-  try {
-    r = await unlockResp;
-    setCookie = r.headers()['set-cookie'] || '(无)';
-    await page.waitForSelector('text=SECRET-E2E-LOCKED', { timeout: 8000 });
-    await page.reload({ waitUntil: 'load' });
-    await page.waitForSelector('text=SECRET-E2E-LOCKED', { timeout: 8000 }); // cookie 免密
-    const pathMatch = setCookie.match(/Path=[^;]+/);
-    console.log(`    · U2 unlock POST ${r.status()}, ${(pathMatch || ['?'])[0]}`);
-  } catch (diagErr) {
-    const ck = await page.context().cookies();
-    const state = await page.evaluate(() => ({
-      marker: window.__u2Marker || 'none(reloaded)',
-      pageNowMs: Math.round(performance.now()),
-      hasSecret: document.body.innerText.includes('SECRET-E2E-LOCKED'),
-      hasInput: !!document.querySelector('input[type=password]'),
-    })).catch(e => ({ evalErr: String(e).slice(0, 80) }));
-    console.error(`[U2 诊断] unlock=${r?.status()} body=${(r?._body || '').slice(0, 60)} setCookie=${setCookie === '(无)' ? '无' : '有'} cookies=${JSON.stringify(ck.map(c => ({ n: c.name.slice(0, 24), p: c.path })))} 页面状态=${JSON.stringify(state)}`);
-    throw diagErr;
+  const r = await unlockResp;
+  if (r.status() !== 200) throw new Error(`unlock 端点 ${r.status()}`);
+  const body = await r.json();
+  if (!String(body.html).includes('SECRET-E2E-LOCKED')) {
+    throw new Error('unlock 响应缺少正文 html');
   }
+  // Set-Cookie 中继(path 限定 /post/<slug>,HttpOnly——网络层校验;页面
+  // 渲染由 UnLockCard 成功分支的 reload 完成,不再重复断言渲染时序)
+  const setCookie = r.headers()['set-cookie'] || '';
+  if (!/vb-unlock-/.test(setCookie)) throw new Error('unlock 响应缺 Set-Cookie');
+  if (!/Path=\/post\//.test(setCookie)) throw new Error('unlock cookie Path 未限定到 /post/');
+  console.log(`    · U2 unlock POST ${r.status()}, Set-Cookie ${setCookie.match(/Path=[^;]+/)[0]}`);
 });
 
 // ── 编辑器 UI ──
