@@ -36,9 +36,9 @@ vanblog 的扩展性不是 PB 白送的，而是由这些显式接线决定的�
 
 ---
 
-## 2. 隐式边界（8 条踩坑实证）
+## 2. 隐式边界（12 条踩坑实证）
 
-> 这是本次重构撞墙后固化的契约。每条 = 事实 + 约束。源码依据可追溯到 PB v0.39.5。
+> 这是本次重构撞墙后固化的契约。每条 = 事实 + 约束。源码依据可追溯到 PB v0.39.5;事实 9-12 基于 v0.40.1 源码与容器实测(v0.40.1 为当前 go.mod 版本)。
 
 ### 事实 1：JS 迁移由 `jsvm` 加载，不是 `migratecmd`；`Automigrate` 只生成快照
 
@@ -80,6 +80,26 @@ vanblog 的扩展性不是 PB 白送的，而是由这些显式接线决定的�
 - **事实**：`Trigger` 按注册顺序排 handlers，默认 handler（`oneOffHandlerFuncs`）追加在最后，再反向构建 next 链 → 第一个注册的先执行，默认 handler 最后执行。（`tools/hook/hook.go:153-174`）
 - **约束**：JS/Go hook 只能「追加」不能「替换」更早注册的 handler；要拦截必须在前置 handler 里「不调 `e.Next()` 并返回错误/响应」短路，否则默认行为总会执行。
 
+
+### 事实 9：`normalizeServeExceptions` 只放行 ApiError 家族，裸 JS Error 整体吞没
+
+- **事实**：jsvm 在 OnServe 时全局绑定 `normalizeServeExceptions`，它只把 `*goja.Exception` 里能 `Export()` 成 Go `error`/`GoError` 的值还原；`new Error("msg")`、`new ValidationError(code,msg)` 导出后都不是这两类 → 客户端只收到 400 `"Something went wrong while processing your request."`，**消息与 data 全部丢失，日志一行都没有**。只有 `new ApiError/BadRequestError(...)`（registerFactoryAsConstructor 暴露的家族）能把消息带回响应。After*Success 之类非路由钩子的抛错走另一条路：错误以 `"Error: xxx at /workspace/pb.js:3:11(11)"` 形态出现在 HTTP 500 body——坐标是 jsvm 把全部钩子合并编译的虚拟 blob（`defaultScriptPath = cwd/pb.js`），行号无效。
+- **约束**：路由钩子要给客户端信息必须抛 ApiError 家族；调试钩子内部错误靠审计层的 `hookError`（audits failure 行 + console.error），不要指望响应或 pb 日志。
+
+### 事实 10：`$app.logger()` 在 JSVM 里不可调用
+
+- **事实**：`$app.logger()` 返回的 `slog.Logger` 暴露给 goja 的是**值**，`Error/Warn` 都是指针接收者方法 → goja 报 `TypeError: Object has no member 'Error'`（容器实测）。`console.log/error` 经 goja_nodejs console 打到 Go `log` → stdout 带时间戳，但无级别、不进 `_logs` 表。
+- **约束**：JSVM 内的错误可见性 = `audits` failure 行（admin UI 可查、可检索）+ `console.error`（stdout）。需要结构化日志就写记录，不要找 slog。
+
+### 事实 11：审计走 `onRecord*Request`，`e.next()` 必须第一个调用
+
+- **事实**：Request 钩子事件带 `e.auth / e.realIP() / e.request`，审计行才有 actor/ip/UA；After*Success 事件全没有（历史事故：每行 actor=""）。Request 事件里 `e.next()` 才执行落库，先审计后 `e.next()` 会把可能失败的写记成 success。
+- **约束**：模式固定为「`e.next()` 第一行 → 审计」；审计段自身意外抛错由 `lib/vanblog-audit.js` 的 `hookError` 兜底（audits failure 行 + console.error 后**吞掉**——审计故障不允许把已成功的操作污染成 500）。Go 层内部写（计数器/缓存失效/dedup）不再产生审计行，这是语义不是缺陷。
+
+### 事实 12：jsvm `HooksWatch` 监视的是 staging 拷贝，对本仓结构性失效
+
+- **事实**：`main.go` 把钩子 stage 进一次性 temp 目录（`os.MkdirTemp("vanblog-hooks-*")`）后，jsvm 的 watcher 盯的是 staging——启动后永不再变，**任何源文件改动都不触发热重载**（容器实测：docker cp 与容器内重写均无 restart 日志）。pb 官方热重载模型 = watcher → `app.Restart()` → `execve` 换进程镜像 → 重新走一遍 staging + registerHooks。
+- **约束**：本仓由 `vault/hooks_watch.go` 的 `watchHookSources` 接管：监视**源目录**（core pb_hooks / pb_migrations）→ 防抖 300ms → 重跑 `StageHooks/StageMigrations` → `app.Restart()`；restage 失败则留在旧 staging 不重启（避免 crash-loop）。Pack 源不在监视面（builtin 内嵌不可变、Pack 结构不暴露本地目录），改 Pack 源仍需重启容器。staging 目录用确定性 per-PID 路径，execve 链路复用同一目录，不再每次启动泄漏一个 `vanblog-hooks-*`。
 ---
 
 ## 3. 未验证点（不做断言，遇到先 spike）
