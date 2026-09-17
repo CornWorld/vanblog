@@ -122,8 +122,8 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 
 **原则**(来自 `architecture-layering.md`):
 
-- Go 层:系统级行为(数据一致性、计数准确性、性能敏感操作)
-- JS 层:用户自定义(审计、自定义校验、webhook)
+- Go 层:系统级行为(数据一致性、计数准确性、性能敏感操作、**审计**——2026-09-17 从 JS 迁回 `internal/audit`;"用户可自定义事件"不等于"核心住 JS",判据见 `pocketbase-extension-contract.md`)
+- JS 层:用户自定义(自定义校验、webhook、cron)
 
 **不能简单"把 Go hooks 移到 JS 让用户改"** 的原因:
 

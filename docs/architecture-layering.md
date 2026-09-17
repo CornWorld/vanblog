@@ -5,7 +5,7 @@
 > **核心原则**:
 >
 > - **Go 层承担所有重运算 / 复杂业务 / 基础设施**(编译进二进制,性能 + 类型安全)
-> - **JSVM 只做用户侧扩展点**(审计钩子、小功能脚本,学习成本低,热更新)
+> - **JSVM 只做用户侧扩展点**(自定义钩子、cron、小功能脚本,学习成本低,热更新;核心审计已于 2026-09-17 迁 Go `internal/audit`,见 `pocketbase-extension-contract.md` 判据)
 > - **Astro 前端通过 pb REST API + `sdk/` TypeScript 包消费数据**
 >
 > 这与 PocketBase 官方的定位一致:JSVM 是"方便用户加小功能",不是"写核心业务"。
@@ -96,7 +96,7 @@ JSVM **不适合**的场景:
 │                                                          │
 │  ┌─────────────────────────────────────────────────────┐ │
 │  │  JSVM 钩子 (pb_hooks/*.pb.js)                       │ │
-│  │  - 审计日志 (vanblog-audit.js + system.pb.js)       │ │
+│  │  - cron 聚合 (system.pb.js;审计已迁 Go internal/audit) │ │
 │  │  - 用户自定义钩子 (~20 行/个)                       │ │
 │  │  - 直接调用 pb 原生 API ($app, Record, cronAdd 等)  │ │
 │  │  - 不承担核心业务逻辑                                │ │
@@ -163,10 +163,9 @@ vault/
     ...
   pb_hooks/                       # ★ JSVM 钩子 (用户侧)
     examples.pb.js                 # 官方示例 (给用户学习的)
-    system.pb.js                   # 审计日志 + visits 聚合 cron
+    system.pb.js                   # visits 聚合 cron (核心审计已迁 internal/audit)
     lib/
       vanblog.d.ts                 # pb + vanblog 类型声明 (TypeScript 姿态, IDE 补全)
-      vanblog-audit.js             # 审计日志公共模块 (require() 共享)
 ```
 
 ### 4.2 Go 业务层模块职责
@@ -213,27 +212,11 @@ JSVM 钩子直接使用 pb 原生全局 API
 | 文件                   | 说明                                                                     |
 | ---------------------- | ------------------------------------------------------------------------ |
 | `examples.pb.js`       | 学习示例钩子,**当前全部以注释形式保留**(不执行),供用户参考复制到自己文件 |
-| `system.pb.js`         | 审计日志 + visits 聚合 cron                                              |
+| `system.pb.js`         | visits 聚合 cron(核心审计已于 2026-09-17 迁 `internal/audit`)            |
 | `lib/vanblog.d.ts`     | pb + vanblog 类型声明 (TypeScript 姿态, IDE 补全)                        |
-| `lib/vanblog-audit.js` | 审计日志公共模块, 通过 `require()` 在 system.pb.js 间共享                |
-
 JSVM 钩子示例 (`pb_hooks/system.pb.js` 的真实片段):
 
 ```javascript
-// 文章发布/更新/删除后记录审计(posts/tags/categories/media/users 各 3 种事件)
-onRecordAfterCreateSuccess(
-  (e) => require("./lib/vanblog-audit.js").postAction("post.create", e),
-  "posts"
-);
-onRecordAfterUpdateSuccess(
-  (e) => require("./lib/vanblog-audit.js").postAction("post.update", e),
-  "posts"
-);
-onRecordAfterDeleteSuccess(
-  (e) => require("./lib/vanblog-audit.js").postAction("post.delete", e),
-  "posts"
-);
-
 // 每日 visits 聚合(0 0 * * * = 每天 00:00)
 cronAdd("visits-daily-aggregate", "0 0 * * *", () => {
   const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
@@ -245,6 +228,11 @@ cronAdd("visits-daily-aggregate", "0 0 * * *", () => {
   // 累加 views/uniques,写入 path="" 的聚合行
 });
 ```
+
+> **审计在 Go 层**(2026-09-17 迁移):`internal/audit` 用**通配** `onRecord*Request`
+> 覆盖全部 collection(含 Pack 运行时建表),action 字符串与 row 形状与旧 JS 版
+> 逐字节兼容。用户要记自定义事件,直接写 `audits` collection(见
+> `examples.pb.js` 示例 6),无需重新注册核心事件。
 
 > `examples.pb.js` 的 5 个示例(webhook/slug/tag 限制/daily stats/custom header)目前都被 `//` 注释掉,文件不执行任何钩子。把它们视为学习样板,复制到你自己的 `.pb.js` 并去掉注释即可启用。
 
@@ -399,10 +387,9 @@ func New(app core.App) *Service {
 
 我们提供的 `pb_hooks/` 里:
 
-- `examples.pb.js` — 官方示例 (给用户学习的,5 个钩子,**当前全部注释掉,需复制到自己文件去掉注释才能生效**)
-- `system.pb.js` — 审计日志 + visits 聚合 cron
+- `examples.pb.js` — 官方示例 (给用户学习的,6 个钩子,**当前全部注释掉,需复制到自己文件去掉注释才能生效**)
+- `system.pb.js` — visits 聚合 cron(核心审计已于 2026-09-17 迁 Go `internal/audit`)
 - `lib/vanblog.d.ts` — pb + vanblog 类型声明 (TypeScript 姿态, IDE 补全)
-- `lib/vanblog-audit.js` — 审计日志公共模块
 
 **不提供的**(核心业务在 Go 里):
 
@@ -438,11 +425,15 @@ onRecordBeforeCreateRequest((e) => {
   }
 }, "posts");
 
-// 示例 3: 审计日志 (使用共享模块)
-onRecordAfterUpdateSuccess((e) => {
-  const audit = require("./lib/vanblog-audit.js");
-  audit.postAction("post.update", e);
-}, "posts");
+// 示例 3: 记录自定义审计事件 (核心审计在 Go 层,用户只记自己的事件)
+onRecordCreateRequest((e) => {
+  e.next(); // 必须第一行——见 system.pb.js 头部约束
+  const col = $app.findCollectionByNameOrId("audits");
+  const row = new Record(col);
+  row.set("action", "newsletter.subscribe");
+  row.set("target", e.record.id);
+  $app.save(row);
+}, "subscribers");
 ```
 
 **特征**:每个钩子 < 20 行,使用 pb 原生 API,不做复杂逻辑。
@@ -506,16 +497,16 @@ interface VanblogSite {
 | visits 计数      | `visits` 原子计数                          | 不暴露                                | ❌                    |
 | visits 聚合      | `visits` 每日聚合                          | `cronAdd` (system.pb.js)              | ✅ 调度在 JSVM        |
 | RSS/Atom/Sitemap | `feed` 生成 + 路由注册                     | 不暴露                                | ❌                    |
-| 审计日志         | —                                          | `vanblog-audit.js` + `system.pb.js`   | ✅ 用户可记自定义事件 |
+| 审计日志         | `internal/audit` 通配 Request 钩子(含 Pack 表)+ auth.login | 用户自定义事件直写 audits(examples 示例 6) | ✅                     |
 | 自定义定时任务   | —                                          | `cronAdd("id", "...", () => { ... })` | ✅                    |
 | 自定义 API 端点  | —                                          | `routerAdd("GET", "/my-api", ...)`    | ✅                    |
 
 > **注**:绝大多数 CRUD 端点不需要手写——PocketBase 原生 `/api/collections/{name}/records` 自动提供 list/get/create/update/delete(含分页/过滤/排序/关联展开),权限由 collection 的 `listRule`/`createRule`/`updateRule`/`deleteRule` 控制。`routerAdd` 仅用于 webhook 转发、跨表聚合、外部 API 集成等特殊业务。Pack 页面路由由 Astro adapter 静态注入 `/p/<pack>`,无需手写。
-
 **总结**:
 
-- Go 业务层承担 **~17 个核心功能** (重运算/基础设施)
-- JSVM 提供 **~5 个扩展点** (审计、定时、自定义路由、校验钩子)
+- Go 业务层承担 **~18 个核心功能** (重运算/基础设施,含审计)
+- JSVM 提供 **~4 个扩展点** (定时、自定义路由、校验钩子、自定义事件)
+
 - JSVM 钩子使用 pb 原生 API (`$app`、`Record`、`$http` 等)，不通过中间 `vanblog.*` 命名空间
 
 ---
@@ -596,15 +587,15 @@ func RegisterRoutes(app core.App) {
 | `feed`          | ✅ 完成 | RSS/Atom/Sitemap 生成 + 路由                  |
 | `site`          | ✅ 完成 | 站点配置读取                                  |
 | `devseed`       | ✅ 完成 | 开发环境种子数据                              |
+| `audit`         | ✅ 完成 | 通配 Request 审计钩子(2026-09-17 从 JSVM 迁入,覆盖 Pack 表) |
 
 ### JSVM 钩子 (已完成)
 
 | 文件                            | 状态    | 说明                             |
 | ------------------------------- | ------- | -------------------------------- |
 | `pb_hooks/lib/vanblog.d.ts`     | ✅ 完成 | pb + vanblog 类型声明 (IDE 补全) |
-| `pb_hooks/lib/vanblog-audit.js` | ✅ 完成 | 审计日志公共模块                 |
-| `pb_hooks/system.pb.js`         | ✅ 完成 | 审计日志钩子 + visits 聚合 cron  |
-| `pb_hooks/examples.pb.js`       | ✅ 完成 | 3-5 个学习示例                   |
+| `pb_hooks/system.pb.js`         | ✅ 完成 | visits 聚合 cron(审计已迁 `internal/audit`) |
+| `pb_hooks/examples.pb.js`       | ✅ 完成 | 6 个学习示例                     |
 
 ### TypeScript SDK (已完成)
 
