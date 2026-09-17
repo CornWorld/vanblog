@@ -263,7 +263,8 @@ async function clickabilitySweep(path, label) {
         } catch {
           if (!it.text) throw new Error('标记丢失且无文本可回退');
           await gotoClean(path);
-          await page.getByText(it.text, { exact: true }).first().click({ timeout: 4000 });
+          // it.text 已被 slice(0,20) 截断——必须子串匹配,exact 会必失败
+          await page.getByText(it.text, { exact: false }).first().click({ timeout: 4000 });
         }
       }
       await page.waitForTimeout(150);
@@ -281,35 +282,50 @@ async function clickabilitySweep(path, label) {
   // 但点不动」的缺陷只有视觉面能抓(真实案例:live2d 工具按钮 pointer-events
   // 继承 none,点击物理穿透到画布,CI 因 CDN 屏蔽永不挂载而漏检)。
   // 命中判据:元素中心 elementFromPoint 须落在自身或后代;落到别处即失败。
+  // 多轮滚动覆盖整页(单轮只看首屏,折叠线以下的伪按钮会漏检);跨轮去重。
   await assert(`B(${label}) 视觉可点击元素无穿透/遮挡`, async () => {
     await gotoClean(path);
-    const offenders = await page.evaluate(() => {
-      const vw = window.innerWidth, vh = window.innerHeight;
-      const bad = [];
-      for (const el of document.querySelectorAll('body *')) {
-        if (bad.length >= 20) break;
-        // 语义可交互元素由正向面逐个真点,这里只抓非语义伪按钮
-        if (el.matches('button, a[href], input, select, textarea, label, summary, [role]')) continue;
-        const cs = getComputedStyle(el);
-        if (cs.cursor !== 'pointer' || cs.display === 'none' || cs.visibility === 'hidden') continue;
-        const r = el.getBoundingClientRect();
-        if (r.width < 8 || r.height < 8) continue;
-        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-        if (cx < 0 || cy < 0 || cx >= vw || cy >= vh) continue; // 视口外交给滚动后的轮次
-        const top = document.elementFromPoint(cx, cy);
-        // 可达 = 命中自身/后代(事件落在自己子树),或命中祖先(SVG 内部图形
-        // 的 elementFromPoint 恒返回 <svg> 根,事件沿祖先链冒泡到真实处理器;
-        // Chrome 对 pointer-events:none 子树的 svg 根也如此)。命中无关子树
-        // 才是穿透/遮挡。
-        const reachable = top && (top === el || el.contains(top) || top.contains(el));
-        if (reachable) continue;
-        bad.push({
-          desc: `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}.${String(el.className?.baseVal ?? el.className).split(' ').slice(0, 2).join('.')}`.slice(0, 70),
-          hit: top ? `${top.tagName.toLowerCase()}${top.id ? '#' + top.id : ''}` : 'null(视口外)',
-        });
-      }
-      return bad;
-    });
+    const offenders = [];
+    const totalHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+    const viewport = page.viewportSize()?.height ?? 900;
+    const steps = Math.max(1, Math.ceil(totalHeight / viewport) + 1);
+    for (let round = 0; round < steps && offenders.length < 20; round++) {
+      const cap = 20 - offenders.length;
+      await page.evaluate((y) => window.scrollTo(0, y), round * viewport);
+      await page.waitForTimeout(120);
+      const found = await page.evaluate((cap) => {
+        const vw = window.innerWidth, vh = window.innerHeight;
+        const bad = [];
+        for (const el of document.querySelectorAll('body *')) {
+          if (bad.length >= cap) break;
+          // 语义可交互元素由正向面逐个真点,这里只抓非语义伪按钮;
+          // data-e2e-scanned 标记跨滚动轮去重。
+          if (el.matches('button, a[href], input, select, textarea, label, summary, [role]')) continue;
+          if (el.hasAttribute('data-e2e-scanned')) continue;
+          const cs = getComputedStyle(el);
+          if (cs.cursor !== 'pointer' || cs.display === 'none' || cs.visibility === 'hidden') continue;
+          const r = el.getBoundingClientRect();
+          if (r.width < 8 || r.height < 8) continue;
+          const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+          if (cx < 0 || cy < 0 || cx >= vw || cy >= vh) continue;
+          el.setAttribute('data-e2e-scanned', '1');
+          const top = document.elementFromPoint(cx, cy);
+          // 可达 = 命中自身/后代(事件落在自己子树),或命中祖先(SVG 内部图形
+          // 的 elementFromPoint 恒返回 <svg> 根,事件沿祖先链冒泡到真实处理器;
+          // Chrome 对 pointer-events:none 子树的 svg 根也如此)。命中无关子树
+          // 才是穿透/遮挡。
+          const reachable = top && (top === el || el.contains(top) || top.contains(el));
+          if (reachable) continue;
+          bad.push({
+            desc: `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}.${String(el.className?.baseVal ?? el.className).split(' ').slice(0, 2).join('.')}`.slice(0, 70),
+            hit: top ? `${top.tagName.toLowerCase()}${top.id ? '#' + top.id : ''}` : 'null(视口外)',
+          });
+        }
+        return bad;
+      }, cap);
+      offenders.push(...found);
+    }
+    await page.evaluate(() => window.scrollTo(0, 0));
     if (offenders.length) {
       const d = offenders[0];
       throw new Error(`${offenders.length} 个 cursor:pointer 元素命中失败,如 <${d.desc}> 实际命中 ${d.hit}`);
@@ -327,6 +343,36 @@ await assert('U1 锁定文错误密码 → toast「密码错误」', async () =>
   await page.fill('input[type=password]', 'wrong-password');
   await page.locator('button.grow-0, button:has-text("确认")').first().click({ timeout: 6000 });
   await page.waitForSelector('text=密码错误', { timeout: 6000 });
+});
+// U2 正确密码全链路:提交 → Go 校验签发 path 限定解锁 cookie(Astro 端点
+// 中继 Set-Cookie)→ 正文出现;reload 凭 cookie 免密重看。该链路是
+// 5282e481(base 前缀断裂)的事故面,只有正确密码能覆盖。
+await assert('U2 锁定文正确密码 → 正文渲染 + 刷新免密', async () => {
+  await gotoClean('/post/e2e-locked');
+  await page.evaluate(() => { window.__u2Marker = 'pre-submit'; });
+  const unlockResp = page.waitForResponse(r => r.url().includes('/api/unlock'), { timeout: 10000 });
+  await page.fill('#post-card input[type=password]', 'E2ELOCKPW1');
+  await page.locator('#post-card button').first().click({ timeout: 6000 });
+  let r, setCookie = '(未捕获)';
+  try {
+    r = await unlockResp;
+    setCookie = r.headers()['set-cookie'] || '(无)';
+    await page.waitForSelector('text=SECRET-E2E-LOCKED', { timeout: 8000 });
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForSelector('text=SECRET-E2E-LOCKED', { timeout: 8000 }); // cookie 免密
+    const pathMatch = setCookie.match(/Path=[^;]+/);
+    console.log(`    · U2 unlock POST ${r.status()}, ${(pathMatch || ['?'])[0]}`);
+  } catch (diagErr) {
+    const ck = await page.context().cookies();
+    const state = await page.evaluate(() => ({
+      marker: window.__u2Marker || 'none(reloaded)',
+      pageNowMs: Math.round(performance.now()),
+      hasSecret: document.body.innerText.includes('SECRET-E2E-LOCKED'),
+      hasInput: !!document.querySelector('input[type=password]'),
+    })).catch(e => ({ evalErr: String(e).slice(0, 80) }));
+    console.error(`[U2 诊断] unlock=${r?.status()} body=${(r?._body || '').slice(0, 60)} setCookie=${setCookie === '(无)' ? '无' : '有'} cookies=${JSON.stringify(ck.map(c => ({ n: c.name.slice(0, 24), p: c.path })))} 页面状态=${JSON.stringify(state)}`);
+    throw diagErr;
+  }
 });
 
 // ── 编辑器 UI ──
