@@ -29,7 +29,7 @@ vanblog 的扩展性不是 PB 白送的，而是由这些显式接线决定的�
 | Migrations（Go / JS） | Go 核心 `vault/pb_migrations/*.go`；Pack JS 经 `pack.StageMigrations` 命名空间化进 `jsvm.Config.MigrationsDir` | **核心扩展面**：Pack 自声明 schema（见 §2） |
 | Hooks | Go manager `New(app)` 自挂；JS `vault/pb_hooks/*.pb.js`；Pack `packs/*/hooks/*.pb.js` | 只能「追加」不能「替换」Go 行为（见 §2 事实 8） |
 | jsvm（JS API 边界） | hooks VM 与 migration VM 的绑定不同（见 §2 事实 3/6） | 决定 JS 扩展「能写什么、不能写什么」 |
-| cron | `vault/pb_hooks/system.pb.js` 的 `cronAdd` | 用户可在 `.pb.js` 注册定时任务（migration VM 无此能力） |
+| cron | Go `app.Cron()`（核心聚合在 `internal/visits`）；JS `cronAdd` 只是它的绑定 | 用户可在 `.pb.js` 注册自定义定时任务（migration VM 无此绑定） |
 | storage | `vault/internal/media/` 封 MD5/S3/缩略图 | 扩展者只声明 `FileField`，不接触 Go 存储 |
 | REST `/api/collections/*` | 前端 `app/` + `sdk/` 直接消费 | 每个新 collection 自动获得完整 REST API，无需手写端点 |
 | 自定义路由 `/api/vanblog/*` | Go manager 在 `OnServe` 里 `se.Router.*` 注册 | 核心业务端点 Go 显式暴露；JS `routerAdd` 只做非核心扩展 |
@@ -111,7 +111,7 @@ vanblog 的扩展性不是 PB 白送的，而是由这些显式接线决定的�
 
 1. **校验有三处可写**（PB 规则 / Pack `schema.ts` Zod / `onRecord*Request` JS）：结构不变式 → 规则或 Go（unique index、admin-only 写规则）；数据契约 → Zod；站点策略偏好 → JS 钩子。
 2. **横切行为分两层**（审计/通知/限流类）：核心横切 → Go 通配 Request 钩子（`internal/audit`，无 tag 注册对全部 collection 生效，含 Pack 运行时建表——JSVM 按表注册做不到）；用户附加 → JS 追加。事实 8 的 append-only 保证两者共存：jsvm 先注册 → JS 先跑 → Go manager 后注册、`e.Next()` 之后落审计行，观察的是最终状态。
-3. **cron 是 JSVM-only**（`cronAdd` 是 PB 暴露给 JS 的形状，Go 侧无等价注册面）——平台事实，不是设计选择。
+3. **cron 双面俱在**：`cronAdd` 只是 Go API `app.Cron().Add` 的 JS 绑定（jsvm `binds.go:106-124`）。本文档曾断言「cron 是 JSVM-only、Go 侧无注册面」——**该断言错误**，2026-09-17 读 binds.go 实锤推翻，visits 聚合随之迁 `internal/visits`（`app.Cron().MustAdd`），`system.pb.js` 删除。教训：**jsvm 绑定面 ≠ PB 能力边界**，判「某能力 JS-only」前必须先查 binds.go 对应的 Go API。
 
 **审计为什么曾在 JS**（迁移史，防再犯）：`338b6f42`（2026-06-24）按「热更新+用户可自定义」把审计归类进 JS，无论证——按 §5.1 自身判据（审计属系统级行为）本就应在 Go，是分类错误；`bd4aee11`（07-03）撞 Request 链控问题后错误回撤 After\*Success 并放弃 actor（症状压制，actor 空了两个半月）；9-16 断链饿死事故证伪「After\*Success 是免链控 observer」假设；`8d43f74c`（09-17）恢复 Request 语义；同日完成 Go 化。「用户可记自定义事件」不要求核心审计住 JS——用户直接写 `audits` collection 即可（`examples.pb.js` 示例 6）。Go 化同时消除了事实 9/10/12 对审计路径的适用面（异常吞没、logger 失明、staging watcher 均不再影响审计）。
 

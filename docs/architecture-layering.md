@@ -96,8 +96,7 @@ JSVM **不适合**的场景:
 │                                                          │
 │  ┌─────────────────────────────────────────────────────┐ │
 │  │  JSVM 钩子 (pb_hooks/*.pb.js)                       │ │
-│  │  - cron 聚合 (system.pb.js;审计已迁 Go internal/audit) │ │
-│  │  - 用户自定义钩子 (~20 行/个)                       │ │
+│  │  - 用户自定义钩子 (~20 行/个);核心(审计/cron)均已迁 Go │ │
 │  │  - 直接调用 pb 原生 API ($app, Record, cronAdd 等)  │ │
 │  │  - 不承担核心业务逻辑                                │ │
 │  └─────────────────────────────────────────────────────┘ │
@@ -163,7 +162,6 @@ vault/
     ...
   pb_hooks/                       # ★ JSVM 钩子 (用户侧)
     examples.pb.js                 # 官方示例 (给用户学习的)
-    system.pb.js                   # visits 聚合 cron (核心审计已迁 internal/audit)
     lib/
       vanblog.d.ts                 # pb + vanblog 类型声明 (TypeScript 姿态, IDE 补全)
 ```
@@ -212,22 +210,13 @@ JSVM 钩子直接使用 pb 原生全局 API
 | 文件                   | 说明                                                                     |
 | ---------------------- | ------------------------------------------------------------------------ |
 | `examples.pb.js`       | 学习示例钩子,**当前全部以注释形式保留**(不执行),供用户参考复制到自己文件 |
-| `system.pb.js`         | visits 聚合 cron(核心审计已于 2026-09-17 迁 `internal/audit`)            |
 | `lib/vanblog.d.ts`     | pb + vanblog 类型声明 (TypeScript 姿态, IDE 补全)                        |
-JSVM 钩子示例 (`pb_hooks/system.pb.js` 的真实片段):
 
-```javascript
-// 每日 visits 聚合(0 0 * * * = 每天 00:00)
-cronAdd("visits-daily-aggregate", "0 0 * * *", () => {
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-  const records = $app.findRecordsByFilter(
-    "visits",
-    "date = {:date} && path != ''",
-    { date: yesterday }
-  );
-  // 累加 views/uniques,写入 path="" 的聚合行
-});
-```
+> **cron 也在 Go 层**(2026-09-17 迁移):`cronAdd` 只是 PB Go API `app.Cron()` 的
+> JS 绑定(jsvm `binds.go`),并非 JSVM 独有能力。核心聚合由 `internal/visits` 直挂
+> `app.Cron().MustAdd("visits-daily-aggregate", "0 0 * * *", ...)`,原
+> `system.pb.js` 已删除。JS 侧 `cronAdd` 留给用户自定义定时作业(`examples.pb.js`
+> 示例 5)。
 
 > **审计在 Go 层**(2026-09-17 迁移):`internal/audit` 用**通配** `onRecord*Request`
 > 覆盖全部 collection(含 Pack 运行时建表),action 字符串与 row 形状与旧 JS 版
@@ -388,7 +377,6 @@ func New(app core.App) *Service {
 我们提供的 `pb_hooks/` 里:
 
 - `examples.pb.js` — 官方示例 (给用户学习的,6 个钩子,**当前全部注释掉,需复制到自己文件去掉注释才能生效**)
-- `system.pb.js` — visits 聚合 cron(核心审计已于 2026-09-17 迁 Go `internal/audit`)
 - `lib/vanblog.d.ts` — pb + vanblog 类型声明 (TypeScript 姿态, IDE 补全)
 
 **不提供的**(核心业务在 Go 里):
@@ -427,7 +415,7 @@ onRecordBeforeCreateRequest((e) => {
 
 // 示例 3: 记录自定义审计事件 (核心审计在 Go 层,用户只记自己的事件)
 onRecordCreateRequest((e) => {
-  e.next(); // 必须第一行——见 system.pb.js 头部约束
+  e.next(); // 必须第一行——见 pocketbase-extension-contract.md 事实 11
   const col = $app.findCollectionByNameOrId("audits");
   const row = new Record(col);
   row.set("action", "newsletter.subscribe");
@@ -495,10 +483,10 @@ interface VanblogSite {
 | revisions 快照   | `revisions` 自动快照                       | 不暴露                                | ❌                    |
 | revisions 恢复   | `revisions` 恢复                           | 不暴露                                | ❌                    |
 | visits 计数      | `visits` 原子计数                          | 不暴露                                | ❌                    |
-| visits 聚合      | `visits` 每日聚合                          | `cronAdd` (system.pb.js)              | ✅ 调度在 JSVM        |
+| visits 聚合      | `internal/visits` 挂 `app.Cron()` 每日聚合 | 不暴露                                | ❌                    |
 | RSS/Atom/Sitemap | `feed` 生成 + 路由注册                     | 不暴露                                | ❌                    |
 | 审计日志         | `internal/audit` 通配 Request 钩子(含 Pack 表)+ auth.login | 用户自定义事件直写 audits(examples 示例 6) | ✅                     |
-| 自定义定时任务   | —                                          | `cronAdd("id", "...", () => { ... })` | ✅                    |
+| 自定义定时任务   | —                                          | `cronAdd("id", "...", () => { ... })`(`app.Cron()` 的 JS 绑定) | ✅                    |
 | 自定义 API 端点  | —                                          | `routerAdd("GET", "/my-api", ...)`    | ✅                    |
 
 > **注**:绝大多数 CRUD 端点不需要手写——PocketBase 原生 `/api/collections/{name}/records` 自动提供 list/get/create/update/delete(含分页/过滤/排序/关联展开),权限由 collection 的 `listRule`/`createRule`/`updateRule`/`deleteRule` 控制。`routerAdd` 仅用于 webhook 转发、跨表聚合、外部 API 集成等特殊业务。Pack 页面路由由 Astro adapter 静态注入 `/p/<pack>`,无需手写。
@@ -583,7 +571,7 @@ func RegisterRoutes(app core.App) {
 | `migration`     | ✅ 完成 | JSON 导入 + 分批事务 + 路由注册               |
 | `caddy`         | ✅ 完成 | admin API 客户端 + SSRF 校验 + TLS 状态       |
 | `revisions`     | ✅ 完成 | 快照 + diff + 恢复                            |
-| `visits`        | ✅ 完成 | 原子计数 + 每日聚合                           |
+| `visits`        | ✅ 完成 | 原子计数 + 每日聚合(`app.Cron()` 夜间任务)    |
 | `feed`          | ✅ 完成 | RSS/Atom/Sitemap 生成 + 路由                  |
 | `site`          | ✅ 完成 | 站点配置读取                                  |
 | `devseed`       | ✅ 完成 | 开发环境种子数据                              |
@@ -594,7 +582,6 @@ func RegisterRoutes(app core.App) {
 | 文件                            | 状态    | 说明                             |
 | ------------------------------- | ------- | -------------------------------- |
 | `pb_hooks/lib/vanblog.d.ts`     | ✅ 完成 | pb + vanblog 类型声明 (IDE 补全) |
-| `pb_hooks/system.pb.js`         | ✅ 完成 | visits 聚合 cron(审计已迁 `internal/audit`) |
 | `pb_hooks/examples.pb.js`       | ✅ 完成 | 6 个学习示例                     |
 
 ### TypeScript SDK (已完成)
