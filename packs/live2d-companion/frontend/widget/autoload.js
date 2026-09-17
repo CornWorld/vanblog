@@ -8,7 +8,9 @@
 // Vendored (live2d-widgets@1.0.1, GPL-3.0): derive the asset base from this
 // script's own URL so sibling files (waifu.css / waifu-tips.js / live2d.min.js
 // / chunk/*) load from the pack's local frontend directory, not a CDN.
-const live2d_path = new URL('.', document.currentScript.src).href;
+// `var` 而非 `const`:经典脚本顶层声明进全局词法环境,若有第二份副本被加载
+// (重试/其他嵌入方),const 会在解析期抛 SyntaxError,var 只是静默覆盖。
+var live2d_path = new URL('.', document.currentScript.src).href;
 // const live2d_path = '/dist/';
 
 // Method to encapsulate asynchronous resource loading

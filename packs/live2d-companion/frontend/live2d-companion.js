@@ -190,16 +190,20 @@ function waitForWaifuMount(timeoutMs) {
 }
 
 async function loadWidgetScript() {
-  // 候选链:本地 vendored 副本 → CDN 兜底。脚本加载失败或 #waifu 迟迟不
-  // 挂载(脚本加载成功但其兄弟资源缺失)都视为该源不可用,尝试下一个。
+  // 候选链:本地 vendored 副本 → CDN 兜底。
+  // ⚠️ 只在「脚本本身加载失败」(404/超时)时才换下一个候选;脚本一旦成功
+  // 执行,绝不再加载第二份——经典脚本顶层 const 是全局词法声明,第二份在
+  // 解析期即 SyntaxError「already been declared」(生产实锤:本地源执行后
+  // 挂载慢于 8s,CDN 副本跟进解析即炸)。挂载慢就等它自己出现。
   const candidates = [CONFIG.widgetPath, CONFIG.widgetCdnPath].filter(Boolean);
   for (const base of candidates) {
     try {
       await loadScriptOnce(base + "autoload.js", 10000);
       // autoload.js 异步注入 #waifu;短暂轮询确认挂载,便于
-      // moveWidgetIntoNamespace() 把它迁入命名空间根。
-      if (await waitForWaifuMount(8000)) return;
-      console.warn("[live2d-companion] widget did not mount from:", base);
+      // moveWidgetIntoNamespace() 把它迁入命名空间根。超时未挂载也不再
+      // 换源(见上),widget 可能随后自己出现。
+      await waitForWaifuMount(8000);
+      return;
     } catch (err) {
       console.warn("[live2d-companion] widget source unavailable:", err.message);
     }
@@ -296,8 +300,18 @@ window.live2dCompanion = {
 };
 
 // ─── Boot ─────────────────────────────────────────────────────
+// 装饰性组件走闲置通道:不占首屏关键路径,也避开与 React island 水合的
+// 时序纠缠。requestIdleCallback 带 timeout 上限,空闲不出现时最迟 2s 执行。
+function startWhenIdle(fn) {
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(fn, { timeout: 2000 });
+  } else {
+    setTimeout(fn, 1);
+  }
+}
+
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init);
+  document.addEventListener("DOMContentLoaded", () => startWhenIdle(init));
 } else {
-  init();
+  startWhenIdle(init);
 }
