@@ -11,14 +11,18 @@
  */
 
 // ─── Default Configuration ────────────────────────────────────
-// widgetPath 解析顺序:SSR serverConfig 覆盖 > 本地 vendored 副本(从本脚本
-// URL 推导,随镜像分发,无外网依赖)> widgetCdnPath(CDN 兜底)。模型资产
-// (cdnPath/live2d_api)体积大且授权复杂,保持 CDN + 失败静默降级。
+// 加载源(source,配置面板可选,附优缺点):
+//   auto(默认)= 本地 vendored 优先,widgetPath(CDN)兜底
+//   local       = 仅本地 vendored 副本——零第三方依赖,版本随镜像
+//   cdn         = 仅 CDN——始终上游构建,依赖第三方可用性
+// widgetPath 语义 = 「CDN 源地址」(cdn 模式使用;auto 模式作兜底)。
+// 模型资产(cdnPath/live2d_api)体积大且授权复杂,保持 CDN + 失败静默降级。
 const WIDGET_CDN_PATH =
   "https://fastly.jsdelivr.net/npm/live2d-widgets@1.0.1/dist/";
+const SOURCE_VALUES = ["auto", "local", "cdn"];
 const DEFAULT_CONFIG = {
-  widgetPath: "",
-  widgetCdnPath: WIDGET_CDN_PATH,
+  source: "auto",
+  widgetPath: WIDGET_CDN_PATH,
   cdnPath: "https://fastly.jsdelivr.net/gh/fghrsh/live2d_api/",
   modelId: 0,
   modelTexturesId: 53,
@@ -62,9 +66,10 @@ function deriveLocalWidgetPath() {
   return "";
 }
 
+// widgetPath(CDN 地址)是配置项;本地 vendored 路径不进配置——由
+// widgetCandidates() 按运行时 import.meta.url 推导(见下)。
 const CONFIG = {
   ...DEFAULT_CONFIG,
-  widgetPath: deriveLocalWidgetPath(),
   ...(loadSsrConfig() || {}),
 };
 
@@ -148,6 +153,13 @@ function init() {
     });
 }
 
+function moveWidgetIntoNamespace() {
+  const waifu = document.getElementById("waifu");
+  if (waifu && widgetRoot && !widgetRoot.contains(waifu)) {
+    widgetRoot.append(waifu);
+  }
+}
+
 function loadScriptOnce(src, timeoutMs) {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
@@ -190,12 +202,42 @@ function waitForWaifuMount(timeoutMs) {
 }
 
 async function loadWidgetScript() {
-  // 候选链:本地 vendored 副本 → CDN 兜底。
+  // 全站配置获取:面板配置存在 live2d_config(admin 写),读规则公开——
+  // 匿名访客页面在此拉取,使 source 对全站生效(此前仅 pack 页面经 SSR
+  // 注入生效)。拉取失败/无记录 → DEFAULT_CONFIG 兜底。
+  try {
+    const res = await fetch(
+      "/api/collections/live2d_config/records?perPage=1",
+    );
+    if (res.ok) {
+      const record = (await res.json()).items?.[0];
+      if (record) {
+        for (const key of [
+          "source",
+          "widgetPath",
+          "cdnPath",
+          "modelId",
+          "modelTexturesId",
+          "tools",
+          "minWidth",
+        ]) {
+          if (record[key] !== undefined && record[key] !== null) {
+            CONFIG[key] = record[key];
+          }
+        }
+      }
+    }
+  } catch {
+    // 网络失败 → 默认配置
+  }
+  // 候选链按配置面板的 source 决定(CONFIG.source):
+  //   auto(默认)= [本地 vendored, widgetPath(CDN)]  本地优先,CDN 兜底
+  //   local       = [本地 vendored]                   零第三方依赖
+  //   cdn         = [widgetPath(CDN)]                 始终上游构建
   // ⚠️ 只在「脚本本身加载失败」(404/超时)时才换下一个候选;脚本一旦成功
-  // 执行,绝不再加载第二份——经典脚本顶层 const 是全局词法声明,第二份在
-  // 解析期即 SyntaxError「already been declared」(生产实锤:本地源执行后
-  // 挂载慢于 8s,CDN 副本跟进解析即炸)。挂载慢就等它自己出现。
-  const candidates = [CONFIG.widgetPath, CONFIG.widgetCdnPath].filter(Boolean);
+  // 执行,绝不再加载第二份——经典脚本顶层声明是全局词法环境,第二份在解析
+  // 期即 SyntaxError(生产实锤)。挂载慢就等它自己出现。
+  const candidates = widgetCandidates();
   for (const base of candidates) {
     try {
       await loadScriptOnce(base + "autoload.js", 10000);
@@ -209,6 +251,18 @@ async function loadWidgetScript() {
     }
   }
   throw new Error("all widget sources unavailable");
+}
+
+function widgetCandidates() {
+  const local = deriveLocalWidgetPath();
+  switch (SOURCE_VALUES.includes(CONFIG.source) ? CONFIG.source : "auto") {
+    case "local":
+      return local ? [local] : [];
+    case "cdn":
+      return [CONFIG.widgetPath].filter(Boolean);
+    default:
+      return [local, CONFIG.widgetPath].filter(Boolean);
+  }
 }
 
 
@@ -285,6 +339,7 @@ window.live2dCompanion = {
   },
   async saveConfig(newConfig) {
     const merged = { ...DEFAULT_CONFIG, ...CONFIG, ...newConfig };
+    if (!SOURCE_VALUES.includes(merged.source)) merged.source = "auto";
     await upsertConfig(merged);
     Object.assign(CONFIG, merged);
     return merged;
