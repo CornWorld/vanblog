@@ -11,7 +11,10 @@
 //   E2E_SKIP_JOURNEY=1 — 跳过内置 journey 调用(已单独跑过时)。
 // 已知噪音豁免:
 //   live2d 看板娘(CDN 第三方包 live2d-widgets)对合成点击的指针处理
-//   不设防(followPointer 读 null 抛 TypeError),相关 pageerror 记豁免。
+//   不设防(followPointer 读 null 抛 TypeError),相关 pageerror 记豁免;
+//   widget 已 vendor 本地化(frontend.static),但模型资产(live2d_api)
+//   仍走 CDN,hermetic 屏蔽下 loadLive2D 抛 null.Version——console 路径
+//   同样豁免(widget 降级为无模型,工具/提示不受影响)。
 // ═══════════════════════════════════════════════════════════════
 import { chromium } from 'playwright';
 import { readFileSync, existsSync } from 'node:fs';
@@ -73,6 +76,9 @@ page.on('console', (m) => {
   if (m.type() !== 'error') return;
   // 资源加载失败(CDN 抖动等)与点击行为无关,不计入页面异常
   if (/net::|Failed to load resource/.test(m.text())) return;
+  // 模型资产(live2d_api)按设计走 CDN,hermetic 旅程屏蔽后 widget 内部
+  // loadLive2D 必然抛 null.Version——工具/提示不受影响,属已知降级噪音
+  if (/loadLive2D failed/.test(m.text())) return;
   pageerrorFilter(m.text());
 });
 const errorsBefore = () => pageErrors.length;
