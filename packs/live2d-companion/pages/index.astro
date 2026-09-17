@@ -46,33 +46,67 @@ const ssrData = { isAdmin, serverConfig };
 
       <form id="l2d-config-form" class="flex flex-col gap-4 max-w-2xl">
         <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-start border border-[var(--border)] p-4">
-          <legend>Widget 加载源</legend>
+          <legend>看板娘文件加载源</legend>
           <label for="cfg-source">加载源</label>
-          <div class="flex flex-col gap-2 text-sm">
-            <label class="flex items-start gap-2">
+          <div class="flex flex-col gap-3 text-sm">
+            <label class="flex items-start gap-2 cursor-pointer">
               <input type="radio" name="source" id="cfg-source" value="auto" class="mt-1" />
-              <span><strong>本地优先，CDN 兜底</strong>（推荐）
-                <span class="block text-xs text-gray-500">优点：常规从站点自身加载（同源快、零第三方依赖），本地不可用时自动落到 CDN。缺点：几乎无——仅当本地与 CDN 版本不同步时行为以本地为准。</span>
-              </span>
+              <div>
+                <strong>本地优先，CDN 兜底（推荐）</strong>
+                <div class="text-xs text-gray-500 mt-1">
+                  优点：
+                  <ul class="list-disc list-inside mt-0.5 space-y-0.5">
+                    <li>本地文件与站点同源，加载速度快。</li>
+                    <li>组件不请求第三方服务，不受 CDN 故障影响。</li>
+                    <li>本地加载失败时，组件自动改用 CDN 加载。</li>
+                  </ul>
+                  缺点：
+                  <ul class="list-disc list-inside mt-0.5 space-y-0.5">
+                    <li>组件版本跟随 VanBlog 发布，无法单独更新。</li>
+                  </ul>
+                </div>
+              </div>
             </label>
-            <label class="flex items-start gap-2">
+            <label class="flex items-start gap-2 cursor-pointer">
               <input type="radio" name="source" value="local" class="mt-1" />
-              <span><strong>仅本地</strong>
-                <span class="block text-xs text-gray-500">优点：完全自包含，零第三方请求，网络受限/防火墙环境最稳定，版本随镜像升级可控。缺点：widget 版本跟随镜像，想用上游新构建需升级镜像。</span>
-              </span>
+              <div>
+                <strong>仅本地</strong>
+                <div class="text-xs text-gray-500 mt-1">
+                  优点：
+                  <ul class="list-disc list-inside mt-0.5 space-y-0.5">
+                    <li>组件不请求任何第三方服务。</li>
+                    <li>文件由站点自身分发，可用性与站点本身一致。</li>
+                  </ul>
+                  缺点：
+                  <ul class="list-disc list-inside mt-0.5 space-y-0.5">
+                    <li>组件版本跟随 VanBlog 发布，无法单独更新。</li>
+                  </ul>
+                </div>
+              </div>
             </label>
-            <label class="flex items-start gap-2">
+            <label class="flex items-start gap-2 cursor-pointer">
               <input type="radio" name="source" value="cdn" class="mt-1" />
-              <span><strong>仅 CDN</strong>
-                <span class="block text-xs text-gray-500">优点：始终使用上游 live2d-widgets 的构建版本，不占站点流量。缺点：依赖第三方 CDN 可用性（可能被墙/抖动），加载失败时访客只会看到降级卡。</span>
-              </span>
+              <div>
+                <strong>仅 CDN</strong>
+                <div class="text-xs text-gray-500 mt-1">
+                  优点：
+                  <ul class="list-disc list-inside mt-0.5 space-y-0.5">
+                    <li>文件由第三方 CDN 分发，不消耗站点服务器带宽。</li>
+                  </ul>
+                  缺点：
+                  <ul class="list-disc list-inside mt-0.5 space-y-0.5">
+                    <li>加载依赖第三方 CDN 的可用性。</li>
+                    <li>CDN 不可用时，页面显示加载失败提示。</li>
+                  </ul>
+                </div>
+              </div>
             </label>
           </div>
-          <label for="cfg-widgetPath">Widget CDN 地址</label>
+          <label for="cfg-widgetPath">CDN 地址</label>
           <input name="widgetPath" id="cfg-widgetPath" class="px-1.5 py-0.5 text-sm" placeholder="https://fastly.jsdelivr.net/npm/live2d-widgets@1.0.1/dist/" />
           <span></span>
-          <span class="text-xs text-gray-500">仅「仅 CDN」模式与「本地优先」的兜底时使用；留空还原默认 CDN。</span>
-          <label for="cfg-cdnPath">模型 API</label>
+          <span class="text-xs text-gray-500">自定义第三方 CDN 地址，留空时使用默认地址。该地址仅在加载源包含 CDN 时生效。</span>
+          <label for="cfg-cdnPath">模型文件地址</label>
           <input name="cdnPath" id="cfg-cdnPath" class="px-1.5 py-0.5 text-sm" placeholder="https://fastly.jsdelivr.net/gh/fghrsh/live2d_api/" />
         </fieldset>
 
