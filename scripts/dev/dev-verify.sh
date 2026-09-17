@@ -38,7 +38,10 @@ HOST_PORT="${HOST_PORT:-8080}"
 # name keeps the prod-compose volume names (empty suffix).
 VOLUME_SUFFIX=""
 if [ "$CONTAINER_NAME" != "vanblog-dev" ]; then VOLUME_SUFFIX="-${CONTAINER_NAME}"; fi
-export E2E_INSTANCE="${CONTAINER_NAME}"
+# 仅改名槽位导出 E2E_INSTANCE:journey/browser 用它给 /tmp 凭据与断言产物
+# 加后缀。默认槽不导出(产物不带后缀),与下方 --clean 的 VOLUME_SUFFIX=""
+# 清理路径保持同一套命名——否则默认槽的 --clean 永远扫不到自己的残留。
+if [ "$CONTAINER_NAME" != "vanblog-dev" ]; then export E2E_INSTANCE="${CONTAINER_NAME}"; fi
 
 # Same-slot operations (a verify run and a --clean, or two verifies) are
 # mutually exclusive: both stomp the same container/volumes. mkdir is atomic
@@ -51,10 +54,13 @@ if ! mkdir "$LOCK_DIR" 2>/dev/null; then
     rm -rf "$LOCK_DIR"
     mkdir "$LOCK_DIR"
   else
-    echo "同槽操作互斥:$LOCK_DIR 已被 pid=$OLD_PID 持有(容器=$CONTAINER_NAME)。并发请换名: CONTAINER_NAME=<name> $0"
+    echo "同槽操作互斥:$LOCK_DIR 已被 pid=$OLD_PID 持有(容器=$CONTAINER_NAME)。并发请换名并错开端口: CONTAINER_NAME=<name> HOST_PORT=<port> $0"
     exit 1
   fi
 fi
+# 记录持锁者 pid:崩溃(SIGKILL/断电)绕过 EXIT trap 时,下一次运行的
+# stale-pid 接管逻辑据此判断锁已死并自动收编。
+echo $$ > "$LOCK_DIR/pid"
 SUPERUSER_EMAIL="${SUPERUSER_EMAIL:-admin@test.com}"
 SUPERUSER_PASSWORD="${SUPERUSER_PASSWORD:-password123}"
 

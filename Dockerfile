@@ -32,11 +32,10 @@ COPY themes/base/package.json ./themes/base/package.json
 COPY themes/vanblog/package.json ./themes/vanblog/package.json
 RUN \
     --mount=type=cache,target=/pnpm/store \
-    pnpm config set store-dir /pnpm/store && \
     if [ -n "$NPM_MIRROR" ]; then \
       pnpm config set registry "$NPM_MIRROR"; \
     fi && \
-    pnpm install --frozen-lockfile
+    pnpm install --frozen-lockfile --config.store-dir=/pnpm/store
 
 # --- Stage 2: Build the generated core schema runtime artifact ---
 FROM workspace-deps AS models-build
@@ -241,8 +240,7 @@ COPY themes/base/package.json /workspace/themes/base/package.json
 COPY themes/vanblog/package.json /workspace/themes/vanblog/package.json
 RUN \
     --mount=type=cache,target=/pnpm/store \
-    pnpm config set store-dir /pnpm/store && \
-    pnpm install --frozen-lockfile
+    pnpm install --frozen-lockfile --config.store-dir=/pnpm/store
 
 COPY sdk/ /workspace/sdk/
 COPY app/ /workspace/app/
@@ -285,8 +283,7 @@ COPY themes/vanblog/package.json /workspace/themes/vanblog/package.json
 WORKDIR /workspace
 RUN \
     --mount=type=cache,target=/pnpm/store \
-    pnpm config set store-dir /pnpm/store && \
-    pnpm install --frozen-lockfile
+    pnpm install --frozen-lockfile --config.store-dir=/pnpm/store
 COPY sdk/ /workspace/sdk/
 COPY app/ /workspace/app/
 COPY packs/ /workspace/packs/
