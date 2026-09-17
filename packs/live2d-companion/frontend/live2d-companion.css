@@ -28,8 +28,12 @@
   pointer-events: none;
 }
 
-[data-vanblog-pack="live2d-companion"] #live2d {
+[data-vanblog-pack="live2d-companion"] #live2d,
+[data-vanblog-pack="live2d-companion"] #waifu-tool {
   pointer-events: auto;
+}
+
+[data-vanblog-pack="live2d-companion"] #live2d {
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
 }
 
