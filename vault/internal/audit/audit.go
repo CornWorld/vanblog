@@ -217,6 +217,13 @@ func (m *Manager) onAuth(e *core.RecordAuthRequestEvent) error {
 	if err := e.Next(); err != nil {
 		return err
 	}
+	// auth-refresh 与 superuser impersonate 复用本钩子且 AuthMethod 为空
+	// (PB apis/record_auth_refresh.go:33 传 "")——它们不是登录。SDK 中间件
+	// 对每个带认证 cookie 的请求 authRefresh,不豁免则每个已认证请求都会
+	// 写一条 auth.login,真实登录被噪音淹没。
+	if e.AuthMethod == "" {
+		return nil
+	}
 	rec := e.Record
 	if rec == nil || rec.Collection().Name != "users" {
 		return nil

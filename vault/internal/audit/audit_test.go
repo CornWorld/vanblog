@@ -302,6 +302,9 @@ func TestAuthLoginAudited(t *testing.T) {
 
 	ev := &core.RecordAuthRequestEvent{
 		Record: admin,
+		// 真实登录路径(password/oauth2/otp)由 PB 填 AuthMethod;refresh 与
+		// impersonate 传 ""(见 TestAuthRefreshNotAudited)。
+		AuthMethod: "password",
 		RequestEvent: &core.RequestEvent{
 			App:      app,
 			Auth:     admin,
@@ -328,5 +331,33 @@ func TestAuthLoginAudited(t *testing.T) {
 	// Go 同一 Set 路径,两种空形态都算 parity。
 	if d := rows[0].GetString("detail"); d != "" && d != `""` {
 		t.Fatalf("auth.login detail = %q, want empty (JS parity)", d)
+	}
+}
+
+// TestAuthRefreshNotAudited 钉住:auth-refresh / impersonate 复用
+// OnRecordAuthRequest 且 AuthMethod 为空,不得写 auth.login。SDK 中间件
+// 对每个带认证 cookie 的请求 authRefresh——不豁免则 audits 被每个已认证
+// 请求的噪音行淹没(2026-09-17 3 天改动审查发现)。
+func TestAuthRefreshNotAudited(t *testing.T) {
+	app, admin := newTestApp(t)
+
+	ev := &core.RecordAuthRequestEvent{
+		Record:     admin,
+		AuthMethod: "", // record_auth_refresh.go:33 传 ""
+		RequestEvent: &core.RequestEvent{
+			App:      app,
+			Auth:     admin,
+			Request:  httptest.NewRequest("POST", "/api/collections/users/auth-refresh", nil),
+			Response: httptest.NewRecorder(),
+		},
+	}
+	noop := func(e *core.RecordAuthRequestEvent) error { return nil }
+	if err := app.OnRecordAuthRequest().Trigger(ev, noop); err != nil {
+		t.Fatalf("trigger auth hook: %v", err)
+	}
+
+	rows := auditRows(t, app, "auth.login")
+	if len(rows) != 0 {
+		t.Fatalf("auth.login rows = %d, want 0 (refresh is not a login)", len(rows))
 	}
 }

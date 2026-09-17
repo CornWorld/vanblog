@@ -101,7 +101,7 @@ func (m *Manager) dedupeOnUpload(e *core.RecordEvent) error {
 	existing, err := m.CheckDuplicate(content)
 	if err != nil {
 		slog.Warn("[media] dedup: query failed", "err", err)
-		return nil
+		return e.Next()
 	}
 	if existing == nil || existing.Id == record.Id {
 		return e.Next()
