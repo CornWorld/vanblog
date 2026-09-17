@@ -23,7 +23,14 @@ const encodeQuerystring = (s: string) => {
 const getTarget = (newTab: boolean) => (newTab ? "_blank" : "_self");
 
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import { useMemo } from "react";
+
+// SEAM(2026-09-17): 上游用 dayjs 本地时区格式化日期——SSR(容器 UTC)与
+// 客户端(访客本地)跨时区即文本不一致 → React 水合 #418/#423(生产实锤)。
+// 统一固定偏移 +8(受众时区,亦即上游部署容器的「偶然正确」值),双侧
+// 确定性渲染。vendor 补丁,上游 fix 时对本文件 apply patch。
+dayjs.extend(utc);
 
 export function Title(props: {
   type: "article" | "about" | "overview";
@@ -123,8 +130,8 @@ export function SubTitle(props: {
           </svg>
         </span>
         {props.type != "about"
-          ? `${dayjs(props.createdAt).format("YYYY-MM-DD")}`
-          : ` ${dayjs(props.updatedAt).format("YYYY-MM-DD")}`}
+          ? `${dayjs(props.createdAt).utcOffset(480).format("YYYY-MM-DD")}`
+          : ` ${dayjs(props.updatedAt).utcOffset(480).format("YYYY-MM-DD")}`}
       </span>
 
       {props.type != "about" && (
