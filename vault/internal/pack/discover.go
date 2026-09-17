@@ -41,6 +41,10 @@ type frontendMetadata struct {
 	Scope   string   `json:"scope"`
 	Styles  []string `json:"styles"`
 	Scripts []string `json:"scripts"`
+	// Static lists frontend/ subdirectories copied verbatim (unhashed) into
+	// the theme build output for widgets that load sibling files by relative
+	// path. Mirrors app/integrations/packs/resolver.mjs — keep in sync.
+	Static []string `json:"static,omitempty"`
 }
 
 // LoadLocal validates one local Pack directory.

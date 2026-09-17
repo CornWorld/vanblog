@@ -1,3 +1,5 @@
+import { cpSync, existsSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { discoverPacks, loadPackMetadata, mergeLocalPacks, resolvePublicPages } from './resolver.mjs';
 
@@ -99,6 +101,7 @@ export default function packsIntegration(options = {}) {
         } catch (err) {
           throw new Error(`Failed to resolve packs: ${err.message}`);
         }
+        const metadata = loadPackMetadata(packs);
         server.watcher.add([
           themePage,
           ...packs.flatMap((pack) => [
@@ -106,7 +109,65 @@ export default function packsIntegration(options = {}) {
             ...pack.pages.map((page) => page.entrypoint),
           ]),
         ]);
+        // Dev 静态服务:_astro/<dir>/* → frontend/<dir>/*(生产由
+        // astro:build:done 原样拷贝,见下)。第三方 widget 按相对路径加载
+        // 兄弟文件,哈希化的 _astro 资产管线无法满足,只能原样服务。
+        const staticDirs = collectStaticDirs(metadata, packs);
+        if (staticDirs.length > 0) {
+          server.middlewares.use((req, res, next) => {
+            const url = (req.url || '').split('?')[0];
+            const match = /^\/_astro\/([\w-]+)\/(.+)$/.exec(decodeURIComponent(url));
+            if (!match) return next();
+            const entry = staticDirs.find((item) => item.dir === match[1]);
+            if (!entry) return next();
+            const file = join(entry.root, match[2]);
+            if (!file.startsWith(entry.root) || !existsSync(file) || !statSync(file).isFile()) return next();
+            res.setHeader('Content-Type', CONTENT_TYPES[file.split('.').pop()] || 'application/octet-stream');
+            res.end(readFileSync(file));
+          });
+        }
+      },
+      'astro:build:done': ({ dir, logger }) => {
+        let packs, metadata;
+        try {
+          packs = resolvePacks();
+          metadata = loadPackMetadata(packs);
+        } catch (err) {
+          logger.warn(`pack static copy skipped: ${err.message}`);
+          return;
+        }
+        const staticDirs = collectStaticDirs(metadata, packs);
+        if (staticDirs.length === 0) return;
+        // dir = 客户端输出目录(URL)。只拷客户端输出:server 输出里的静态
+        // 文件永远不会被服务。
+        const clientRoot = fileURLToPath(dir);
+        if (!existsSync(join(clientRoot, '_astro'))) return;
+        for (const entry of staticDirs) {
+          const target = join(clientRoot, '_astro', entry.dir);
+          cpSync(entry.root, target, { recursive: true });
+          logger.info(`pack static: ${entry.pack}/${entry.dir} → ${target}`);
+        }
       },
     },
   };
 }
+
+// 收集各 pack 的 frontend.static 目录:[{ pack, dir, root }]
+function collectStaticDirs(metadata, packs) {
+  const directoryByName = new Map(packs.map((pack) => [pack.name, pack.directory]));
+  return metadata.flatMap((item) => {
+    const statics = item.frontend?.static;
+    if (!Array.isArray(statics) || statics.length === 0) return [];
+    const directory = directoryByName.get(item.name);
+    if (!directory) return [];
+    return statics.map((dir) => ({ pack: item.name, dir, root: join(directory, 'frontend', dir) }));
+  });
+}
+
+const CONTENT_TYPES = {
+  js: 'text/javascript',
+  css: 'text/css',
+  json: 'application/json',
+  png: 'image/png',
+  svg: 'image/svg+xml',
+};

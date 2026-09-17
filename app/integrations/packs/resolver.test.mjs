@@ -248,6 +248,67 @@ test('rejects frontend styles that is not an array', () => {
   assert.throws(() => loadPackMetadata(discoverPacks(root)), /frontend styles must be an array/);
 });
 
+test('loads valid frontend static dir into metadata', () => {
+  const root = fixtureRoot();
+  const dir = writeFrontendPack(root, 'alpha', {
+    scope: 'public',
+    styles: ['style.css'],
+    scripts: ['script.js'],
+    static: ['widget'],
+  });
+  mkdirSync(join(dir, 'frontend', 'widget'), { recursive: true });
+  writeFileSync(join(dir, 'frontend', 'widget', 'autoload.js'), '// widget');
+  const [metadata] = loadPackMetadata(discoverPacks(root));
+  assert.deepEqual(metadata.frontend.static, ['widget']);
+});
+
+test('accepts a static-only frontend contribution', () => {
+  const root = fixtureRoot();
+  const dir = writeFrontendPack(root, 'alpha', {
+    scope: 'public',
+    styles: [],
+    scripts: [],
+    static: ['widget'],
+  });
+  mkdirSync(join(dir, 'frontend', 'widget'), { recursive: true });
+  writeFileSync(join(dir, 'frontend', 'widget', 'autoload.js'), '// widget');
+  const [metadata] = loadPackMetadata(discoverPacks(root));
+  assert.deepEqual(metadata.frontend.static, ['widget']);
+});
+
+test('rejects frontend static dir that does not exist', () => {
+  const root = fixtureRoot();
+  writeFrontendPack(root, 'alpha', {
+    scope: 'public',
+    styles: ['style.css'],
+    scripts: [],
+    static: ['missing'],
+  });
+  assert.throws(() => loadPackMetadata(discoverPacks(root)), /static dir must exist/);
+});
+
+test('rejects frontend static path traversal', () => {
+  const root = fixtureRoot();
+  writeFrontendPack(root, 'alpha', {
+    scope: 'public',
+    styles: ['style.css'],
+    scripts: [],
+    static: ['../other'],
+  });
+  assert.throws(() => loadPackMetadata(discoverPacks(root)), /must stay under frontend/);
+});
+
+test('rejects frontend static that is not an array', () => {
+  const root = fixtureRoot();
+  writeFrontendPack(root, 'alpha', {
+    scope: 'public',
+    styles: ['style.css'],
+    scripts: [],
+    static: 'widget',
+  });
+  assert.throws(() => loadPackMetadata(discoverPacks(root)), /frontend static must be an array/);
+});
+
 // --- mergeLocalPacks (whole-Pack replacement) tests ---
 
 test('mergeLocalPacks returns builtins untouched when no local root is given', () => {

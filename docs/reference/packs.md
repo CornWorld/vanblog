@@ -16,9 +16,22 @@ Pack 是 vanblog 的扩展单元，通过 `pack.json` 描述自身，可携带�
   "name": "bookmarks",
   "version": "1.0.0",
   "title": "收藏",
-  "nav": { "label": "收藏", "href": "/p/bookmarks" }
+  "nav": { "label": "收藏", "href": "/p/bookmarks" },
+  "frontend": {
+    "scope": "public",
+    "styles": ["style.css"],
+    "scripts": ["script.js"],
+    "static": ["widget"]
+  }
 }
 ```
+
+- `styles`/`scripts`:经 Vite `?url` 发射为**哈希化**资产并注入每页
+  (`<link>` / `<script type="module">`)。适合自包含单文件贡献。
+- `static`:列 `frontend/` 下的子目录,整树**原样(不哈希)**发射到
+  `_astro/<dir>/`,供按相对路径加载兄弟文件的第三方 widget
+  (如 live2d-widgets 的 `chunk/` 动态分块)。目录必须存在,拒绝越界路径。
+  dev 模式由集成中间件按同前缀服务。示例:`packs/live2d-companion`。
 
 ## 生命周期与安装位置
 
@@ -32,8 +45,8 @@ Pack 是 vanblog 的扩展单元，通过 `pack.json` 描述自身，可携带�
 |---|---|---|
 | `bookmarks` | 收藏 | 收藏夹页，路由 `/p/bookmarks` |
 | `moments` | 说说/动态 | 短动态流 |
-| `visits` | 访客 | 访客计数/聚合 |
-| `live2d-companion` | — | Live2D 看板娘 |
+| `online` | 当前在线 | 会话心跳在线人数 |
+| `live2d-companion` | — | Live2D 看板娘（widget 已 vendor 本地化） |
 > **权威 API 清单**：PB 0.39.5 启动时会把完整 JSVM 类型声明写入 hooks 目录（`types.d.ts`，787KB）——即 `docs/reference/pb-jsvm-types.d.ts`（仓库内留存，与运行时同版本）。它声明了**全部**可用全局与签名（`routerAdd`/`routerUse`/`$app`/`$security`/`$apis`/`$dbx`/`$os`/`$filepath`/事件对象等）。**写 hook 前先 `grep` 这份文件确认 API 存在与签名**，例如：
 >
 > ```bash

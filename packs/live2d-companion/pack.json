@@ -9,6 +9,7 @@
   "frontend": {
     "scope": "public",
     "styles": ["live2d-companion.css"],
-    "scripts": ["live2d-companion.js"]
+    "scripts": ["live2d-companion.js"],
+    "static": ["widget"]
   }
 }

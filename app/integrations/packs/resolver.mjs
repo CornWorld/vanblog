@@ -137,8 +137,34 @@ function resolveFrontendContribution(pack, contribution) {
   if (contribution.scope !== 'public') throw new Error(`Pack ${pack.name} frontend scope must be public`);
   const styles = validateFrontendPaths(pack, contribution.styles, 'styles');
   const scripts = validateFrontendPaths(pack, contribution.scripts, 'scripts');
-  if (styles.length === 0 && scripts.length === 0) throw new Error(`Pack ${pack.name} frontend contribution is empty`);
-  return { scope: 'public', styles, scripts };
+  const staticDirs = validateFrontendStaticDirs(pack, contribution.static);
+  if (styles.length === 0 && scripts.length === 0 && staticDirs.length === 0) {
+    throw new Error(`Pack ${pack.name} frontend contribution is empty`);
+  }
+  return { scope: 'public', styles, scripts, ...(staticDirs.length > 0 ? { static: staticDirs } : {}) };
+}
+
+// static 目录整树原样(不哈希)发射到构建输出 _astro/<dir>/ 下,供按相对
+// 路径加载兄弟文件的第三方 widget(如 live2d-widgets 的 chunk/ 动态分块)。
+function validateFrontendStaticDirs(pack, values) {
+  if (values === undefined) return [];
+  if (!Array.isArray(values)) throw new Error(`Pack ${pack.name} frontend static must be an array`);
+  const seen = new Set();
+  return values.map((value) => {
+    if (typeof value !== 'string' || value.length === 0 || isAbsolute(value) || value.includes('\0')) {
+      throw new Error(`Pack ${pack.name} frontend static contains an invalid path`);
+    }
+    const normalized = normalize(value);
+    const frontendRoot = join(pack.directory, 'frontend');
+    const target = join(frontendRoot, normalized);
+    if (relative(frontendRoot, target).startsWith('..') || normalized !== value) {
+      throw new Error(`Pack ${pack.name} frontend static path must stay under frontend/: ${value}`);
+    }
+    if (!existsSync(target)) throw new Error(`Pack ${pack.name} frontend static dir must exist under frontend/: ${value}`);
+    if (seen.has(value)) throw new Error(`Pack ${pack.name} frontend static contains duplicate dir: ${value}`);
+    seen.add(value);
+    return value;
+  });
 }
 
 function validateFrontendPaths(pack, values, field) {

@@ -11,8 +11,14 @@
  */
 
 // ─── Default Configuration ────────────────────────────────────
+// widgetPath 解析顺序:SSR serverConfig 覆盖 > 本地 vendored 副本(从本脚本
+// URL 推导,随镜像分发,无外网依赖)> widgetCdnPath(CDN 兜底)。模型资产
+// (cdnPath/live2d_api)体积大且授权复杂,保持 CDN + 失败静默降级。
+const WIDGET_CDN_PATH =
+  "https://fastly.jsdelivr.net/npm/live2d-widgets@1.0.1/dist/";
 const DEFAULT_CONFIG = {
-  widgetPath: "https://fastly.jsdelivr.net/npm/live2d-widgets@1.0.1/dist/",
+  widgetPath: "",
+  widgetCdnPath: WIDGET_CDN_PATH,
   cdnPath: "https://fastly.jsdelivr.net/gh/fghrsh/live2d_api/",
   modelId: 0,
   modelTexturesId: 53,
@@ -42,7 +48,24 @@ function loadSsrConfig() {
   }
 }
 
-const CONFIG = { ...DEFAULT_CONFIG, ...(loadSsrConfig() || {}) };
+// 本地 vendored 副本与本脚本同目录的 widget/ 子目录(构建管线把 frontend/
+// static 目录原样发射到 _astro/ 下)。本脚本经 <script type="module" src=…>
+// 注入(BaseLayout),模块上下文里 document.currentScript 为 null,只能用
+// import.meta.url 取自身地址;文件内容原样发射,URL 不被构建改写。
+function deriveLocalWidgetPath() {
+  try {
+    if (import.meta.url) return new URL("widget/", import.meta.url).href;
+  } catch {
+    // URL 解析失败(理论不可达),交由 CDN 兜底
+  }
+  return "";
+}
+
+const CONFIG = {
+  ...DEFAULT_CONFIG,
+  widgetPath: deriveLocalWidgetPath(),
+  ...(loadSsrConfig() || {}),
+};
 
 // ─── Widget runtime error guard ───────────────────────────────
 // live2d-widgets@1.0.1 的 followPointer 在模型未就绪时读 null.hitTest
@@ -124,63 +147,65 @@ function init() {
     });
 }
 
-function moveWidgetIntoNamespace() {
-  const waifu = document.getElementById("waifu");
-  if (waifu && widgetRoot && !widgetRoot.contains(waifu)) {
-    widgetRoot.append(waifu);
-  }
-}
-
-function loadWidgetScript() {
+function loadScriptOnce(src, timeoutMs) {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = CONFIG.widgetPath + "autoload.js";
+    script.src = src;
     script.async = true;
 
-    let settled = false;
-    const fail = (msg) => {
-      if (settled) return;
-      settled = true;
-      reject(new Error(msg));
-    };
-    const done = () => {
-      if (settled) return;
-      settled = true;
-      resolve();
-    };
-
-    // Hard timeout: reject if the script itself never loads.
+    // Hard timeout: reject and remove the tag so a late-loading script
+    // cannot inject an orphaned widget after we moved on.
     const hardTimeout = setTimeout(() => {
-      script.remove(); // prevent late-loading script from injecting orphaned widget
-      fail("CDN timeout");
-    }, 10000);
+      script.remove();
+      reject(new Error("widget script timeout: " + src));
+    }, timeoutMs);
 
     script.onerror = () => {
       clearTimeout(hardTimeout);
-      fail("CDN script unavailable");
+      reject(new Error("widget script unavailable: " + src));
     };
-
     script.onload = () => {
       clearTimeout(hardTimeout);
-      // autoload.js injects #waifu asynchronously; poll briefly for it so
-      // moveWidgetIntoNamespace() can relocate it into our namespaced root.
-      const started = Date.now();
-      const poll = setInterval(() => {
-        if (document.getElementById("waifu")) {
-          clearInterval(poll);
-          done();
-        } else if (Date.now() - started > 8000) {
-          clearInterval(poll);
-          // Script loaded but widget never mounted. Resolve anyway — the
-          // widget may appear later; fallback UI would hide a late arrival.
-          done();
-        }
-      }, 200);
+      resolve();
     };
 
     document.head.append(script);
   });
 }
+
+function waitForWaifuMount(timeoutMs) {
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const poll = setInterval(() => {
+      if (document.getElementById("waifu")) {
+        clearInterval(poll);
+        resolve(true);
+      } else if (Date.now() - started > timeoutMs) {
+        clearInterval(poll);
+        resolve(false);
+      }
+    }, 200);
+  });
+}
+
+async function loadWidgetScript() {
+  // 候选链:本地 vendored 副本 → CDN 兜底。脚本加载失败或 #waifu 迟迟不
+  // 挂载(脚本加载成功但其兄弟资源缺失)都视为该源不可用,尝试下一个。
+  const candidates = [CONFIG.widgetPath, CONFIG.widgetCdnPath].filter(Boolean);
+  for (const base of candidates) {
+    try {
+      await loadScriptOnce(base + "autoload.js", 10000);
+      // autoload.js 异步注入 #waifu;短暂轮询确认挂载,便于
+      // moveWidgetIntoNamespace() 把它迁入命名空间根。
+      if (await waitForWaifuMount(8000)) return;
+      console.warn("[live2d-companion] widget did not mount from:", base);
+    } catch (err) {
+      console.warn("[live2d-companion] widget source unavailable:", err.message);
+    }
+  }
+  throw new Error("all widget sources unavailable");
+}
+
 
 // ─── Fallback ─────────────────────────────────────────────────
 function renderFallback(error) {
