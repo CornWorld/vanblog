@@ -111,9 +111,9 @@ vanblog 的扩展性不是 PB 白送的，而是由这些显式接线决定的�
 
 1. **校验有三处可写**（PB 规则 / Pack `schema.ts` Zod / `onRecord*Request` JS）：结构不变式 → 规则或 Go（unique index、admin-only 写规则）；数据契约 → Zod；站点策略偏好 → JS 钩子。
 2. **横切行为分两层**（审计/通知/限流类）：核心横切 → Go 通配 Request 钩子（`internal/audit`，无 tag 注册对全部 collection 生效，含 Pack 运行时建表——JSVM 按表注册做不到）；用户附加 → JS 追加。事实 8 的 append-only 保证两者共存：jsvm 先注册 → JS 先跑 → Go manager 后注册、`e.Next()` 之后落审计行，观察的是最终状态。
-3. **cron 双面俱在**：`cronAdd` 只是 Go API `app.Cron().Add` 的 JS 绑定（jsvm `binds.go:106-124`）。本文档曾断言「cron 是 JSVM-only、Go 侧无注册面」——**该断言错误**，2026-09-17 读 binds.go 实锤推翻，visits 聚合随之迁 `internal/visits`（`app.Cron().MustAdd`），`system.pb.js` 删除。教训：**jsvm 绑定面 ≠ PB 能力边界**，判「某能力 JS-only」前必须先查 binds.go 对应的 Go API。
+3. **cron 双面俱在**：`cronAdd` 只是 Go API `app.Cron().Add` 的 JS 绑定（jsvm `binds.go:106-124`）。本文档曾断言「cron 是 JSVM-only、Go 侧无注册面」——**该断言错误**，2026-09-17 读 binds.go 实锤推翻，visits 聚合随之迁 `internal/visits`（`app.Cron().MustAdd`），`system.pb.js` 删除。教训：**jsvm 绑定面 ≠ PB 能力边界**，判「某能力 JS-only」前必须先查 binds.go 对应的 Go API。另注：core 的 `system.pb.js` 从来不是用户可编辑面——事实 8 append-only（用户自注册 cron，同 id 冲突、异 id 与核心作业互覆写聚合行）+ core 烤入镜像（升级即覆盖），删掉它没有移除任何真实用户面。
 
-**审计为什么曾在 JS**（迁移史，防再犯）：`338b6f42`（2026-06-24）按「热更新+用户可自定义」把审计归类进 JS，无论证——按 §5.1 自身判据（审计属系统级行为）本就应在 Go，是分类错误；`bd4aee11`（07-03）撞 Request 链控问题后错误回撤 After\*Success 并放弃 actor（症状压制，actor 空了两个半月）；9-16 断链饿死事故证伪「After\*Success 是免链控 observer」假设；`8d43f74c`（09-17）恢复 Request 语义；同日完成 Go 化。「用户可记自定义事件」不要求核心审计住 JS——用户直接写 `audits` collection 即可（`examples.pb.js` 示例 6）。Go 化同时消除了事实 9/10/12 对审计路径的适用面（异常吞没、logger 失明、staging watcher 均不再影响审计）。
+**审计为什么曾在 JS**（迁移史，防再犯）：`338b6f42`（2026-06-24）按「热更新+用户可自定义」把审计归类进 JS——这是**有立场的扩展性押注**（jsvm 是产品特性），不是疏忽；它的失误不在立场，而在没先切分**正确性内核**（actor/ip 抓取、链安全、动态表覆盖——没有用户「定制」正确性）与**可变偏好**，而后续全部事故都出在前者。`bd4aee11`（07-03）撞 Request 链控问题后错误回撤 After\*Success 并放弃 actor（症状压制，actor 空了两个半月）；9-16 断链饿死事故证伪「After\*Success 是免链控 observer」假设；`8d43f74c`（09-17）恢复 Request 语义；同日完成 Go 化。「用户可记自定义事件」不要求核心审计住 JS——用户直接写 `audits` collection 即可（`examples.pb.js` 示例 6）。Go 化同时消除了事实 9/10/12 对审计路径的适用面（异常吞没、logger 失明、staging watcher 均不再影响审计）。
 
 ---
 
