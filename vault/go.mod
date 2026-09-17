@@ -5,8 +5,10 @@ go 1.27
 require (
 	github.com/CornWorld/caddyadmin v0.3.0
 	github.com/brianvoe/gofakeit/v7 v7.15.0
+	github.com/creack/pty v1.1.24
 	github.com/dop251/goja v0.0.0-20260806115107-493f22071ef6
 	github.com/fsnotify/fsnotify v1.10.1
+	github.com/gorilla/websocket v1.5.3
 	github.com/pocketbase/dbx v1.12.0
 	// PocketBase >= v0.40.1 is REQUIRED: Go 1.27 enables encoding/json/v2 by
 	// default, and v0.39.x Collection.UnmarshalJSON (defined-pointer alias)
@@ -17,7 +19,6 @@ require (
 
 require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/creack/pty v1.1.24 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dlclark/regexp2/v2 v2.7.1 // indirect
 	github.com/domodwyer/mailyak/v3 v3.6.2 // indirect
@@ -32,7 +33,6 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/pprof v0.0.0-20260802141513-ef3492d7dac3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect

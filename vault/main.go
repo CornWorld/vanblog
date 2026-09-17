@@ -78,13 +78,17 @@ func main() {
 	app.RootCmd.PersistentFlags().StringVar(&packsDir, "packsDir", "", "the directory with local Pack overrides")
 	app.RootCmd.PersistentFlags().StringVar(&packRuntimeDir, "packRuntimeDir", "", "private directory for staged Pack runtime resources")
 	app.RootCmd.PersistentFlags().StringVar(&coreSchemaPath, "coreSchemaPath", "runtime/core-schema/models.js", "path to the generated core schema artifact")
-	privateRuntimeDir, err := os.MkdirTemp("", "vanblog-hooks-*")
-	if err != nil {
-		slog.Error("reserve private Pack runtime directory", "err", err)
+	// Deterministic per-PID runtime dir. execve restarts (hooksWatch) keep
+	// the PID, so restarts reuse the same dir instead of leaking a fresh
+	// vanblog-hooks-* temp dir per restart. Removing it here is safe: the
+	// previous process image with this PID is gone by the time we run.
+	privateRuntimeDir := filepath.Join(os.TempDir(), fmt.Sprintf("vanblog-hooks-%d", os.Getpid()))
+	if err := os.RemoveAll(privateRuntimeDir); err != nil {
+		slog.Error("clear private Pack runtime directory", "err", err)
 		os.Exit(1)
 	}
-	if err := os.Remove(privateRuntimeDir); err != nil {
-		slog.Error("release private Pack runtime directory reservation", "err", err)
+	if err := os.MkdirAll(privateRuntimeDir, 0o700); err != nil {
+		slog.Error("create private Pack runtime directory", "err", err)
 		os.Exit(1)
 	}
 	staging := filepath.Join(privateRuntimeDir, "pb_hooks")
@@ -108,6 +112,12 @@ func main() {
 		return false
 	}()
 	loadablePacks := []pack.Pack{}
+	// Hot-reload plumbing, populated inside the pack-resolution block below:
+	// hookSources are the SOURCE hook/migration dirs to watch; restageRuntime
+	// re-stages them into the staging copies. Started from OnServe once the
+	// app is up (see watchHookSources).
+	var hookSources []string
+	var restageRuntime func() error
 	if !utilityCmd {
 		// --- Pack resolution and hook staging (before JSVM registration) ---
 		// jsvm.MustRegister calls registerHooks() immediately, which reads HooksDir.
@@ -194,15 +204,38 @@ func main() {
 		jsvm.MustRegister(app, jsvm.Config{
 			MigrationsDir: stagingMigrations,
 			HooksDir:      staging,
-			HooksWatch:    hooksWatch,
+			// jsvm's own HooksWatch watches the STAGING copy — written once
+			// at startup, never again, so it could never fire. The source-dir
+			// watcher (watchHookSources, started in OnServe) owns reloads.
+			// Bonus: false makes a broken hook file panic at startup (fail
+			// fast) instead of log-and-continue serving without hooks.
+			HooksWatch:    false,
 			HooksPoolSize: hooksPool,
 		})
 
 		// Loadable packs captured for OnServe schema resolution.
 		loadablePacks = loadable
+
+		restageRuntime = func() error {
+			if err := pack.StageHooks(coreHooksDir, loadable, staging); err != nil {
+				return fmt.Errorf("stage hooks: %w", err)
+			}
+			if err := pack.StageMigrations(coreMigrationsDir, loadable, stagingMigrations); err != nil {
+				return fmt.Errorf("stage migrations: %w", err)
+			}
+			return nil
+		}
+		hookSources = nonMissingDirs(coreHooksDir, coreMigrationsDir)
 	}
 
 	app.OnServe().BindFunc(func(event *core.ServeEvent) error {
+		// Hot hook reload: watch the SOURCE hook/migration dirs (jsvm's own
+		// HooksWatch watches the staging copy, which never changes after
+		// startup — structurally dead). On change: re-stage + execve restart.
+		if hooksWatch && restageRuntime != nil {
+			watchHookSources(app, hookSources, restageRuntime)
+		}
+
 		// pprof endpoints for memory/goroutine profiling (dev/debug only).
 		// Mounted under /debug/pprof/* — not behind admin auth, but only
 		// reachable from localhost (Caddy doesn't proxy /debug/*).
