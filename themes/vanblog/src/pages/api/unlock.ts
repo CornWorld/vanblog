@@ -50,13 +50,17 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   const { content } = await r.json();
 
   // 中继 Go 层 Set-Cookie(vb-unlock-<id> = HMAC 签名 token),浏览器刷新/
-  // 分享后凭 cookie 免密重看;cookie 的 path 已由 Go 按 /post/<id> 限定。
+  // 分享后凭 cookie 免密重看。cookie path 必须等于**页面 URL**(/post/<id>
+  // ——站点经 caddy 把文章页挂载在根路径;/themes/<name>/ 只是资产前缀,
+  // 不能进 cookie path,否则 path 永不匹配页面,解锁后刷新仍回到锁定态,
+  // 死循环)。id 可能是带前导斜杠的 slug 路径,归一之。
+  const cookiePath = `/post/${id.replace(/^\//, "")}`;
   for (const raw of r.headers.getSetCookie?.() ?? []) {
     const [pair] = raw.split(';');
     const eq = pair.indexOf('=');
     if (eq > 0) {
       cookies.set(pair.slice(0, eq).trim(), pair.slice(eq + 1).trim(), {
-        path: `${basePath}/post/${id}`,
+        path: cookiePath,
         maxAge: 86400 * 7,
         httpOnly: true,
         sameSite: 'lax',
