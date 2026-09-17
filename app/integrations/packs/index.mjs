@@ -109,18 +109,18 @@ export default function packsIntegration(options = {}) {
             ...pack.pages.map((page) => page.entrypoint),
           ]),
         ]);
-        // Dev 静态服务:_astro/<dir>/* → frontend/<dir>/*(生产由
+        // Dev 静态服务:/pack-static/<pack>/<dir>/* → frontend/<dir>/*(生产由
         // astro:build:done 原样拷贝,见下)。第三方 widget 按相对路径加载
         // 兄弟文件,哈希化的 _astro 资产管线无法满足,只能原样服务。
         const staticDirs = collectStaticDirs(metadata, packs);
         if (staticDirs.length > 0) {
           server.middlewares.use((req, res, next) => {
             const url = (req.url || '').split('?')[0];
-            const match = /^\/_astro\/([\w-]+)\/(.+)$/.exec(decodeURIComponent(url));
+            const match = /^\/pack-static\/([\w-]+)\/([\w-]+)\/(.+)$/.exec(decodeURIComponent(url));
             if (!match) return next();
-            const entry = staticDirs.find((item) => item.dir === match[1]);
+            const entry = staticDirs.find((item) => item.pack === match[1] && item.dir === match[2]);
             if (!entry) return next();
-            const file = join(entry.root, match[2]);
+            const file = join(entry.root, match[3]);
             if (!file.startsWith(entry.root) || !existsSync(file) || !statSync(file).isFile()) return next();
             res.setHeader('Content-Type', CONTENT_TYPES[file.split('.').pop()] || 'application/octet-stream');
             res.end(readFileSync(file));
@@ -138,12 +138,15 @@ export default function packsIntegration(options = {}) {
         }
         const staticDirs = collectStaticDirs(metadata, packs);
         if (staticDirs.length === 0) return;
-        // dir = 客户端输出目录(URL)。只拷客户端输出:server 输出里的静态
-        // 文件永远不会被服务。
+        // dir = 客户端输出目录(URL)。拷到 pack-static/<pack>/<dir> 而非
+        // _astro/:后者被 Caddy 标 immutable(前提「内容变→URL 变」),固定
+        // 路径的原样目录放进去会在 pack 升级后让老访客最长一年读旧缓存。
+        // pack-static 走已有 SSR 代理通道(Astro standalone 以 ETag/Last-
+        // Modified 服役非哈希文件,2026-09-15 e2e 已验证)→ 升级即重验。
         const clientRoot = fileURLToPath(dir);
         if (!existsSync(join(clientRoot, '_astro'))) return;
         for (const entry of staticDirs) {
-          const target = join(clientRoot, '_astro', entry.dir);
+          const target = join(clientRoot, 'pack-static', entry.pack, entry.dir);
           cpSync(entry.root, target, { recursive: true });
           logger.info(`pack static: ${entry.pack}/${entry.dir} → ${target}`);
         }

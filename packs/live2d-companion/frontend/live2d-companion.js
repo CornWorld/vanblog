@@ -48,13 +48,14 @@ function loadSsrConfig() {
   }
 }
 
-// 本地 vendored 副本与本脚本同目录的 widget/ 子目录(构建管线把 frontend/
-// static 目录原样发射到 _astro/ 下)。本脚本经 <script type="module" src=…>
-// 注入(BaseLayout),模块上下文里 document.currentScript 为 null,只能用
-// import.meta.url 取自身地址;文件内容原样发射,URL 不被构建改写。
+// 本地 vendored 副本发射在客户端输出的 pack-static/live2d-companion/widget/
+//(构建管线原样拷贝,不经 _astro 哈希化,升级即重验)。本脚本经
+// <script type="module" src=…> 注入(BaseLayout),模块上下文里
+// document.currentScript 为 null,只能用 import.meta.url 取自身地址;文件
+// 内容原样发射,URL 不被构建改写。
 function deriveLocalWidgetPath() {
   try {
-    if (import.meta.url) return new URL("widget/", import.meta.url).href;
+    if (import.meta.url) return new URL("../pack-static/live2d-companion/widget/", import.meta.url).href;
   } catch {
     // URL 解析失败(理论不可达),交由 CDN 兜底
   }

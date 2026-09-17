@@ -29,9 +29,9 @@ Pack 是 vanblog 的扩展单元，通过 `pack.json` 描述自身，可携带�
 - `styles`/`scripts`:经 Vite `?url` 发射为**哈希化**资产并注入每页
   (`<link>` / `<script type="module">`)。适合自包含单文件贡献。
 - `static`:列 `frontend/` 下的子目录,整树**原样(不哈希)**发射到
-  `_astro/<dir>/`,供按相对路径加载兄弟文件的第三方 widget
+  `/pack-static/<pack>/<dir>/`,供按相对路径加载兄弟文件的第三方 widget
   (如 live2d-widgets 的 `chunk/` 动态分块)。目录必须存在,拒绝越界路径。
-  dev 模式由集成中间件按同前缀服务。示例:`packs/live2d-companion`。
+  路径不进 `_astro/` 哈希档,走 SSR 代理(ETag 重验)——pack 升级即生效,无 immutable 陈旧窗口。dev 模式由集成中间件按同前缀服务。示例:`packs/live2d-companion`。
 
 ## 生命周期与安装位置
 
