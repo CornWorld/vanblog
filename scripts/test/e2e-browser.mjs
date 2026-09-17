@@ -268,6 +268,47 @@ async function clickabilitySweep(path, label) {
     if (fresh.length > 0) throw new Error(`点击引发页面错误: ${fresh[0].slice(0, 100)}`);
     console.log(`    · ${label}: ${items.length} 个可见元素全过,${items.filter((x) => x.tag !== 'a').length} 个按钮点击无页面错误`);
   });
+
+  // 反向扫描:视觉上可点击(computed cursor:pointer)但命中测试失败的元素。
+  // 正向枚举只认 button/[role]/a[href] 语义标签;span+onClick 伪按钮、点击
+  // 穿透(命中落到别的元素)、pointer-events:none 继承——这一类「看起来可点
+  // 但点不动」的缺陷只有视觉面能抓(真实案例:live2d 工具按钮 pointer-events
+  // 继承 none,点击物理穿透到画布,CI 因 CDN 屏蔽永不挂载而漏检)。
+  // 命中判据:元素中心 elementFromPoint 须落在自身或后代;落到别处即失败。
+  await assert(`B(${label}) 视觉可点击元素无穿透/遮挡`, async () => {
+    await gotoClean(path);
+    const offenders = await page.evaluate(() => {
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const bad = [];
+      for (const el of document.querySelectorAll('body *')) {
+        if (bad.length >= 20) break;
+        // 语义可交互元素由正向面逐个真点,这里只抓非语义伪按钮
+        if (el.matches('button, a[href], input, select, textarea, label, summary, [role]')) continue;
+        const cs = getComputedStyle(el);
+        if (cs.cursor !== 'pointer' || cs.display === 'none' || cs.visibility === 'hidden') continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < 8 || r.height < 8) continue;
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        if (cx < 0 || cy < 0 || cx >= vw || cy >= vh) continue; // 视口外交给滚动后的轮次
+        const top = document.elementFromPoint(cx, cy);
+        // 可达 = 命中自身/后代(事件落在自己子树),或命中祖先(SVG 内部图形
+        // 的 elementFromPoint 恒返回 <svg> 根,事件沿祖先链冒泡到真实处理器;
+        // Chrome 对 pointer-events:none 子树的 svg 根也如此)。命中无关子树
+        // 才是穿透/遮挡。
+        const reachable = top && (top === el || el.contains(top) || top.contains(el));
+        if (reachable) continue;
+        bad.push({
+          desc: `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}.${String(el.className?.baseVal ?? el.className).split(' ').slice(0, 2).join('.')}`.slice(0, 70),
+          hit: top ? `${top.tagName.toLowerCase()}${top.id ? '#' + top.id : ''}` : 'null(视口外)',
+        });
+      }
+      return bad;
+    });
+    if (offenders.length) {
+      const d = offenders[0];
+      throw new Error(`${offenders.length} 个 cursor:pointer 元素命中失败,如 <${d.desc}> 实际命中 ${d.hit}`);
+    }
+  });
 }
 await clickabilitySweep('/', '首页');
 await clickabilitySweep('/post/e2e-normal', '正常文详情');
