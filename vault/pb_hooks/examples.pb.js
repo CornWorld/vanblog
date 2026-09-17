@@ -53,3 +53,20 @@
 //     e.response.header("X-Powered-By", "Vanblog")
 //     return e.next()
 // })
+
+// --- Example 6: Record a custom audit event ---
+// Core auditing (post.create, tag.delete, auth.login, ...) is handled by the
+// Go layer (internal/audit) since 2026-09-17 — you don't need to re-register
+// those. To record YOUR OWN events, write rows into the shared `audits`
+// collection directly:
+// onRecordCreateRequest((e) => {
+//     e.next(); // must be first — see constraints in system.pb.js
+//     const col = $app.findCollectionByNameOrId("audits");
+//     const row = new Record(col);
+//     if (e.auth && e.auth.collection().name === "users") row.set("actor", e.auth.id);
+//     row.set("action", "newsletter.subscribe");
+//     row.set("target", e.record.id);
+//     row.set("result", "success");
+//     row.set("ip", e.realIP());
+//     $app.save(row);
+// }, "subscribers");

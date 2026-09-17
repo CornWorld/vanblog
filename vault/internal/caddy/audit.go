@@ -2,10 +2,10 @@ package caddy
 
 // audit.go writes routing changes to the shared `audits` table.
 //
-// Scope: routing only for now. JSVM hooks (pb_hooks/lib/vanblog-audit.js)
-// already cover posts/tags/categories/media/users/site/auth. The Go-side
-// routing code path bypasses hooks entirely, so it has to write audits
-// directly.
+// Scope: routing only for now. Core record auditing lives in
+// internal/audit (wildcard Go Request hooks, covering Pack tables too).
+// The Go-side routing code path is an internal app.Save, which Request
+// hooks never see, so it has to write audits directly.
 //
 // Schema (matches what JSVM writes):
 //   - actor:     relation to users, optional (empty when triggered by

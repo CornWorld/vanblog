@@ -18,6 +18,7 @@ import (
 	"github.com/cornworld/vanblog/internal/admin"
 	"github.com/cornworld/vanblog/internal/agent"
 	"github.com/cornworld/vanblog/internal/article"
+	"github.com/cornworld/vanblog/internal/audit"
 	"github.com/cornworld/vanblog/internal/bootstrap"
 	"github.com/cornworld/vanblog/internal/caddy"
 	"github.com/cornworld/vanblog/internal/commentssso"
@@ -329,6 +330,9 @@ func main() {
 	// init) in its constructor. Order only affects same-event Bind order;
 	// no cross-manager dependency.
 	// jsvm.MustRegister is called inside OnServe after StageHooks.
+	// audit first among managers: untagged Request hooks observe every
+	// collection (incl. Pack tables) after the write lands via e.Next().
+	_ = audit.New(app)
 	_ = revisions.New(app)
 	_ = schema.New(app)
 	// validation.RegisterWithSource is now called inside OnServe after Pack
