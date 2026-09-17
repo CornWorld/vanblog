@@ -188,3 +188,22 @@ func TestAggregateDaily(t *testing.T) {
 	}
 	t.Logf("daily summary: views=%d, uniques=%d", views, uniques)
 }
+
+// TestCronDailyAggregateRegistered pins the cron wiring: visits.New must
+// register the nightly aggregation in app.Cron() (the same registry jsvm's
+// cronAdd binds to). Guards against the JS-era regression class where the
+// job silently lived only in pb_hooks.
+func TestCronDailyAggregateRegistered(t *testing.T) {
+	app := setupApp(t)
+	New(app)
+
+	found := false
+	for _, job := range app.Cron().Jobs() {
+		if job.Id() == "visits-daily-aggregate" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("cron job visits-daily-aggregate not registered in app.Cron()")
+	}
+}

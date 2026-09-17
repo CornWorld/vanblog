@@ -36,6 +36,18 @@ func New(app core.App) *Manager {
 		se.Router.GET("/api/vanblog/visits/summary", m.handleSummary)
 		return se.Next()
 	})
+
+	// Nightly site-wide aggregation. cronAdd is only a JS binding over
+	// app.Cron() (pocketbase plugins/jsvm binds.go) — core counting belongs
+	// here, not in pb_hooks; users keep cronAdd for their own jobs. Replaces
+	// the JSVM version in system.pb.js (retired 2026-09-17).
+	app.Cron().MustAdd("visits-daily-aggregate", "0 0 * * *", func() {
+		// JS 语义钉:UTC 昨日(原 system.pb.js 用 toISOString 取 UTC 日期)。
+		date := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
+		if err := m.AggregateDaily(date); err != nil {
+			slog.Error("visits daily aggregate", "date", date, "err", err)
+		}
+	})
 	return m
 }
 
