@@ -91,6 +91,11 @@ export function sharedAstroConfig({ themeName, themeSrcDir, mainAppSrcDir, theme
             target: process.env.PB_URL || 'http://127.0.0.1:8090',
             changeOrigin: true,
           },
+          // pack 配置的匿名读取(companion 启动时按加载源拉取 live2d_config)
+          '/api/collections/live2d_config': {
+            target: process.env.PB_URL || 'http://127.0.0.1:8090',
+            changeOrigin: true,
+          },
           '/api/palette.css': {
             target: process.env.PB_URL || 'http://127.0.0.1:8090',
             changeOrigin: true,

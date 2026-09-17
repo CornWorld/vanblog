@@ -144,8 +144,9 @@ function resolveFrontendContribution(pack, contribution) {
   return { scope: 'public', styles, scripts, ...(staticDirs.length > 0 ? { static: staticDirs } : {}) };
 }
 
-// static 目录整树原样(不哈希)发射到构建输出 _astro/<dir>/ 下,供按相对
-// 路径加载兄弟文件的第三方 widget(如 live2d-widgets 的 chunk/ 动态分块)。
+// static 目录整树原样(不哈希)发射到构建输出 pack-static/<pack>/<dir>/
+// 下(刻意避开 _astro 的 immutable 缓存档,升级即重验),供按相对路径
+// 加载兄弟文件的第三方 widget(如 live2d-widgets 的 chunk/ 动态分块)。
 function validateFrontendStaticDirs(pack, values) {
   if (values === undefined) return [];
   if (!Array.isArray(values)) throw new Error(`Pack ${pack.name} frontend static must be an array`);

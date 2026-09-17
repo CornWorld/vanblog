@@ -57,9 +57,18 @@ function loadSsrConfig() {
 // <script type="module" src=…> 注入(BaseLayout),模块上下文里
 // document.currentScript 为 null,只能用 import.meta.url 取自身地址;文件
 // 内容原样发射,URL 不被构建改写。
+// dev 例外:astro dev 下 Vite 以 /@fs/<绝对路径> 服役本文件,且
+// vite:asset-import-meta-url 会把可静态分析的 new URL 重写为 /@fs 资产
+// 地址(尾斜杠被吞)——故 dev 分支改为站点根绝对路径,由集成的
+// /pack-static dev 中间件服役;相对段用变量间接,避免被插件静态改写。
 function deriveLocalWidgetPath() {
   try {
-    if (import.meta.url) return new URL("../pack-static/live2d-companion/widget/", import.meta.url).href;
+    const self = import.meta.url;
+    const rel = "../pack-static/live2d-companion/widget/";
+    if (self.includes("/@fs/")) {
+      return new URL("/pack-static/live2d-companion/widget/", self).href;
+    }
+    return new URL(rel, self).href;
   } catch {
     // URL 解析失败(理论不可达),交由 CDN 兜底
   }
@@ -78,12 +87,18 @@ const CONFIG = {
 // 抛 TypeError(快速指针移动/合成点击均可触发,上游未设防)。在 window
 // 捕获阶段拦下该包抛出的错误:阻止默认上报,只提示一次。升级 widget
 // 依赖修复后此守卫可移除。
+// 路径匹配需同时覆盖两种服役形态:CDN(文件名含 live2d-widgets)与本地
+// vendored(/pack-static/live2d-companion/widget/,文件名不含该关键字)。
 (function guardWidgetErrors() {
   let warned = false;
+  const fromWidget = (filename) =>
+    typeof filename === "string" &&
+    (filename.includes("live2d-widgets") ||
+      filename.includes("live2d-companion/widget/"));
   window.addEventListener(
     "error",
     (ev) => {
-      if (!ev.filename || !ev.filename.includes("live2d-widgets")) return;
+      if (!fromWidget(ev.filename)) return;
       ev.preventDefault();
       if (!warned) {
         warned = true;
