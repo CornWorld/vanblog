@@ -57,13 +57,24 @@ func New(app core.App) *Manager {
 // before an HTTP update applies the new state. Failures are logged but
 // non-fatal — a missing revision is better than a blocked post save.
 func (m *Manager) snapshotBeforePostUpdate(e *core.RecordRequestEvent) error {
+	siteRec, err := m.app.FindFirstRecordByFilter("site", "")
+	if err != nil {
+		// 读不到站点配置:保持捕获(缺省行为),跳过裁剪。
+		siteRec = nil
+	}
+	if siteRec != nil && !siteRec.GetBool("revisionsEnabled") {
+		// 站点设置「修订:启用」关闭 → 不捕获(site.astro 的开关此前
+		// 只有 UI 没有执行面,2026-09-18 接线)。
+		return e.Next()
+	}
 	oldRecord, err := m.app.FindRecordById("posts", e.Record.Id)
 	if err == nil && oldRecord != nil {
 		if err := m.CaptureBeforeUpdate(oldRecord, ReasonAutoSave, ""); err != nil {
 			slog.Warn("[revisions] capture failed", "post", e.Record.Id, "err", err)
 		}
-		// 保留策略:裁剪到 displayOptions.revisionsMaxKeep。修订删除是数据面
-		// (归 Go),数值是偏好(归站点配置,运行时读取)。
+		// 保留策略:裁剪到 site.revisionsRetention。修订删除是数据面
+		// (归 Go),数值是偏好(归站点配置,admin 设置页既有编辑器,
+		// 运行时读取)。
 		if err := m.Cleanup(e.Record.Id, m.MaxKeep()); err != nil {
 			slog.Warn("[revisions] cleanup failed", "post", e.Record.Id, "err", err)
 		}
@@ -71,30 +82,26 @@ func (m *Manager) snapshotBeforePostUpdate(e *core.RecordRequestEvent) error {
 	return e.Next()
 }
 
-// defaultMaxKeep is the revision retention when the site config does not
-// specify one. 修订无限增长曾是无主缺口——Cleanup 存在但无人调用。
+// defaultMaxKeep 与 init 迁移/admin 设置页的缺省一致(50)。此前修订
+// 保留是「schema+UI 完整、Go 零执行」的无主缺口——Cleanup 死代码。
 const defaultMaxKeep = 50
 
-// MaxKeep reads site.displayOptions.revisionsMaxKeep. Absent/unreadable →
-// defaultMaxKeep;<=0 → 0(= 不限,Cleanup 对 <=0 是 no-op)。
+// MaxKeep reads site.revisionsRetention (top-level field, NOT
+// displayOptions——该字段自 init 迁移即存在,admin 设置页可编辑)。
+// Absent/zero → defaultMaxKeep;<0 → 0(= 不限,Cleanup 对 <=0 是 no-op)。
 func (m *Manager) MaxKeep() int {
 	rec, err := m.app.FindFirstRecordByFilter("site", "")
 	if err != nil {
 		return defaultMaxKeep
 	}
-	var opts map[string]any
-	if raw := rec.GetString("displayOptions"); raw != "" {
-		if err := json.Unmarshal([]byte(raw), &opts); err != nil {
-			return defaultMaxKeep
-		}
+	v := int(rec.GetFloat("revisionsRetention"))
+	if v == 0 {
+		return defaultMaxKeep
 	}
-	if v, ok := opts["revisionsMaxKeep"].(float64); ok {
-		if int(v) <= 0 {
-			return 0 // unlimited
-		}
-		return int(v)
+	if v < 0 {
+		return 0 // unlimited
 	}
-	return defaultMaxKeep
+	return v
 }
 
 // CaptureBeforeUpdate takes a snapshot of the current (pre-update) post state

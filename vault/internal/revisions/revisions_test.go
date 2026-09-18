@@ -331,56 +331,81 @@ func TestExtractSnapshot(t *testing.T) {
 	}
 }
 
-func setMaxKeep(t *testing.T, app core.App, v any) {
+func setRetention(t *testing.T, app core.App, field string, v any) {
 	t.Helper()
 	siteRec, err := app.FindFirstRecordByFilter("site", "")
 	if err != nil {
 		t.Fatalf("site get: %v", err)
 	}
-	var opts map[string]any
-	if raw := siteRec.GetString("displayOptions"); raw != "" {
-		_ = json.Unmarshal([]byte(raw), &opts)
-	}
-	if opts == nil {
-		opts = map[string]any{}
-	}
-	opts["revisionsMaxKeep"] = v
-	b, _ := json.Marshal(opts)
-	siteRec.Set("displayOptions", string(b))
+	siteRec.Set(field, v)
 	if err := app.Save(siteRec); err != nil {
 		t.Fatalf("site save: %v", err)
 	}
 }
 
-// TestMaxKeepConfig 钉住配置语义:缺省 50;正值生效;<=0 = 不限(0)。
-func TestMaxKeepConfig(t *testing.T) {
+// TestRetentionConfig 钉住配置语义(顶层字段 site.revisionsRetention,
+// admin 设置页既有编辑器):缺省 50;0/缺省值=50;负数=不限。
+func TestRetentionConfig(t *testing.T) {
 	app := setupApp(t)
 	mgr := New(app)
 
 	if got := mgr.MaxKeep(); got != 50 {
-		t.Fatalf("default maxKeep = %d, want 50", got)
+		t.Fatalf("default retention = %d, want 50", got)
 	}
-	setMaxKeep(t, app, 2)
+	setRetention(t, app, "revisionsRetention", 2)
 	if got := mgr.MaxKeep(); got != 2 {
-		t.Fatalf("configured maxKeep = %d, want 2", got)
+		t.Fatalf("configured retention = %d, want 2", got)
 	}
-	setMaxKeep(t, app, 0)
-	if got := mgr.MaxKeep(); got != 0 {
-		t.Fatalf("zero maxKeep = %d, want 0 (unlimited)", got)
+	setRetention(t, app, "revisionsRetention", 0)
+	if got := mgr.MaxKeep(); got != 50 {
+		t.Fatalf("zero retention = %d, want 50 (default)", got)
 	}
-	setMaxKeep(t, app, -5)
+	setRetention(t, app, "revisionsRetention", -5)
 	if got := mgr.MaxKeep(); got != 0 {
-		t.Fatalf("negative maxKeep = %d, want 0 (unlimited)", got)
+		t.Fatalf("negative retention = %d, want 0 (unlimited)", got)
+	}
+}
+
+// TestRevisionsEnabledGate 钉住开关:site.revisionsEnabled=false 时更新
+// 钩子不捕获修订(admin 设置页「启用」此前只有 UI 没有执行面)。
+func TestRevisionsEnabledGate(t *testing.T) {
+	app := setupApp(t)
+	mgr := New(app)
+	post := createTestPost(t, app, "Original", "Hello world", "published")
+	setRetention(t, app, "revisionsEnabled", false)
+
+	postsCol, err := app.FindCollectionByNameOrId("posts")
+	if err != nil {
+		t.Fatalf("posts collection: %v", err)
+	}
+	ev := &core.RecordRequestEvent{
+		Record:     post,
+		Collection: postsCol,
+		RequestEvent: &core.RequestEvent{
+			App:      app,
+			Request:  httptest.NewRequest("PATCH", "/api/collections/posts/records/"+post.Id, nil),
+			Response: httptest.NewRecorder(),
+		},
+	}
+	if err := app.OnRecordUpdateRequest("posts").Trigger(ev, func(e *core.RecordRequestEvent) error { return e.Next() }); err != nil {
+		t.Fatalf("trigger update hook: %v", err)
+	}
+	revs, err := mgr.List(post.Id, 10)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(revs) != 0 {
+		t.Fatalf("revisions with revisionsEnabled=false = %d, want 0", len(revs))
 	}
 }
 
 // TestRetentionTrimsOnUpdateHook 钉住接线:post 更新钩子捕获修订后按
-// maxKeep 裁剪(修复「Cleanup 死代码、修订无限增长」缺口)。
+// site.revisionsRetention 裁剪(修复「Cleanup 死代码、修订无限增长」缺口)。
 func TestRetentionTrimsOnUpdateHook(t *testing.T) {
 	app := setupApp(t)
 	mgr := New(app)
 	post := createTestPost(t, app, "Original", "Hello world", "published")
-	setMaxKeep(t, app, 2)
+	setRetention(t, app, "revisionsRetention", 2)
 
 	postsCol, err := app.FindCollectionByNameOrId("posts")
 	if err != nil {

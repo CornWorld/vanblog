@@ -1,0 +1,48 @@
+---
+// 站点水印(site.enableWaterMark + site.watermarkText)。
+// 上游遗留字段——schema 自 init 迁移即存在,但全仓零实现;2026-09-18
+// 补主题端。Canvas 平铺纹理 + fixed 覆盖层:pointer-events:none 不影响
+// 交互,aria-hidden 不进无障碍树;中性灰低透明度在明暗配色下均可见。
+interface Props {
+  enabled?: boolean;
+  text?: string;
+}
+const { enabled = false, text = '' } = Astro.props;
+---
+{enabled && (
+  <div id="vb-watermark" aria-hidden="true" data-text={text || 'vanblog'} />
+  <script is:inline>
+    (() => {
+      const el = document.getElementById('vb-watermark');
+      if (!el) return;
+      const text = el.dataset.text || 'vanblog';
+      const dpr = window.devicePixelRatio || 1;
+      const w = 220;
+      const h = 150;
+      const canvas = document.createElement('canvas');
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.scale(dpr, dpr);
+      ctx.translate(w / 2, h / 2);
+      ctx.rotate((-22 * Math.PI) / 180);
+      ctx.font = '13px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(128, 128, 128, 0.12)';
+      ctx.fillText(text, 0, 0);
+      el.style.backgroundImage = 'url(' + canvas.toDataURL() + ')';
+    })();
+  </script>
+)}
+<style>
+  #vb-watermark {
+    position: fixed;
+    inset: 0;
+    /* 覆盖内容层,低于导航/抽屉/toast 等交互浮层。 */
+    z-index: 80;
+    pointer-events: none;
+    background-repeat: repeat;
+  }
+</style>

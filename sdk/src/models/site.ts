@@ -46,7 +46,9 @@ const SiteFieldsSchema = SystemFieldsSchema.extend({
   customHtml: z.string().optional(),
   customScript: z.string().optional(),
   watermarkText: z.string().optional(),
-  enableWatermark: z.boolean().optional(),
+  // PB 字段名为 enableWaterMark(大写 M,见 init 迁移);此前 SDK 类型误拼
+  // enableWatermark 导致运行时永远取不到值。
+  enableWaterMark: z.boolean().optional(),
 
   // Copyright & about
   copyrightAgreement: z.string().optional(),

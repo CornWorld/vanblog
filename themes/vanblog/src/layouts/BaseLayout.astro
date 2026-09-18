@@ -16,6 +16,7 @@ import NavChrome from '../vendor/NavChrome';
 import BackToTopIsland from '../vendor/BackToTop';
 import ImageZoom from '../vendor/ImageZoom';
 import ToastProviderIsland from '../vendor/ToastProvider';
+import Watermark from '../components/Watermark.astro';
 
 interface Props {
   title?: string;
@@ -245,6 +246,7 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     </div>
     <ImageZoom client:load />
     <BackToTopIsland client:load />
+    <Watermark enabled={site?.enableWaterMark === true} text={site?.watermarkText || siteName} />
 
     {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (
       <script is:inline type="module" src={src} data-vanblog-pack-script></script>
