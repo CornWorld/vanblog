@@ -6,10 +6,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/cornworld/vanblog/internal/media"
+	"github.com/cornworld/vanblog/internal/site"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -157,5 +159,53 @@ func TestSelfHealCronRegistered(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("cron job posts-revalidate-selfheal not registered")
+	}
+}
+
+// TestSelfHealGatedBySiteConfig 钉住开关语义:site.displayOptions
+// .revalidateSelfHeal=false 时每日自愈跳过(不发 Astro 请求);缺省开启。
+// 开关运行时读取,改配置无需重启。
+func TestSelfHealGatedBySiteConfig(t *testing.T) {
+	var hits int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+	t.Setenv("ASTRO_URL", srv.URL)
+
+	app := setupApp(t)
+	m := New(app)
+
+	setFlag := func(v bool) {
+		siteRec, err := site.Get(app)
+		if err != nil {
+			t.Fatalf("site get: %v", err)
+		}
+		var opts map[string]any
+		if raw := siteRec.GetString("displayOptions"); raw != "" {
+			_ = json.Unmarshal([]byte(raw), &opts)
+		}
+		if opts == nil {
+			opts = map[string]any{}
+		}
+		opts["revalidateSelfHeal"] = v
+		b, _ := json.Marshal(opts)
+		siteRec.Set("displayOptions", string(b))
+		if err := app.Save(siteRec); err != nil {
+			t.Fatalf("site save: %v", err)
+		}
+	}
+
+	setFlag(false)
+	m.runSelfHeal()
+	if got := atomic.LoadInt32(&hits); got != 0 {
+		t.Fatalf("disabled: astro hits = %d, want 0", got)
+	}
+
+	setFlag(true)
+	m.runSelfHeal()
+	if got := atomic.LoadInt32(&hits); got != 1 {
+		t.Fatalf("enabled: astro hits = %d, want 1", got)
 	}
 }
