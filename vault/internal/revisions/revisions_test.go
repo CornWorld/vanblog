@@ -2,6 +2,7 @@ package revisions
 
 import (
 	"encoding/json"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
@@ -327,5 +328,87 @@ func TestExtractSnapshot(t *testing.T) {
 	var check map[string]any
 	if err := json.Unmarshal([]byte(rawJSON), &check); err != nil {
 		t.Errorf("snapshot JSON invalid: %v", err)
+	}
+}
+
+func setMaxKeep(t *testing.T, app core.App, v any) {
+	t.Helper()
+	siteRec, err := app.FindFirstRecordByFilter("site", "")
+	if err != nil {
+		t.Fatalf("site get: %v", err)
+	}
+	var opts map[string]any
+	if raw := siteRec.GetString("displayOptions"); raw != "" {
+		_ = json.Unmarshal([]byte(raw), &opts)
+	}
+	if opts == nil {
+		opts = map[string]any{}
+	}
+	opts["revisionsMaxKeep"] = v
+	b, _ := json.Marshal(opts)
+	siteRec.Set("displayOptions", string(b))
+	if err := app.Save(siteRec); err != nil {
+		t.Fatalf("site save: %v", err)
+	}
+}
+
+// TestMaxKeepConfig 钉住配置语义:缺省 50;正值生效;<=0 = 不限(0)。
+func TestMaxKeepConfig(t *testing.T) {
+	app := setupApp(t)
+	mgr := New(app)
+
+	if got := mgr.MaxKeep(); got != 50 {
+		t.Fatalf("default maxKeep = %d, want 50", got)
+	}
+	setMaxKeep(t, app, 2)
+	if got := mgr.MaxKeep(); got != 2 {
+		t.Fatalf("configured maxKeep = %d, want 2", got)
+	}
+	setMaxKeep(t, app, 0)
+	if got := mgr.MaxKeep(); got != 0 {
+		t.Fatalf("zero maxKeep = %d, want 0 (unlimited)", got)
+	}
+	setMaxKeep(t, app, -5)
+	if got := mgr.MaxKeep(); got != 0 {
+		t.Fatalf("negative maxKeep = %d, want 0 (unlimited)", got)
+	}
+}
+
+// TestRetentionTrimsOnUpdateHook 钉住接线:post 更新钩子捕获修订后按
+// maxKeep 裁剪(修复「Cleanup 死代码、修订无限增长」缺口)。
+func TestRetentionTrimsOnUpdateHook(t *testing.T) {
+	app := setupApp(t)
+	mgr := New(app)
+	post := createTestPost(t, app, "Original", "Hello world", "published")
+	setMaxKeep(t, app, 2)
+
+	postsCol, err := app.FindCollectionByNameOrId("posts")
+	if err != nil {
+		t.Fatalf("posts collection: %v", err)
+	}
+	trigger := func() {
+		ev := &core.RecordRequestEvent{
+			Record:     post,
+			Collection: postsCol,
+			RequestEvent: &core.RequestEvent{
+				App:      app,
+				Request:  httptest.NewRequest("PATCH", "/api/collections/posts/records/"+post.Id, nil),
+				Response: httptest.NewRecorder(),
+			},
+		}
+		if err := app.OnRecordUpdateRequest("posts").Trigger(ev, func(e *core.RecordRequestEvent) error { return e.Next() }); err != nil {
+			t.Fatalf("trigger update hook: %v", err)
+		}
+	}
+
+	for i := 0; i < 4; i++ {
+		trigger()
+	}
+	revs, err := mgr.List(post.Id, 10)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(revs) != 2 {
+		t.Fatalf("revisions after 4 updates with maxKeep=2 = %d, want 2", len(revs))
 	}
 }

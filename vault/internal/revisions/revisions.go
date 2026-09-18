@@ -62,8 +62,39 @@ func (m *Manager) snapshotBeforePostUpdate(e *core.RecordRequestEvent) error {
 		if err := m.CaptureBeforeUpdate(oldRecord, ReasonAutoSave, ""); err != nil {
 			slog.Warn("[revisions] capture failed", "post", e.Record.Id, "err", err)
 		}
+		// 保留策略:裁剪到 displayOptions.revisionsMaxKeep。修订删除是数据面
+		// (归 Go),数值是偏好(归站点配置,运行时读取)。
+		if err := m.Cleanup(e.Record.Id, m.MaxKeep()); err != nil {
+			slog.Warn("[revisions] cleanup failed", "post", e.Record.Id, "err", err)
+		}
 	}
 	return e.Next()
+}
+
+// defaultMaxKeep is the revision retention when the site config does not
+// specify one. 修订无限增长曾是无主缺口——Cleanup 存在但无人调用。
+const defaultMaxKeep = 50
+
+// MaxKeep reads site.displayOptions.revisionsMaxKeep. Absent/unreadable →
+// defaultMaxKeep;<=0 → 0(= 不限,Cleanup 对 <=0 是 no-op)。
+func (m *Manager) MaxKeep() int {
+	rec, err := m.app.FindFirstRecordByFilter("site", "")
+	if err != nil {
+		return defaultMaxKeep
+	}
+	var opts map[string]any
+	if raw := rec.GetString("displayOptions"); raw != "" {
+		if err := json.Unmarshal([]byte(raw), &opts); err != nil {
+			return defaultMaxKeep
+		}
+	}
+	if v, ok := opts["revisionsMaxKeep"].(float64); ok {
+		if int(v) <= 0 {
+			return 0 // unlimited
+		}
+		return int(v)
+	}
+	return defaultMaxKeep
 }
 
 // CaptureBeforeUpdate takes a snapshot of the current (pre-update) post state

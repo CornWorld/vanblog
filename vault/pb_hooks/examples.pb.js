@@ -70,3 +70,33 @@
 //     row.set("ip", e.realIP());
 //     $app.save(row);
 // }, "subscribers");
+
+// --- Example 7: Push failure alerts to your own webhook ---
+// The platform writes result="failure" rows into `audits` when background
+// chains fail (e.g. action="revalidate.failure" / "revalidate.selfheal"
+// when Astro cache invalidation cannot be reached — see selfheal.pb.js).
+// Those rows are visible in the admin audits page; if you also want a PUSH
+// notification (Slack / DingTalk / your own endpoint), poll for recent
+// failure rows and forward them. Copy this into your own .pb.js file and
+// set your webhook URL.
+//
+// cronAdd("failure-alert-push", "*/10 * * * *", () => {
+//     const webhookUrl = "https://hooks.slack.com/services/YOURS";
+//     const since = new Date(Date.now() - 10 * 60 * 1000).toISOString().replace("T", " ");
+//     const failures = $app.findRecordsByFilter(
+//         "audits", "result = 'failure' && created > {:since}", "-created", 20, 0, { since }
+//     );
+//     if (!failures.length) return;
+//     const lines = failures.map((f) => `[${f.get("action")}] ${f.get("detail") || f.get("target")}`);
+//     try {
+//         $http.send({
+//             url: webhookUrl,
+//             method: "POST",
+//             headers: { "Content-Type": "application/json" },
+//             body: JSON.stringify({ text: "VanBlog 失败提醒:\n" + lines.join("\n") }),
+//             timeout: 5,
+//         });
+//     } catch (e) {
+//         console.error("[vanblog] failure-alert push failed:", e);
+//     }
+// });

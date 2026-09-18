@@ -371,3 +371,65 @@ func TestUnlockEndpoint_ResolvePathname(t *testing.T) {
 		t.Errorf("unknown slug: got %d, want 404", rec.Code)
 	}
 }
+
+func setUnlockTTLDays(t *testing.T, app core.App, days int) {
+	t.Helper()
+	siteRec, err := app.FindFirstRecordByFilter("site", "")
+	if err != nil {
+		t.Fatalf("site get: %v", err)
+	}
+	var opts map[string]any
+	if raw := siteRec.GetString("displayOptions"); raw != "" {
+		_ = json.Unmarshal([]byte(raw), &opts)
+	}
+	if opts == nil {
+		opts = map[string]any{}
+	}
+	opts["unlockTTLDays"] = days
+	b, _ := json.Marshal(opts)
+	siteRec.Set("displayOptions", string(b))
+	if err := app.Save(siteRec); err != nil {
+		t.Fatalf("site save: %v", err)
+	}
+}
+
+func unlockCookieMaxAge(t *testing.T, mux http.Handler, postID, body string) int {
+	t.Helper()
+	rec := postUnlock(t, mux, postID, body, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("unlock = %d %s", rec.Code, rec.Body.String())
+	}
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == "vb-unlock-"+postID {
+			return c.MaxAge
+		}
+	}
+	t.Fatal("unlock cookie missing")
+	return 0
+}
+
+// TestUnlockTTLFromSiteConfig 钉住 TTL 配置语义:displayOptions.unlockTTLDays
+// 生效、有界 [1,30];缺省 7 天。
+func TestUnlockTTLFromSiteConfig(t *testing.T) {
+	app := setupApp(t)
+	mux := buildRouter(t, app)
+	post := createLockedPost(t, app, "/locked", "rightpw")
+	body := `{"password":"rightpw","basePath":""}`
+
+	// 缺省 7 天。
+	if got := unlockCookieMaxAge(t, mux, post.Id, body); got != 7*24*3600 {
+		t.Fatalf("default maxAge = %d, want %d", got, 7*24*3600)
+	}
+
+	// 配置 1 天 → 86400。
+	setUnlockTTLDays(t, app, 1)
+	if got := unlockCookieMaxAge(t, mux, post.Id, body); got != 86400 {
+		t.Fatalf("1-day maxAge = %d, want 86400", got)
+	}
+
+	// 上界钳制:99 → 30 天。
+	setUnlockTTLDays(t, app, 99)
+	if got := unlockCookieMaxAge(t, mux, post.Id, body); got != 30*24*3600 {
+		t.Fatalf("clamped maxAge = %d, want %d", got, 30*24*3600)
+	}
+}

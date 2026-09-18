@@ -35,7 +35,9 @@ import (
 
 const (
 	unlockCookiePrefix = "vb-unlock-"
-	unlockTTL          = 7 * 24 * time.Hour
+	// 解锁票据有效期缺省 7 天;可经 site.displayOptions.unlockTTLDays 调整
+	// (有界 [1,30]——票据越长重放窗口越大,不开放无界配置)。
+	defaultUnlockTTLDays = 7
 	// Failed password attempts allowed per IP per window before 429.
 	unlockMaxAttempts = 10
 	unlockWindow      = time.Minute
@@ -139,10 +141,30 @@ func requestIsHTTPS(e *core.RequestEvent) bool {
 	return e.Request.TLS != nil
 }
 
+// unlockTTLDuration reads site.displayOptions.unlockTTLDays, clamped to
+// [1,30] days. 缺省 7;读失败保持缺省——安全参数不做 fail-open。
+func (m *Manager) unlockTTLDuration() time.Duration {
+	days := defaultUnlockTTLDays
+	if rec, err := m.app.FindFirstRecordByFilter("site", ""); err == nil {
+		var opts map[string]any
+		if raw := rec.GetString("displayOptions"); raw != "" {
+			_ = json.Unmarshal([]byte(raw), &opts)
+		}
+		if v, ok := opts["unlockTTLDays"].(float64); ok && int(v) >= 1 {
+			days = int(v)
+		}
+	}
+	if days > 30 {
+		days = 30
+	}
+	return time.Duration(days) * 24 * time.Hour
+}
+
 // setUnlockCookie issues a fresh signed unlock cookie scoped to the post
 // page URL.
 func (m *Manager) setUnlockCookie(e *core.RequestEvent, postID, basePath string) error {
-	token, err := m.signUnlockToken(postID, time.Now().Add(unlockTTL).Unix())
+	ttl := m.unlockTTLDuration()
+	token, err := m.signUnlockToken(postID, time.Now().Add(ttl).Unix())
 	if err != nil {
 		return err
 	}
@@ -159,7 +181,7 @@ func (m *Manager) setUnlockCookie(e *core.RequestEvent, postID, basePath string)
 	e.SetCookie(&http.Cookie{ // #nosec G124 -- Secure is deployment-dependent, see above
 		Name:     unlockCookiePrefix + postID,
 		Value:    token,
-		MaxAge:   int(unlockTTL.Seconds()),
+		MaxAge:   int(ttl.Seconds()),
 		Path:     basePath + "/post/" + postID,
 		Secure:   requestIsHTTPS(e),
 		HttpOnly: true,
