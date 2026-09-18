@@ -4,14 +4,11 @@ package article
 
 import (
 	"cmp"
-	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
 
-	"github.com/cornworld/vanblog/internal/site"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -98,15 +95,8 @@ func (m *Manager) handlePostsCacheInvalidation(app core.App) {
 		invalidate()
 		return e.Next()
 	})
-	// 自愈 cron:失效通知是单次 fire-and-forget,Astro 重启窗口内会丢失且
-	// 无重试(丢失时写 result=failure 审计行提醒管理员)。每日低峰重发一次
-	// 失效(单次幂等 HTTP,与标签无关的自愈),自愈窗口从「永远」收敛到
-	// 「≤24h」。
-	// 可关闭:site.displayOptions.revalidateSelfHeal=false(运行时读取,
-	// 无需重启);缺省开启。失败提醒行不受开关影响(那是底线能力)。
-	app.Cron().MustAdd("posts-revalidate-selfheal", "0 4 * * *", func() {
-		m.runSelfHeal()
-	})
+	// 失效通知本体(go revalidateAstroCache)保持 Go 层。每日自愈 cron
+	// 在 pb_hooks/selfheal.pb.js(用户可关闭/改造,平台自带默认启用)。
 }
 
 func (m *Manager) handleTimelineEndpoint(e *core.RequestEvent) error {
@@ -407,36 +397,4 @@ func (m *Manager) handlePurgeEndpoint(e *core.RequestEvent) error {
 	go revalidateAstroCache(m.app, []string{"posts", "feed"})
 
 	return e.JSON(http.StatusOK, map[string]any{"ok": true, "id": id})
-}
-
-// runSelfHeal executes one daily self-heal round: re-send the Astro cache
-// invalidation for posts+feed. Gated by site.displayOptions
-// .revalidateSelfHeal(缺省开启;读失败保持开启——自愈是无害兜底,读失败
-// 不应静默关闭可靠性)。
-func (m *Manager) runSelfHeal() {
-	if !m.selfHealEnabled() {
-		slog.Info("[article] self-heal disabled by site config, skipping")
-		return
-	}
-	revalidateAstroCache(m.app, []string{"posts", "feed"})
-}
-
-// selfHealEnabled reads site.displayOptions.revalidateSelfHeal. Any read
-// failure or absent key resolves to enabled(true)——自愈是无害兜底。
-func (m *Manager) selfHealEnabled() bool {
-	rec, err := site.Get(m.app)
-	if err != nil {
-		return true
-	}
-	if v := rec.Get("displayOptions"); v != nil {
-		if b, err := json.Marshal(v); err == nil {
-			var opts struct {
-				RevalidateSelfHeal *bool `json:"revalidateSelfHeal"`
-			}
-			if json.Unmarshal(b, &opts) == nil && opts.RevalidateSelfHeal != nil {
-				return *opts.RevalidateSelfHeal
-			}
-		}
-	}
-	return true
 }

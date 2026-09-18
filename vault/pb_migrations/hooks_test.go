@@ -4,7 +4,8 @@ package migrations
 // 核心审计已迁 Go 层(internal/audit,通配 Request 钩子,原 verify_audits.go
 // → hooks_test.go 的行为断言随迁到 internal/audit/audit_test.go);visits 聚合
 // cron 同日迁 internal/visits(cronAdd 只是 app.Cron() 的 JS 绑定),system.pb.js
-// 已删除,pb_hooks 只剩用户扩展面(examples + 用户自己的 *.pb.js)。本测试只锁:
+// 已删除,pb_hooks 只剩用户扩展面(examples + 用户自己的 *.pb.js;另有平台
+// 自带的用户可改造钩子 selfheal.pb.js,见 selfheal_hooks_test.go)。本测试只锁:
 //  1. 真实 pb_hooks/*.pb.js 仍能被 jsvm 加载(lessons §1.1:jsvm 是可选插件,
 //     不注册 = 静默失效,无报错);
 //  2. 审计不在 JS 层——posts 的 Request 写产生 0 条审计行。
