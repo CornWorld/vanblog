@@ -82,7 +82,7 @@ func New(app core.App) *Manager {
 // Each handler runs in a goroutine so the request isn't blocked on Astro's
 // response.
 func (m *Manager) handlePostsCacheInvalidation(app core.App) {
-	invalidate := func() { go revalidateAstroCache([]string{"posts", "feed"}) }
+	invalidate := func() { go revalidateAstroCache(app, []string{"posts", "feed"}) }
 	app.OnRecordAfterCreateSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
 		invalidate()
 		return e.Next()
@@ -94,6 +94,13 @@ func (m *Manager) handlePostsCacheInvalidation(app core.App) {
 	app.OnRecordAfterDeleteSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
 		invalidate()
 		return e.Next()
+	})
+	// 自愈 cron:失效通知是单次 fire-and-forget,Astro 重启窗口内会丢失且
+	// 无重试(丢失时写 result=failure 审计行提醒管理员)。每日低峰重发一次
+	// 失效(单次幂等 HTTP,与标签无关的自愈),自愈窗口从「永远」收敛到
+	// 「≤24h」。
+	app.Cron().MustAdd("posts-revalidate-selfheal", "0 4 * * *", func() {
+		revalidateAstroCache(app, []string{"posts", "feed"})
 	})
 }
 
@@ -349,7 +356,7 @@ func (m *Manager) handleRestoreEndpoint(e *core.RequestEvent) error {
 	}
 
 	// Mirror handlePostsCacheInvalidation: invalidate Astro cache async.
-	go revalidateAstroCache([]string{"posts", "feed"})
+	go revalidateAstroCache(m.app, []string{"posts", "feed"})
 	return e.JSON(http.StatusOK, map[string]any{"ok": true, "id": id})
 }
 
@@ -392,7 +399,7 @@ func (m *Manager) handlePurgeEndpoint(e *core.RequestEvent) error {
 		}
 		return e.JSON(http.StatusInternalServerError, err.Error())
 	}
-	go revalidateAstroCache([]string{"posts", "feed"})
+	go revalidateAstroCache(m.app, []string{"posts", "feed"})
 
 	return e.JSON(http.StatusOK, map[string]any{"ok": true, "id": id})
 }

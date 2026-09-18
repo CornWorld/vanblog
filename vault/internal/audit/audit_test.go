@@ -361,3 +361,23 @@ func TestAuthRefreshNotAudited(t *testing.T) {
 		t.Fatalf("auth.login rows = %d, want 0 (refresh is not a login)", len(rows))
 	}
 }
+
+// TestOpsFailedWritesFailureRow 钉住后台链失败提醒机制:OpsFailed 必须写
+// result=failure 的系统审计行(actor 空,ip/ua 空)。缓存失效丢失等链式
+// 失败经此提醒管理员。
+func TestOpsFailedWritesFailureRow(t *testing.T) {
+	app, _ := newTestApp(t)
+
+	OpsFailed(app, "revalidate.failure", "posts,feed", map[string]any{"reason": "probe"})
+
+	rows := auditRows(t, app, "revalidate.failure")
+	if len(rows) != 1 {
+		t.Fatalf("failure rows = %d, want 1", len(rows))
+	}
+	if rows[0].GetString("result") != "failure" {
+		t.Fatalf("result = %q, want failure", rows[0].GetString("result"))
+	}
+	if rows[0].GetString("actor") != "" {
+		t.Fatalf("actor = %q, want empty (system)", rows[0].GetString("actor"))
+	}
+}

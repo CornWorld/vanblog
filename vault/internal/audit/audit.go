@@ -247,11 +247,22 @@ func userAgent(e *core.RequestEvent) string {
 	return e.Request.Header.Get("User-Agent")
 }
 
+// OpsFailed records a failed background-chain operation (缓存失效丢失等) as
+// a system audits row: actor 空 = 系统行为,result = "failure"。Best-effort:
+// 持久化失败降级为结构化日志——运维事件绝不能 panic 其调用方。
+func OpsFailed(app core.App, action, target string, detail map[string]any) {
+	writeRow(app, "", action, target, detail, "", "", "failure")
+}
+
 // write persists one audits row. Failures degrade to structured logs —
 // an audit failure must never surface as a 500 on a succeeded operation.
 func (m *Manager) write(actor, action, target string, detail any, ip, ua string) {
-	logger := m.app.Logger()
-	col, err := m.app.FindCollectionByNameOrId("audits")
+	writeRow(m.app, actor, action, target, detail, ip, ua, "success")
+}
+
+func writeRow(app core.App, actor, action, target string, detail any, ip, ua, result string) {
+	logger := app.Logger()
+	col, err := app.FindCollectionByNameOrId("audits")
 	if err != nil {
 		logger.Error("audit: audits collection missing", "action", action, "err", err)
 		return
@@ -271,11 +282,11 @@ func (m *Manager) write(actor, action, target string, detail any, ip, ua string)
 	}
 	rec.Set("action", action)
 	rec.Set("target", target)
-	rec.Set("result", "success")
+	rec.Set("result", result)
 	rec.Set("detail", detailStr)
 	rec.Set("ip", ip)
 	rec.Set("userAgent", ua)
-	if err := m.app.Save(rec); err != nil {
+	if err := app.Save(rec); err != nil {
 		logger.Error("audit write failed", "action", action, "target", target, slog.String("err", err.Error()))
 	}
 }
