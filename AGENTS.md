@@ -25,7 +25,7 @@ cd vault && go build -o bin/vanblog . # pb 二进制
 node scripts/build/theme-init.mjs <name>   # 脚手架新主题
 ```
 
-本机 `docker build`:本网络不可达 `proxy.golang.org`,必须带
+本机 `docker build`:本网络不可达 `proxy.golang.org` 时, 必须带
 `--build-arg GOPROXY=https://goproxy.cn,direct --build-arg NPM_MIRROR=https://registry.npmmirror.com`
 （Dockerfile 头注释的文档化入口,`build_dev_image` 会透传;2026-09-18 实测
 全冷 ~4 分钟）。宿主机重启会丢 Docker 基础镜像缓存,首次构建需重拉。
