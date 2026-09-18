@@ -25,6 +25,12 @@ cd vault && go build -o bin/vanblog . # pb 二进制
 node scripts/build/theme-init.mjs <name>   # 脚手架新主题
 ```
 
+本机 `docker build`:本网络不可达 `proxy.golang.org`,必须带
+`--build-arg GOPROXY=https://goproxy.cn,direct --build-arg NPM_MIRROR=https://registry.npmmirror.com`
+（Dockerfile 头注释的文档化入口,`build_dev_image` 会透传;2026-09-18 实测
+全冷 ~4 分钟）。宿主机重启会丢 Docker 基础镜像缓存,首次构建需重拉。
+npmmirror 偶发瞬时失败,重试即可。
+
 改任何 `themes/*/astro.config.mjs` 或 `app/integrations/` 后，所有 theme 都要 rebuild。
 
 ## 禁区（不要改）
@@ -71,3 +77,11 @@ pi -p "帮我 review"   # 单次提问
 ## Skill 作者
 
 Skill（`SKILL.md`）只写流程编排和检查清单，**不要抄 docs 内容**——领域知识一律 `read docs/<file>` 现场取。参考 `.agents/skills/vanblog/SKILL.md` 作为标准模板。
+
+## 协作约定（omp agent）
+
+- 收尾扫描若只剩「自己立的未验证项」（性能探针、可选实测之类），向用户报为
+  可选并给预估成本，由用户定优先级——不要当成欠账自行开磨。
+- 验证/构建中途环境突变（缓存丢失、网络不通）导致成本暴涨时，停下来重新
+  评估并向用户说明，不要链式等待硬磨。
+
