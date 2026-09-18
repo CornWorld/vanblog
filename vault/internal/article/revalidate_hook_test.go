@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/cornworld/vanblog/internal/media"
+	"github.com/pocketbase/pocketbase/core"
 )
 
 // TestWriteHooksTriggerAstroRevalidate pins that posts CRUD fires the Astro
@@ -106,3 +107,55 @@ func TestMediaThenArticleChainFiresWebhook(t *testing.T) {
 }
 
 var _ = os.Getenv // keep os import if test evolves
+
+// TestRevalidateFailureWritesFailedAuditRow 钉住自愈提醒机制:Astro 不可达
+// 时,失效失败必须写一条 result=failure 的审计行(管理员审计页可见)——
+// 失效通知是单次 fire-and-forget,无此行则丢失后既不自愈也无法感知。
+func TestRevalidateFailureWritesFailedAuditRow(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+	}))
+	defer srv.Close()
+	t.Setenv("ASTRO_URL", srv.URL)
+
+	app := setupApp(t)
+	_ = New(app)
+
+	createPost(t, app, "Fail Probe", "body", "published", "/fail-probe")
+	// 失效失败 → OpsFailed 审计行由后台 goroutine 落库;测试主协程的读询
+	// 压力可能让该 goroutine 的调度延迟数秒(实测 ~10s),窗口放宽到 30s。
+	deadline := time.Now().Add(30 * time.Second)
+	var failed *core.Record
+	for time.Now().Before(deadline) && failed == nil {
+		all, _ := app.FindRecordsByFilter("audits", "", "-created", 10, 0)
+		for _, a := range all {
+			if a.GetString("action") == "revalidate.failure" && a.GetString("result") == "failure" {
+				failed = a
+				break
+			}
+		}
+		if failed == nil {
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
+	if failed.GetString("result") != "failure" {
+		t.Errorf("result = %q, want failure", failed.GetString("result"))
+	}
+}
+
+// TestSelfHealCronRegistered 钉住:每日自愈 cron 必须注册——失效通知丢失
+// 的兜底重发依赖它(2026-09-17 长流程审查沉淀)。
+func TestSelfHealCronRegistered(t *testing.T) {
+	app := setupApp(t)
+	_ = New(app)
+
+	found := false
+	for _, job := range app.Cron().Jobs() {
+		if job.Id() == "posts-revalidate-selfheal" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("cron job posts-revalidate-selfheal not registered")
+	}
+}

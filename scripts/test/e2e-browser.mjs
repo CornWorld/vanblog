@@ -358,12 +358,15 @@ await assert('U2 锁定文正确密码 → 解锁端点 200 + 解锁 cookie', as
   if (!String(body.html).includes('SECRET-E2E-LOCKED')) {
     throw new Error('unlock 响应缺少正文 html');
   }
-  // Set-Cookie 中继(path 限定 /post/<slug>,HttpOnly——网络层校验;页面
-  // 渲染由 UnLockCard 成功分支的 reload 完成,不再重复断言渲染时序)
-  const setCookie = r.headers()['set-cookie'] || '';
-  if (!/vb-unlock-/.test(setCookie)) throw new Error('unlock 响应缺 Set-Cookie');
-  if (!/Path=\/post\//.test(setCookie)) throw new Error('unlock cookie Path 未限定到 /post/');
-  console.log(`    · U2 unlock POST ${r.status()}, Set-Cookie ${setCookie.match(/Path=[^;]+/)[0]}`);
+  // Set-Cookie 中继(path 限定 /post/<slug>,HttpOnly——page JS 与
+  // headers() 均不可见,须查 context cookie;页面渲染由 UnLockCard 成功
+  // 分支的 reload 完成,不重复断言渲染时序)
+  const unlockCookie = (await page.context().cookies(`${BASE}/post/e2e-locked`))
+    .find(c => c.name.startsWith('vb-unlock-'));
+  if (!unlockCookie) throw new Error('unlock 响应未设置 vb-unlock-* cookie');
+  if (unlockCookie.path !== '/post/e2e-locked') {
+    throw new Error(`unlock cookie path = ${unlockCookie.path}, want /post/e2e-locked`);
+  }
 });
 
 // ── 编辑器 UI ──
