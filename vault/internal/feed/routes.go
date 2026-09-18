@@ -1,6 +1,7 @@
 package feed
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -31,8 +32,28 @@ func New(app core.App) *Service {
 	return s
 }
 
+// feedLimit reads site.displayOptions.feedLimit, clamped to [1,100].
+// 缺省 20(上游原版可配,本仓曾写死);越界/读失败回缺省。
+func feedLimit(app core.App) int {
+	const def, max = 20, 100
+	rec, err := app.FindFirstRecordByFilter("site", "")
+	if err != nil {
+		return def
+	}
+	var opts map[string]any
+	if raw := rec.GetString("displayOptions"); raw != "" {
+		_ = json.Unmarshal([]byte(raw), &opts)
+	}
+	if v, ok := opts["feedLimit"].(float64); ok {
+		if n := int(v); n >= 1 && n <= max {
+			return n
+		}
+	}
+	return def
+}
+
 func (s *Service) serveRSS(e *core.RequestEvent) error {
-	data, err := GenerateRSS(s.app, 20)
+	data, err := GenerateRSS(s.app, feedLimit(s.app))
 	if err != nil {
 		return e.String(http.StatusInternalServerError, "rss failed")
 	}
@@ -40,7 +61,7 @@ func (s *Service) serveRSS(e *core.RequestEvent) error {
 }
 
 func (s *Service) serveAtom(e *core.RequestEvent) error {
-	data, err := GenerateAtom(s.app, 20)
+	data, err := GenerateAtom(s.app, feedLimit(s.app))
 	if err != nil {
 		return e.String(http.StatusInternalServerError, "atom failed")
 	}

@@ -18,6 +18,8 @@ const (
 	backupListTimeout      = 30 * time.Second
 	backupDownloadTimeout  = 10 * time.Minute
 	backupOperationTimeout = 10 * time.Minute
+	// backupNamePrefix 本仓备份命名约定;定时备份的保留裁剪只作用于该前缀。
+	backupNamePrefix = "vanblog_backup_"
 )
 
 type backupFileInfo struct {
@@ -34,7 +36,7 @@ func validateBackupKey(key string) error {
 }
 
 func newBackupName(now time.Time) string {
-	return "vanblog_backup_" + now.UTC().Format("20060102_150405.000000000") + ".zip"
+	return backupNamePrefix + now.UTC().Format("20060102_150405.000000000") + ".zip"
 }
 
 func backupConflict(app core.App) bool {

@@ -46,6 +46,7 @@ func New(app core.App) *Manager {
 		se.Router.GET("/api/vanblog/export/all", m.handleExportAll)
 		return se.Next()
 	})
+	m.registerDailyBackup()
 	return m
 }
 

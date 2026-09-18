@@ -1,6 +1,9 @@
 package feed
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -101,5 +104,82 @@ func TestGenerateAtom(t *testing.T) {
 	}
 	if !strings.Contains(string(data), "Atom Test") {
 		t.Error("Atom should contain post title")
+	}
+}
+
+func setFeedLimit(t *testing.T, app core.App, v int) {
+	t.Helper()
+	siteRec, err := app.FindFirstRecordByFilter("site", "")
+	if err != nil {
+		t.Fatalf("site get: %v", err)
+	}
+	var opts map[string]any
+	if raw := siteRec.GetString("displayOptions"); raw != "" {
+		_ = json.Unmarshal([]byte(raw), &opts)
+	}
+	if opts == nil {
+		opts = map[string]any{}
+	}
+	opts["feedLimit"] = v
+	b, _ := json.Marshal(opts)
+	siteRec.Set("displayOptions", string(b))
+	if err := app.Save(siteRec); err != nil {
+		t.Fatalf("site save: %v", err)
+	}
+}
+
+// TestFeedLimitFromSiteConfig 钉住:RSS 路由按 displayOptions.feedLimit
+// 出条目(缺省 20;越界回缺省;上界 100)。
+func TestFeedLimitFromSiteConfig(t *testing.T) {
+	app := setupApp(t)
+	for i := 0; i < 5; i++ {
+		createPost(t, app, fmt.Sprintf("Post%d", i))
+	}
+	s := New(app)
+
+	serveRSSBody := func() string {
+		rec := httptest.NewRecorder()
+		ev := &core.RequestEvent{
+			App:      app,
+			Request:  httptest.NewRequest("GET", "/api/feed.xml", nil),
+			Response: rec,
+		}
+		if err := s.serveRSS(ev); err != nil {
+			t.Fatalf("serveRSS: %v", err)
+		}
+		return rec.Body.String()
+	}
+	count := func(body string) int { return strings.Count(body, "<item>") }
+
+	// 缺省 20 → 5 篇全出。
+	if got := count(serveRSSBody()); got != 5 {
+		t.Fatalf("default feed items = %d, want 5", got)
+	}
+
+	// feedLimit=3 → 恰 3 条。
+	setFeedLimit(t, app, 3)
+	if got := count(serveRSSBody()); got != 3 {
+		t.Fatalf("feed items with feedLimit=3 = %d, want 3", got)
+	}
+
+	// 越界(500 > 100)→ 回缺省 20 → 5 篇全出。
+	setFeedLimit(t, app, 500)
+	if got := count(serveRSSBody()); got != 5 {
+		t.Fatalf("feed items with out-of-range feedLimit = %d, want 5", got)
+	}
+
+	// Atom 同规则。
+	setFeedLimit(t, app, 2)
+	rec := httptest.NewRecorder()
+	ev := &core.RequestEvent{
+		App:      app,
+		Request:  httptest.NewRequest("GET", "/api/atom.xml", nil),
+		Response: rec,
+	}
+	if err := s.serveAtom(ev); err != nil {
+		t.Fatalf("serveAtom: %v", err)
+	}
+	if got := strings.Count(rec.Body.String(), "<entry>"); got != 2 {
+		t.Fatalf("atom entries with feedLimit=2 = %d, want 2", got)
 	}
 }
