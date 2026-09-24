@@ -74,8 +74,12 @@ func (m *Manager) snapshotBeforePostUpdate(e *core.RecordRequestEvent) error {
 		}
 		// 保留策略:裁剪到 site.revisionsRetention。修订删除是数据面
 		// (归 Go),数值是偏好(归站点配置,admin 设置页既有编辑器,
-		// 运行时读取)。
-		if err := m.Cleanup(e.Record.Id, m.MaxKeep()); err != nil {
+		// 运行时读取)。复用上面已取的 siteRec——MaxKeep() 会再查一次。
+		keep := defaultMaxKeep
+		if siteRec != nil {
+			keep = maxKeepFrom(siteRec)
+		}
+		if err := m.Cleanup(e.Record.Id, keep); err != nil {
 			slog.Warn("[revisions] cleanup failed", "post", e.Record.Id, "err", err)
 		}
 	}
@@ -89,12 +93,17 @@ const defaultMaxKeep = 50
 // MaxKeep reads site.revisionsRetention (top-level field, NOT
 // displayOptions——该字段自 init 迁移即存在,admin 设置页可编辑)。
 // Absent/zero → defaultMaxKeep;<0 → 0(= 不限,Cleanup 对 <=0 是 no-op)。
+// 已持有 site 记录的调用方用 maxKeepFrom,避免重复查询。
 func (m *Manager) MaxKeep() int {
 	rec, err := m.app.FindFirstRecordByFilter("site", "")
 	if err != nil {
 		return defaultMaxKeep
 	}
-	v := int(rec.GetFloat("revisionsRetention"))
+	return maxKeepFrom(rec)
+}
+
+func maxKeepFrom(siteRec *core.Record) int {
+	v := int(siteRec.GetFloat("revisionsRetention"))
 	if v == 0 {
 		return defaultMaxKeep
 	}
