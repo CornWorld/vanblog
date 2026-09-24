@@ -1,9 +1,9 @@
 package feed
 
 import (
-	"encoding/json"
 	"net/http"
 
+	"github.com/cornworld/vanblog/internal/site"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -36,20 +36,11 @@ func New(app core.App) *Service {
 // 缺省 20(上游原版可配,本仓曾写死);越界/读失败回缺省。
 func feedLimit(app core.App) int {
 	const def, max = 20, 100
-	rec, err := app.FindFirstRecordByFilter("site", "")
-	if err != nil {
+	v, err := site.DisplayNumber(app, "feedLimit")
+	if err != nil || v < 1 || v > max {
 		return def
 	}
-	var opts map[string]any
-	if raw := rec.GetString("displayOptions"); raw != "" {
-		_ = json.Unmarshal([]byte(raw), &opts)
-	}
-	if v, ok := opts["feedLimit"].(float64); ok {
-		if n := int(v); n >= 1 && n <= max {
-			return n
-		}
-	}
-	return def
+	return int(v)
 }
 
 func (s *Service) serveRSS(e *core.RequestEvent) error {

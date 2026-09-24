@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cornworld/vanblog/internal/site"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -145,14 +146,8 @@ func requestIsHTTPS(e *core.RequestEvent) bool {
 // [1,30] days. 缺省 7;读失败保持缺省——安全参数不做 fail-open。
 func (m *Manager) unlockTTLDuration() time.Duration {
 	days := defaultUnlockTTLDays
-	if rec, err := m.app.FindFirstRecordByFilter("site", ""); err == nil {
-		var opts map[string]any
-		if raw := rec.GetString("displayOptions"); raw != "" {
-			_ = json.Unmarshal([]byte(raw), &opts)
-		}
-		if v, ok := opts["unlockTTLDays"].(float64); ok && int(v) >= 1 {
-			days = int(v)
-		}
+	if v, err := site.DisplayNumber(m.app, "unlockTTLDays"); err == nil && int(v) >= 1 {
+		days = int(v)
 	}
 	if days > 30 {
 		days = 30
