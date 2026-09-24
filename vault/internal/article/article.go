@@ -62,6 +62,8 @@ type Manager struct {
 //   - OnRecordAfterCreateSuccess/UpdateSuccess/DeleteSuccess("posts"):
 //     invalidate Astro SSR cache so readers see the change immediately.
 //   - OnServe: register /api/vanblog/timeline and /api/vanblog/search.
+//   - OnServe: verify the JSVM self-heal cron actually registered (see
+//     verifySelfhealCron).
 func New(app core.App) *Manager {
 	m := &Manager{app: app}
 	RegisterContentHygieneHooks(app)
@@ -73,6 +75,7 @@ func New(app core.App) *Manager {
 		se.Router.POST("/api/vanblog/posts/{id}/restore", m.handleRestoreEndpoint)
 		se.Router.POST("/api/vanblog/posts/{id}/unlock", m.handleUnlock)
 		se.Router.POST("/api/vanblog/posts/{id}/purge", m.handlePurgeEndpoint)
+		verifySelfhealCron(se.App)
 		return se.Next()
 	})
 	return m

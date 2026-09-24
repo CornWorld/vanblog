@@ -144,4 +144,43 @@ func TestRevalidateFailureWritesFailedAuditRow(t *testing.T) {
 }
 
 // TestSelfHealCronRegistered 钉住:每日自愈 cron 必须注册——失效通知丢失
-// 的兜底重发依赖它(2026-09-17 长流程审查沉淀)。
+// 的兜底重发依赖它(2026-09-17 长流程审查沉淀)。selfheal.pb.js 是用户
+// 可改的 JSVM 文件,volume 覆盖/升级重置/语法错误都会静默丢掉 cron,
+// verifySelfhealCron 必须在缺席时写 selfheal.cron.missing 审计行让管理员
+// 可见(writeRow 同步落库,断言无需轮询)。
+func TestSelfHealCronRegistered(t *testing.T) {
+	t.Run("registered", func(t *testing.T) {
+		app := setupApp(t)
+		// 模拟 selfheal.pb.js 被 jsvm 层加载注册。
+		app.Cron().MustAdd(selfhealCronId, "0 4 * * *", func() {})
+
+		verifySelfhealCron(app)
+
+		rows, err := app.FindRecordsByFilter("audits", "action={:a}", "-created", 10, 0,
+			map[string]any{"a": "selfheal.cron.missing"})
+		if err != nil {
+			t.Fatalf("query audits: %v", err)
+		}
+		if len(rows) != 0 {
+			t.Fatalf("selfheal.cron.missing rows = %d, want 0 (cron registered)", len(rows))
+		}
+	})
+
+	t.Run("missing", func(t *testing.T) {
+		app := setupApp(t) // 裸 app:无 JSVM 层,selfheal 未注册
+
+		verifySelfhealCron(app)
+
+		rows, err := app.FindRecordsByFilter("audits", "action={:a}", "-created", 10, 0,
+			map[string]any{"a": "selfheal.cron.missing"})
+		if err != nil {
+			t.Fatalf("query audits: %v", err)
+		}
+		if len(rows) != 1 {
+			t.Fatalf("selfheal.cron.missing rows = %d, want 1", len(rows))
+		}
+		if rows[0].GetString("result") != "failure" {
+			t.Fatalf("result = %q, want failure", rows[0].GetString("result"))
+		}
+	})
+}

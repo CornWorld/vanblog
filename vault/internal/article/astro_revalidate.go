@@ -66,3 +66,29 @@ func revalidateAstroCache(app core.App, tags []string) {
 		slog.Info("[article] revalidate: cache invalidated", "tags", tags)
 	}
 }
+
+// selfhealCronId must match the cronAdd id in pb_hooks/selfheal.pb.js.
+const selfhealCronId = "posts-revalidate-selfheal"
+
+// verifySelfhealCron warns at serve time when the JSVM self-heal cron is
+// absent. The daily cache self-heal moved from a Go cron (formerly
+// MustAdd here, now removed) to a user-editable JSVM file — a pb_hooks
+// volume override or upgrade reset silently drops it, which is the exact
+// "后台安全网失灵不可见" incident shape (docs/lessons-learned §1: JSVM
+// hook not executing, no error surfaced). JSVM hook files register their
+// crons during jsvm.MustRegister, i.e. before any OnServe bind fires — so
+// at this point a missing id means the file did not load/register.
+// slog + audit row: both surfaces, because this is precisely the failure
+// that must be observable (与 backup.prune 同一哲学).
+func verifySelfhealCron(app core.App) {
+	for _, job := range app.Cron().Jobs() {
+		if job.Id() == selfhealCronId {
+			return
+		}
+	}
+	slog.Error("[selfheal] cron posts-revalidate-selfheal not registered — daily cache self-heal is OFF",
+		"hint", "check pb_hooks/selfheal.pb.js (volume override, reset by upgrade, or JS syntax error)")
+	audit.OpsFailed(app, "selfheal.cron.missing", "pb_hooks/selfheal.pb.js", map[string]any{
+		"reason": "cron id posts-revalidate-selfheal absent at serve time",
+	})
+}
