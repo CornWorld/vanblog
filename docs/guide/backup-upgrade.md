@@ -10,6 +10,14 @@
 
 备份会短暂停服并生成 tar.gz（含 `pb_data`、`caddy_data`、`packs`）。见 [参考: 备份](../reference/backup.md)。
 
+## 手动快照与保留裁剪
+
+PB 管理面板创建的手动快照（`vanblog_backup_*`）与每日定时备份共用同一命名前缀，**共同参与 `site.displayOptions.backupKeep` 的保留裁剪**——「升级前手动快照」不在豁免之列，超出保留份数后同样会被最旧先删。
+
+要长期保留某份快照：调大 `backupKeep`（PB 管理界面编辑 site 记录的 displayOptions JSON），或先从备份页下载归档到本地。
+
+`./vanblog.sh backup` 生成的 tar.gz 存放在宿主机，不经过上述裁剪，不受影响。
+
 ## 升级
 
 ```bash

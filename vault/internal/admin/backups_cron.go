@@ -7,13 +7,16 @@ package admin
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
+	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/cornworld/vanblog/internal/audit"
+	"github.com/cornworld/vanblog/internal/site"
+	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/filesystem/blob"
 )
 
@@ -22,6 +25,9 @@ const (
 	backupCronId = "backups-daily"
 	// defaultBackupKeep 缺省保留最近 7 份;<=0 = 不限(只增不删)。
 	defaultBackupKeep = 7
+	// backupPruneTimeout 裁剪的独立预算:prune 不复用 CreateBackup 的
+	// context——S3 类后端上备份吃满 10 分钟不应把当天的裁剪一起拖死。
+	backupPruneTimeout = 5 * time.Minute
 )
 
 // registerDailyBackup registers the nightly backup cron.
@@ -49,45 +55,58 @@ func (m *Manager) runDailyBackup() {
 	}
 	slog.Info("[backups] daily backup created", "name", name)
 	if keep := m.backupKeep(); keep > 0 {
-		m.pruneOldBackups(ctx, keep)
+		if err := m.pruneOldBackups(keep); err != nil {
+			slog.Error("[backups] prune failed", "err", err)
+			// 裁剪失灵必须可感知(与 backup.failure 同一哲学):只 slog
+			// 的话,备份目录静默膨胀在审计链里不可见。
+			audit.OpsFailed(m.app, "backup.prune", "", map[string]any{"reason": err.Error()})
+		}
 	}
 }
 
-// backupKeep reads site.displayOptions.backupKeep. Absent/unreadable →
-// defaultBackupKeep;<=0 → 0(= 不限,不裁剪)。
+// backupKeep reads site.displayOptions.backupKeep via the site helper.
+//   - 未配置 → defaultBackupKeep;
+//   - <=0 → 0(= 不限,不裁剪);
+//   - 站点记录/displayOptions 读失败 → 0(跳过裁剪)。
+//
+// 读失败不做 default fallback:那是数据丢失方向的 fail-open——管理员
+// 配了保留 30,一次暂时性读失败就把保留裁到 7。宁可只增不删。
 func (m *Manager) backupKeep() int {
-	rec, err := m.app.FindFirstRecordByFilter("site", "")
-	if err != nil {
-		return defaultBackupKeep
+	v, err := site.DisplayNumber(m.app, "backupKeep")
+	switch {
+	case errors.Is(err, site.ErrDisplayOptionAbsent):
+		v = defaultBackupKeep
+	case err != nil:
+		slog.Warn("[backups] retention config unreadable, skipping prune", "err", err)
+		return 0
 	}
-	var opts map[string]any
-	if raw := rec.GetString("displayOptions"); raw != "" {
-		if err := json.Unmarshal([]byte(raw), &opts); err != nil {
-			return defaultBackupKeep
-		}
+	if int(v) <= 0 {
+		return 0 // unlimited
 	}
-	if v, ok := opts["backupKeep"].(float64); ok {
-		if int(v) <= 0 {
-			return 0 // unlimited
-		}
-		return int(v)
-	}
-	return defaultBackupKeep
+	return int(v)
 }
 
 // pruneOldBackups deletes oldest vanblog_backup_* beyond keep. 只裁剪本仓
-// 命名前缀的备份——PB 原生/外部工具创建的其他命名不受影响。
-func (m *Manager) pruneOldBackups(ctx context.Context, keep int) {
+// 命名前缀的备份——PB 原生/外部工具创建的其他命名不受影响。注意:手动
+// 端点(handleCreateBackup)创建的快照同名前缀,同样参与保留裁剪——
+// 「升级前手动快照」不在裁剪豁免之列,要长期保留请调大 backupKeep 或
+// 下载后另行归档(docs/guide/backup-upgrade.md)。
+//
+// 返回聚合错误(打开存储/列举/逐个删除),由调用方写审计——裁剪失败
+// 只 slog 会在审计链里不可见。 Restore 正在读的备份(core.StoreKeyActiveBackup)
+// 一律跳过:runDailyBackup 开头的 backupConflict 检查挡不住「裁剪进行中
+// 才开始的 restore」,与 handleDeleteBackup 的在用守卫同口径。
+func (m *Manager) pruneOldBackups(keep int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), backupPruneTimeout)
+	defer cancel()
 	fsys, err := openBackupsFilesystem(m.app, ctx)
 	if err != nil {
-		slog.Error("[backups] prune: open filesystem failed", "err", err)
-		return
+		return fmt.Errorf("open filesystem: %w", err)
 	}
 	defer fsys.Close()
 	files, err := fsys.List("")
 	if err != nil {
-		slog.Error("[backups] prune: list failed", "err", err)
-		return
+		return fmt.Errorf("list: %w", err)
 	}
 	ours := make([]*blob.ListObject, 0, len(files))
 	for _, f := range files {
@@ -96,11 +115,19 @@ func (m *Manager) pruneOldBackups(ctx context.Context, keep int) {
 		}
 	}
 	slices.SortFunc(ours, func(a, b *blob.ListObject) int { return b.ModTime.Compare(a.ModTime) })
+	activeKey, _ := m.app.Store().Get(core.StoreKeyActiveBackup).(string)
+	var delErrs []error
 	for i := keep; i < len(ours); i++ {
+		if ours[i].Key == activeKey {
+			slog.Info("[backups] prune: skipping in-use backup", "key", ours[i].Key)
+			continue
+		}
 		if err := fsys.Delete(ours[i].Key); err != nil {
 			slog.Error("[backups] prune: delete failed", "key", ours[i].Key, "err", err)
+			delErrs = append(delErrs, fmt.Errorf("%s: %w", ours[i].Key, err))
 			continue
 		}
 		slog.Info("[backups] pruned old backup", "key", ours[i].Key)
 	}
+	return errors.Join(delErrs...)
 }
