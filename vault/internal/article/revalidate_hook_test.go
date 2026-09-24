@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -183,4 +185,17 @@ func TestSelfHealCronRegistered(t *testing.T) {
 			t.Fatalf("result = %q, want failure", rows[0].GetString("result"))
 		}
 	})
+}
+
+// selfhealCronId 与 pb_hooks/selfheal.pb.js 的 cronAdd id 靠注释维系
+// 会静默漂移(Go 侧单改常量时本包测试自洽、migrations 测试只钉 JS 字面量,
+// 退化 = 持续误报)。直接读 JS 源文件钉住两侧一致。
+func TestSelfhealCronIdPinnedToJSHook(t *testing.T) {
+	js, err := os.ReadFile(filepath.Join("..", "..", "pb_hooks", "selfheal.pb.js"))
+	if err != nil {
+		t.Fatalf("read selfheal.pb.js: %v", err)
+	}
+	if !strings.Contains(string(js), `cronAdd("`+selfhealCronId+`"`) {
+		t.Fatalf("selfheal.pb.js does not register cron id %q — update one side or both", selfhealCronId)
+	}
 }

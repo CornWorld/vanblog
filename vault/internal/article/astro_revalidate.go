@@ -92,7 +92,7 @@ func verifySelfhealCron(app core.App) {
 		}
 	}
 	slog.Error("[selfheal] cron posts-revalidate-selfheal not registered — daily cache self-heal is OFF",
-		"hint", "check pb_hooks/selfheal.pb.js (volume override, reset by upgrade, JS syntax error, or renamed cron id)")
+		"hint", "check pb_hooks/selfheal.pb.js: volume override, manual removal, or renamed cron id. (A broken script never reaches serve — it panics at startup since HooksWatch is off.)")
 	audit.OpsFailed(app, "selfheal.cron.missing", "pb_hooks/selfheal.pb.js", map[string]any{
 		"reason": "cron id posts-revalidate-selfheal absent at serve time",
 	})

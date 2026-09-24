@@ -75,11 +75,13 @@ func (m *Manager) snapshotBeforePostUpdate(e *core.RecordRequestEvent) error {
 		// 保留策略:裁剪到 site.revisionsRetention。修订删除是数据面
 		// (归 Go),数值是偏好(归站点配置,admin 设置页既有编辑器,
 		// 运行时读取)。复用上面已取的 siteRec——MaxKeep() 会再查一次。
-		keep := defaultMaxKeep
-		if siteRec != nil {
-			keep = maxKeepFrom(siteRec)
+		// 读不到站点配置时跳过裁剪(fail-closed):缺省 50 可能比用户
+		// 配置的 revisionsRetention 更狠,瞬时读失败不该触发超裁
+		// (与 backups 裁剪的 backupKeep 姿态一致);下次更新自然重试。
+		if siteRec == nil {
+			return e.Next()
 		}
-		if err := m.Cleanup(e.Record.Id, keep); err != nil {
+		if err := m.Cleanup(e.Record.Id, maxKeepFrom(siteRec)); err != nil {
 			slog.Warn("[revisions] cleanup failed", "post", e.Record.Id, "err", err)
 		}
 	}
