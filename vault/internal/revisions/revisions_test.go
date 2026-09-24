@@ -437,3 +437,48 @@ func TestRetentionTrimsOnUpdateHook(t *testing.T) {
 		t.Fatalf("revisions after 4 updates with maxKeep=2 = %d, want 2", len(revs))
 	}
 }
+
+// TestCleanupSkippedWhenSiteUnreadable 钉住 fail-closed 分支:site 记录
+// 读不到时捕获照常、裁剪跳过——瞬时读失败不得用缺省 50 触发超裁
+// (与 backupKeep 读失败跳过同姿态)。retention=2 且 51 次更新后仍
+// 应有 51 份:site 在场会裁到 2,旧 fail-open 行为会裁到 50。
+func TestCleanupSkippedWhenSiteUnreadable(t *testing.T) {
+	app := setupApp(t)
+	mgr := New(app)
+	post := createTestPost(t, app, "Original", "Hello world", "published")
+	setRetention(t, app, "revisionsRetention", 2)
+
+	siteRec, err := app.FindFirstRecordByFilter("site", "")
+	if err != nil {
+		t.Fatalf("find site: %v", err)
+	}
+	if err := app.Delete(siteRec); err != nil {
+		t.Fatalf("delete site record: %v", err)
+	}
+
+	postsCol, err := app.FindCollectionByNameOrId("posts")
+	if err != nil {
+		t.Fatalf("posts collection: %v", err)
+	}
+	for i := 0; i < 51; i++ {
+		ev := &core.RecordRequestEvent{
+			Record:     post,
+			Collection: postsCol,
+			RequestEvent: &core.RequestEvent{
+				App:      app,
+				Request:  httptest.NewRequest("PATCH", "/api/collections/posts/records/"+post.Id, nil),
+				Response: httptest.NewRecorder(),
+			},
+		}
+		if err := app.OnRecordUpdateRequest("posts").Trigger(ev, func(e *core.RecordRequestEvent) error { return e.Next() }); err != nil {
+			t.Fatalf("trigger update hook: %v", err)
+		}
+	}
+	revs, err := mgr.List(post.Id, 100)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(revs) != 51 {
+		t.Fatalf("revisions with site unreadable = %d, want 51 (captured, not pruned)", len(revs))
+	}
+}

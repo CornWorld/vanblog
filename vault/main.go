@@ -329,7 +329,8 @@ func main() {
 	// Each manager registers its own pb hooks (events + routes + startup
 	// init) in its constructor. Order only affects same-event Bind order;
 	// no cross-manager dependency.
-	// jsvm.MustRegister is called inside OnServe after StageHooks.
+	// jsvm.MustRegister ran at the top of main() (before the managers
+	// below), so every OnServe bind here can rely on JS hooks being loaded.
 	// audit first among managers: untagged Request hooks observe every
 	// collection (incl. Pack tables) after the write lands via e.Next().
 	_ = audit.New(app)
