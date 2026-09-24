@@ -33,14 +33,18 @@ cronAdd("posts-revalidate-selfheal", "0 4 * * *", () => {
   const astroUrl = $os.getenv("ASTRO_URL") || "http://127.0.0.1:4321"
   const fail = (reason) => {
     console.error("[selfheal] revalidate failed:", reason, astroUrl)
-    // 失败提醒行(与 Go 侧 audit.OpsFailed 同形):审计失败只降级日志,
-    // 绝不向外抛。
+    // 失败提醒行与 Go 侧 revalidateAstroCache 同 action
+    // ("revalidate.failure")——告警按 action 过滤才能跨 Go/JSVM 连续;
+    // detail.trigger 区分来源。审计失败只降级日志,绝不向外抛。
     try {
       const rec = new Record($app.findCollectionByNameOrId("audits"))
-      rec.set("action", "revalidate.selfheal")
+      rec.set("action", "revalidate.failure")
       rec.set("target", "posts,feed")
       rec.set("result", "failure")
-      rec.set("detail", JSON.stringify({ reason, url: astroUrl }))
+      rec.set("detail", JSON.stringify({ reason, url: astroUrl, trigger: "selfheal-cron" }))
+      // S5:$app.save 是模型层直写,不触发 request 级钩子(cron 无 HTTP
+      // 请求上下文;OnRecordCreate 模型层钩子照常触发)——见
+      // docs/developer/pb-security-notes.md §S5。
       $app.save(rec)
     } catch (e) {
       console.error("[selfheal] audit row write failed:", e)

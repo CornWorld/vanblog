@@ -9,7 +9,8 @@ package migrations
 //  2. 开关语义——site.displayOptions.revalidateSelfHeal=false 时 Run() 不发
 //     Astro 请求;缺省/true 时发;
 //  3. 失败提醒——Astro 非 200 时写 result=failure 审计行
-//     (action="revalidate.selfheal",管理员审计页可见)。
+//     (action="revalidate.failure",与 Go 侧 revalidateAstroCache 同名,
+//     detail.trigger="selfheal-cron" 区分来源;管理员审计页可见)。
 //
 // 注意:goja VM 装载较慢,本测试耗时为正常现象。
 
@@ -129,11 +130,20 @@ func TestSelfHealHookBehavior(t *testing.T) {
 	defer badSrv.Close()
 	t.Setenv("ASTRO_URL", badSrv.URL)
 	runSelfHealJob(t, app)
-	rows, err := app.FindRecordsByFilter("audits", "action = {:a} && result = {:r}", "-created", 1, 0, map[string]any{"a": "revalidate.selfheal", "r": "failure"})
+	rows, err := app.FindRecordsByFilter("audits", "action = {:a} && result = {:r}", "-created", 1, 0, map[string]any{"a": "revalidate.failure", "r": "failure"})
 	if err != nil {
 		t.Fatalf("query audits: %v", err)
 	}
 	if len(rows) == 0 {
-		t.Fatal("failure audit row (action=revalidate.selfheal) missing after 502")
+		t.Fatal("failure audit row (action=revalidate.failure) missing after 502")
+	}
+	var detail struct {
+		Trigger string `json:"trigger"`
+	}
+	if err := json.Unmarshal([]byte(rows[0].GetString("detail")), &detail); err != nil {
+		t.Fatalf("detail %q: %v", rows[0].GetString("detail"), err)
+	}
+	if detail.Trigger != "selfheal-cron" {
+		t.Fatalf("detail.trigger = %q, want selfheal-cron", detail.Trigger)
 	}
 }
