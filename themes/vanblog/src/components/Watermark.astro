@@ -32,17 +32,15 @@ const { enabled = false, text = '' } = Astro.props;
       ctx.textBaseline = 'middle';
       ctx.fillStyle = 'rgba(128, 128, 128, 0.12)';
       ctx.fillText(text, 0, 0);
+      // 布局样式内联(组件 <style> 会被 Astro hoist 成全局 CSS,水印
+      // 禁用时也随页面下发;内联到启用路径才生效)。
+      el.style.position = 'fixed';
+      el.style.inset = '0';
+      /* 覆盖内容层,低于导航/抽屉/toast 等交互浮层。 */
+      el.style.zIndex = '80';
+      el.style.pointerEvents = 'none';
+      el.style.backgroundRepeat = 'repeat';
       el.style.backgroundImage = 'url(' + canvas.toDataURL() + ')';
     })();
   </script>
 )}
-<style>
-  #vb-watermark {
-    position: fixed;
-    inset: 0;
-    /* 覆盖内容层,低于导航/抽屉/toast 等交互浮层。 */
-    z-index: 80;
-    pointer-events: none;
-    background-repeat: repeat;
-  }
-</style>
