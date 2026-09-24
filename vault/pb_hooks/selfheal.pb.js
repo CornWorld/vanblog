@@ -16,6 +16,9 @@
 //
 // 注意:容器/平台升级会把本文件重置为发行版内容——深度定制请复制为
 // 新文件名(如 selfheal.custom.pb.js)并把 cron id 一并改名,避免双注册。
+// 改名代价:Go 侧 serve 时按 id "posts-revalidate-selfheal" 校验注册,
+// 改名后每次启动会记一条 selfheal.cron.missing 审计行(已知噪音,不接
+// webhook 告警则仅审计页可见);介意就保留原 id、只改执行逻辑。
 cronAdd("posts-revalidate-selfheal", "0 4 * * *", () => {
   // 1. 开关:site.displayOptions.revalidateSelfHeal !== false。
   //    读失败保持开启——自愈是无害兜底,不应静默关闭可靠性。

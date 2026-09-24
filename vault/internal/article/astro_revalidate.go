@@ -75,9 +75,14 @@ const selfhealCronId = "posts-revalidate-selfheal"
 // MustAdd here, now removed) to a user-editable JSVM file — a pb_hooks
 // volume override or upgrade reset silently drops it, which is the exact
 // "后台安全网失灵不可见" incident shape (docs/lessons-learned §1: JSVM
-// hook not executing, no error surfaced). JSVM hook files register their
-// crons during jsvm.MustRegister, i.e. before any OnServe bind fires — so
-// at this point a missing id means the file did not load/register.
+// hook not executing, no error surfaced). JSVM hook files execute
+// synchronously inside jsvm.MustRegister's registerHooks (v0.40.1:
+// loader.RunScript loop; jsvm's own OnServe bind is router-exception
+// normalization only), so any cron they add is already present by the
+// time OnServe fires — here a missing id means the file did not
+// load/register. Known false positive: renaming the cron id per the
+// file header's customization advice also lands here (one audit row
+// per serve, selfheal.pb.js 头注释已说明代价).
 // slog + audit row: both surfaces, because this is precisely the failure
 // that must be observable (与 backup.prune 同一哲学).
 func verifySelfhealCron(app core.App) {
@@ -87,7 +92,7 @@ func verifySelfhealCron(app core.App) {
 		}
 	}
 	slog.Error("[selfheal] cron posts-revalidate-selfheal not registered — daily cache self-heal is OFF",
-		"hint", "check pb_hooks/selfheal.pb.js (volume override, reset by upgrade, or JS syntax error)")
+		"hint", "check pb_hooks/selfheal.pb.js (volume override, reset by upgrade, JS syntax error, or renamed cron id)")
 	audit.OpsFailed(app, "selfheal.cron.missing", "pb_hooks/selfheal.pb.js", map[string]any{
 		"reason": "cron id posts-revalidate-selfheal absent at serve time",
 	})

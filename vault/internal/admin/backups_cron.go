@@ -94,8 +94,11 @@ func (m *Manager) backupKeep() int {
 //
 // 返回聚合错误(打开存储/列举/逐个删除),由调用方写审计——裁剪失败
 // 只 slog 会在审计链里不可见。 Restore 正在读的备份(core.StoreKeyActiveBackup)
-// 一律跳过:runDailyBackup 开头的 backupConflict 检查挡不住「裁剪进行中
-// 才开始的 restore」,与 handleDeleteBackup 的在用守卫同口径。
+// 一律跳过,且**每次删除前实时读 Store**:快照式(列举后读一次)只覆盖
+// 「裁剪前已设置的 restore」,裁剪列举后才开始的目标仍会被删(竞态窗
+// = 整个裁剪时长,S3 类后端可达分钟级)。check 与 delete 之间的残余
+// TOCTOU 微窗不另加锁——与 handleDeleteBackup 的在用守卫同水位。
+// 保留线内(下标 < keep)本就不删,在用跳过只对保留线外的候选生效。
 func (m *Manager) pruneOldBackups(keep int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), backupPruneTimeout)
 	defer cancel()
@@ -115,10 +118,9 @@ func (m *Manager) pruneOldBackups(keep int) error {
 		}
 	}
 	slices.SortFunc(ours, func(a, b *blob.ListObject) int { return b.ModTime.Compare(a.ModTime) })
-	activeKey, _ := m.app.Store().Get(core.StoreKeyActiveBackup).(string)
 	var delErrs []error
 	for i := keep; i < len(ours); i++ {
-		if ours[i].Key == activeKey {
+		if active, _ := m.app.Store().Get(core.StoreKeyActiveBackup).(string); ours[i].Key == active {
 			slog.Info("[backups] prune: skipping in-use backup", "key", ours[i].Key)
 			continue
 		}

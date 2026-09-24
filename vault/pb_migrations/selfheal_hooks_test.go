@@ -20,6 +20,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -138,6 +139,8 @@ func TestSelfHealHookBehavior(t *testing.T) {
 		t.Fatal("failure audit row (action=revalidate.failure) missing after 502")
 	}
 	var detail struct {
+		Reason  string `json:"reason"`
+		URL     string `json:"url"`
 		Trigger string `json:"trigger"`
 	}
 	if err := json.Unmarshal([]byte(rows[0].GetString("detail")), &detail); err != nil {
@@ -145,5 +148,11 @@ func TestSelfHealHookBehavior(t *testing.T) {
 	}
 	if detail.Trigger != "selfheal-cron" {
 		t.Fatalf("detail.trigger = %q, want selfheal-cron", detail.Trigger)
+	}
+	if detail.URL != badSrv.URL {
+		t.Fatalf("detail.url = %q, want %q", detail.URL, badSrv.URL)
+	}
+	if !strings.Contains(detail.Reason, "502") {
+		t.Fatalf("detail.reason = %q, want it to mention 502", detail.Reason)
 	}
 }
