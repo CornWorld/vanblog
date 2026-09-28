@@ -20,12 +20,18 @@ git pull --ff-only "$GIT_REMOTE" "$GIT_BRANCH" 2>&1 || {
 CURR_HEAD=$(git rev-parse HEAD)
 
 # ── Step 2: Determine baseline ───────────────────────────────────
+# PREV_HEAD 不落盘,「pull 无新提交」意味着本窗口没有可review的增量——
+# 旧实现的 HEAD~10 fallback 会在安静期每 6h 重review同一批旧提交(实测一轮
+# 白烧 31 万 token),改为直接跳过。HEAD~10 仅作冷启动兜底(PREV_HEAD 为空)。
 if [ -n "$PREV_HEAD" ] && [ "$PREV_HEAD" != "$CURR_HEAD" ]; then
     BASELINE="$PREV_HEAD"
     echo "[ocr-review] $(date -u +%H:%M:%S) Reviewing $PREV_HEAD → $CURR_HEAD"
-else
+elif [ -z "$PREV_HEAD" ]; then
     BASELINE="${BASELINE_FALLBACK:-HEAD~10}"
-    echo "[ocr-review] $(date -u +%H:%M:%S) No new commits pulled, using fallback: $BASELINE"
+    echo "[ocr-review] $(date -u +%H:%M:%S) Cold start, using fallback: $BASELINE"
+else
+    echo "[ocr-review] $(date -u +%H:%M:%S) No new commits since last run, nothing to review."
+    exit 0
 fi
 
 # ── Step 3: Check for source changes ─────────────────────────────
@@ -39,7 +45,36 @@ if [ "${CHANGES:-0}" -eq 0 ]; then
 fi
 echo "[ocr-review] $(date -u +%H:%M:%S) $CHANGES changed files"
 
-# ── Step 4: Run review ───────────────────────────────────────────
+# ── Step 4: Quota probe ─────────────────────────────────────────
+# 商汤 TokenPlan 无配额查询端点(usage/account 等 4 端点均 404),只能探测:
+# 1-token 请求连中 2 次 HTTP 200 才开跑;否则视为池子打干,跳过本轮等下个窗口。
+# 探测 200 即可——推理模型 max_tokens=1 时 finish_reason=length 属正常。
+PROBE_OK=$(python3 - <<'PYEOF'
+import json, os, urllib.request
+cfg = json.load(open(os.path.expanduser('~/.opencodereview/config.json')))
+name = cfg.get('provider')
+p = (cfg.get('custom_providers') or {}).get(name) or {}
+url = p.get('url', '').rstrip('/') + '/chat/completions'
+req_body = json.dumps({'model': p.get('model'), 'messages': [{'role': 'user', 'content': 'hi'}], 'max_tokens': 1}).encode()
+ok = 0
+for _ in range(2):
+    try:
+        req = urllib.request.Request(url, data=req_body, headers={'Authorization': 'Bearer ' + p.get('api_key', ''), 'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            if r.status == 200:
+                ok += 1
+    except Exception:
+        pass
+print('yes' if ok >= 2 else 'no')
+PYEOF
+) || PROBE_OK=no
+if [ "$PROBE_OK" != "yes" ]; then
+    echo "[ocr-review] $(date -u +%H:%M:%S) ⏭ quota probe failed (pool exhausted?), skipping this run"
+    exit 0
+fi
+echo "[ocr-review] $(date -u +%H:%M:%S) quota probe OK"
+
+# ── Step 5: Run review ───────────────────────────────────────────
 TIMESTAMP=$(date -u +%Y%m%d-%H%M)
 OUTPUT_FILE="$REFS_DIR/review-${TIMESTAMP}.json"
 
@@ -50,8 +85,8 @@ ocr review \
     --to HEAD \
     --format json \
     --audience agent \
-    --concurrency 4 \
-    --timeout 15 \
+    --concurrency 1 \
+    --timeout 60 \
     > "$OUTPUT_FILE" 2>"$OCR_STDERR"
 OCR_EXIT=$?
 set -e
@@ -63,7 +98,7 @@ if [ $OCR_EXIT -ne 0 ]; then
     echo "[ocr-review] ocr exited with code $OCR_EXIT"
 fi
 
-# ── Step 5: Summary ─────────────────────────────────────────────
+# ── Step 6: Summary ─────────────────────────────────────────────
 if [ ! -s "$OUTPUT_FILE" ]; then
     echo "[ocr-review] $(date -u +%H:%M:%S) ❌ Failed (no output)"
     exit 1
