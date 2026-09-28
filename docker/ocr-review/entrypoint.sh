@@ -63,18 +63,26 @@ if [ $OCR_EXIT -ne 0 ]; then
     echo "[ocr-review] ocr exited with code $OCR_EXIT"
 fi
 
-# ── Step 5: Summary ──────────────────────────────────────────────
-if [ -f "$OUTPUT_FILE" ]; then
-    python3 -c "
+# ── Step 5: Summary ─────────────────────────────────────────────
+if [ ! -s "$OUTPUT_FILE" ]; then
+    echo "[ocr-review] $(date -u +%H:%M:%S) ❌ Failed (no output)"
+    exit 1
+fi
+
+# 真实判定: ocr 退出码非 0 或 status=failed 都算失败,不因 summary 字段缺省而误报成功
+STATUS=$(python3 -c "import json; d=json.load(open('$OUTPUT_FILE')); print(d.get('status','unknown'))" 2>/dev/null || echo unknown)
+SUMMARY_LINE=$(python3 -c "
 import json
-with open('$OUTPUT_FILE') as f:
-    d = json.load(f)
+d = json.load(open('$OUTPUT_FILE'))
 s = d.get('summary', {})
 tt = s.get('total_tokens')
 tt_str = f'{tt:,}' if isinstance(tt, (int, float)) else str(tt or '?')
-print(f\"[ocr-review] $(date -u +%H:%M:%S) ✅ {s.get('comments','?')} issues, {tt_str} tokens in {s.get('elapsed','?')}\")
-" 2>/dev/null || echo "[ocr-review] $(date -u +%H:%M:%S) ✅ Done → $OUTPUT_FILE"
+print(f\"{s.get('comments','?')} issues, {tt_str} tokens in {s.get('elapsed','?')}\")
+" 2>/dev/null || echo "summary unavailable")
+
+if [ "$OCR_EXIT" -eq 0 ] && [ "$STATUS" != "failed" ]; then
+    echo "[ocr-review] $(date -u +%H:%M:%S) ✅ $SUMMARY_LINE → $OUTPUT_FILE"
 else
-    echo "[ocr-review] $(date -u +%H:%M:%S) ❌ Failed"
+    echo "[ocr-review] $(date -u +%H:%M:%S) ❌ review failed (ocr_exit=$OCR_EXIT, status=$STATUS): $SUMMARY_LINE → $OUTPUT_FILE"
     exit 1
 fi
