@@ -4,7 +4,7 @@ set -euo pipefail
 REPO_DIR="${REPO_DIR:-/workspace}"
 REFS_DIR="${REFS_DIR:-/workspace/refs}"
 GIT_REMOTE="${GIT_REMOTE:-origin}"
-GIT_BRANCH="${GIT_BRANCH:-main}"
+GIT_BRANCH="${GIT_BRANCH:-$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)}"
 
 cd "$REPO_DIR"
 mkdir -p "$REFS_DIR"
@@ -13,7 +13,7 @@ mkdir -p "$REFS_DIR"
 PREV_HEAD=$(git rev-parse HEAD 2>/dev/null || echo "")
 
 echo "[ocr-review] $(date -u +%H:%M:%S) Pulling $GIT_REMOTE/$GIT_BRANCH..."
-git pull -- "$GIT_REMOTE" "$GIT_BRANCH" --ff-only 2>&1 || {
+git pull --ff-only "$GIT_REMOTE" "$GIT_BRANCH" 2>&1 || {
     echo "[ocr-review] $(date -u +%H:%M:%S) ⚠️  git pull failed (conflict? network?), using local HEAD"
 }
 
