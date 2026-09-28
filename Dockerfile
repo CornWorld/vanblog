@@ -90,8 +90,7 @@ COPY themes/ ./themes/
 # Validate at least one theme directory exists.
 RUN ls themes/ > /dev/null
 
-# Build SDK first — themes import from @vanblog/sdk.
-RUN pnpm --filter sdk build
+# SDK 无独立构建 —— 以 TS 源码经 Vite noExternal 直供（app/astro.config.mjs）。
 
 # Build ALL themes (not just the active one).
 # Each theme's astro.config.mjs reads VANBLOG_THEME_NAME to set base/assetsPrefix.

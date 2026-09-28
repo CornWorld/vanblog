@@ -15,7 +15,6 @@ SDK：`createVanblogClient({ url: process.env.PB_URL })`，登录 `pb.collection
 ## 构建与测试
 
 ```bash
-pnpm --filter sdk build              # SDK（改 sdk/src 后必跑）
 pnpm --filter vanblog-app build      # admin SSR app
 cd themes/<name> && pnpm dev         # 主题 HMR
 cd themes/<name> && pnpm build       # 主题构建验证

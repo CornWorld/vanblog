@@ -15,7 +15,6 @@ docker build --target dev -t vanblog:dev .
 
 ```bash
 pnpm install
-pnpm --filter sdk build          # 改 sdk/src 后必跑
 pnpm --filter vanblog-app build  # admin SSR app
 cd vault && go test ./...        # 后端测试
 cd vault && go build -o bin/vanblog .   # pb 二进制

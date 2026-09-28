@@ -123,7 +123,7 @@ Rules:
 
 1. Reference a working pack: `packs/bookmarks/` — the canonical example
 2. Pack structure: `pack.json` + `hooks/` (JSVM) + `pages/` (Astro)
-3. Build: `pnpm --filter sdk build` (after SDK changes)
+3. SDK: consumed as TS source in-tree (Vite noExternal) — no build step exists or is needed
 4. Load: Pack hooks are staged at PocketBase startup only — there is no runtime restage. After writing a new pack, trigger a supervised service restart so the pack takes effect:
    ```bash
    curl -X POST "$PB_URL/api/vanblog/system/restart" -H "Authorization: $PB_TOKEN"
@@ -134,7 +134,6 @@ Rules:
 ## Build Commands
 
 ```bash
-pnpm --filter sdk build              # SDK (run after sdk/src changes)
 pnpm --filter vanblog-app build      # Admin SSR app
 cd themes/<name> && pnpm dev         # Theme HMR
 cd themes/<name> && pnpm build       # Theme build validation
