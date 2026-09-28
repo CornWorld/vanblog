@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_DIR="${REPO_DIR:-/workspace}"
 REFS_DIR="${REFS_DIR:-/workspace/refs}"
+RESUME_FILE="$REFS_DIR/ocr-resume-session.txt"
 GIT_REMOTE="${GIT_REMOTE:-origin}"
 GIT_BRANCH="${GIT_BRANCH:-$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)}"
 
@@ -23,12 +24,20 @@ CURR_HEAD=$(git rev-parse HEAD)
 # PREV_HEAD 不落盘,「pull 无新提交」意味着本窗口没有可review的增量——
 # 旧实现的 HEAD~10 fallback 会在安静期每 6h 重review同一批旧提交(实测一轮
 # 白烧 31 万 token),改为直接跳过。HEAD~10 仅作冷启动兜底(PREV_HEAD 为空)。
+RESUME_ID=""
 if [ -n "$PREV_HEAD" ] && [ "$PREV_HEAD" != "$CURR_HEAD" ]; then
     BASELINE="$PREV_HEAD"
+    rm -f "$RESUME_FILE"   # 新增量到来,旧的失败 session 已过期
     echo "[ocr-review] $(date -u +%H:%M:%S) Reviewing $PREV_HEAD → $CURR_HEAD"
 elif [ -z "$PREV_HEAD" ]; then
     BASELINE="${BASELINE_FALLBACK:-HEAD~10}"
     echo "[ocr-review] $(date -u +%H:%M:%S) Cold start, using fallback: $BASELINE"
+elif [ -s "$RESUME_FILE" ]; then
+    # 429 规则不公布、事前不可预知(无余量查询 API):中途打干是常态而非异常。
+    # 上轮失败的 session 落盘于此,本窗口窗口恢复后 --resume 续跑剩余文件,
+    # 已 review 的不重烧。
+    IFS=$'\t' read -r BASELINE RESUME_ID < "$RESUME_FILE"
+    echo "[ocr-review] $(date -u +%H:%M:%S) No new commits; resuming unfinished session $RESUME_ID (baseline $BASELINE)"
 else
     echo "[ocr-review] $(date -u +%H:%M:%S) No new commits since last run, nothing to review."
     exit 0
@@ -79,14 +88,12 @@ TIMESTAMP=$(date -u +%Y%m%d-%H%M)
 OUTPUT_FILE="$REFS_DIR/review-${TIMESTAMP}.json"
 
 OCR_STDERR=$(mktemp)
+OCR_ARGS=(review --from "$BASELINE" --to HEAD --format json --audience agent --concurrency 1 --timeout 60)
+if [ -n "$RESUME_ID" ]; then
+    OCR_ARGS+=(--resume "$RESUME_ID")
+fi
 set +e
-ocr review \
-    --from "$BASELINE" \
-    --to HEAD \
-    --format json \
-    --audience agent \
-    --concurrency 1 \
-    --timeout 60 \
+ocr "${OCR_ARGS[@]}" \
     > "$OUTPUT_FILE" 2>"$OCR_STDERR"
 OCR_EXIT=$?
 set -e
@@ -116,8 +123,14 @@ print(f\"{s.get('comments','?')} issues, {tt_str} tokens in {s.get('elapsed','?'
 " 2>/dev/null || echo "summary unavailable")
 
 if [ "$OCR_EXIT" -eq 0 ] && [ "$STATUS" != "failed" ]; then
+    rm -f "$RESUME_FILE"
     echo "[ocr-review] $(date -u +%H:%M:%S) ✅ $SUMMARY_LINE → $OUTPUT_FILE"
 else
     echo "[ocr-review] $(date -u +%H:%M:%S) ❌ review failed (ocr_exit=$OCR_EXIT, status=$STATUS): $SUMMARY_LINE → $OUTPUT_FILE"
+    FAILED_SID=$(python3 -c "import json; print(json.load(open('$OUTPUT_FILE')).get('session_id') or '')" 2>/dev/null || true)
+    if [ -n "$FAILED_SID" ]; then
+        printf '%s\t%s\n' "$BASELINE" "$FAILED_SID" > "$RESUME_FILE"
+        echo "[ocr-review] saved session for resume next window: $FAILED_SID"
+    fi
     exit 1
 fi
