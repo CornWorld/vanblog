@@ -50,11 +50,19 @@
 docker build --target prod -t vanblog:bench-prod .
 ```
 
-拉语料（一次性，可反复）：
+拉语料（`corpus.jsonl` 不入库，两种方式）：
 
 ```bash
+# 方式 A（推荐，可复现）：pin 一次源 ID（corpus.ids.json 入库），此后随时确定性重建
+node bench/fetch-corpus.mjs --pin 1000 > bench/corpus.jsonl   # 首次抓取并钉 ID
+node bench/fetch-corpus.mjs --replay > bench/corpus.jsonl     # 任何人任何时候重建同一语料
+
+# 方式 B（探索用）：按当前源数据抓一次，不可复现
 node bench/fetch-corpus.mjs 1000 > bench/corpus.jsonl
 ```
+
+`--replay` 输出与 `--pin` 时逐字节一致（HN items 端点 + arXiv id_list，
+时间戳归一 + ID 序重排；重建失败会 abort 而非静默缺篇）。
 
 跑矩阵：
 
@@ -96,7 +104,8 @@ python3 summarize.py results/20260828-XXXXXXX --csv out.csv --plot out.png
 | 2g   | 0      | 1000 | 100.0%    | 1.1ms  | 5.7ms  | no      |
 | 2g   | 500    | 1000 | **63.8%** | 45.1ms | 273ms  | no      |
 
-![chart-1000qps](results/20260828-172006/chart-1000qps.svg)
+（原始数据文件不入库；历史版本可从 git 历史取回，数字沉淀见下表与
+`docs/lessons-learned.md` §3.3。）
 
 ### 结论
 

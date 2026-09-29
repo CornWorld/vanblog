@@ -1,17 +1,9 @@
-# bench 中间产物 — 一律不提交
-# 压测产生的 raw binary 时序 & 日志（r.bin 可达 GB 级）
-results/*/r.bin
-results/*/*.log
-results/*/client_err.txt
-results/current/
-
-# 其他临时结果（多轮跑出来的噪声），核心结果目录单独保留
-results/20260828-171*/
-results/20260828-171256/
-results/20260828-171401/
-results/20260828-171510/
-results/20260828-170728/
-results/20260828-170802/
+# bench 产物一律不提交：
+# - 语料可由 fetch-corpus.mjs --replay 按 corpus.ids.json 确定性重建
+# - 压测结果的关键数字沉淀在 docs/lessons-learned.md；原始数据不入库
+#   （历史版本在 git 里可取回）
+corpus.jsonl
+results/
 
 # 内置 vegeta 二进制 — 不提交（README 说明如何获取；或用 Docker 镜像）
 bin/vegeta-linux-*
