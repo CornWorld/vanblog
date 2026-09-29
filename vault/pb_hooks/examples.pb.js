@@ -16,6 +16,9 @@
  *     callback is re-compiled per executor VM): only use PB globals inside.
  *  4. There is no per-hook timeout or memory cap: a stuck hook holds a
  *     jsvm pool slot (and a concurrency-gate slot) until process restart.
+ *  5. NEVER write async hooks (async/await). pb does not await Promises:
+ *     rejections are swallowed (only a console warn), e.next() cannot
+ *     cross the Promise boundary, and timing decouples from the response.
  * ===========================================================================
  */
 
