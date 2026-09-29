@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
@@ -72,7 +73,7 @@ func main() {
 	var coreSchemaPath string
 	app.RootCmd.PersistentFlags().StringVar(&hooksDir, "hooksDir", "", "the directory with the JS app hooks")
 	app.RootCmd.PersistentFlags().BoolVar(&hooksWatch, "hooksWatch", true, "auto reload the app on pb_hooks file change (UNIX only)")
-	app.RootCmd.PersistentFlags().IntVar(&hooksPool, "hooksPool", 15, "the total prewarm goja.Runtime instances for the JS app hooks execution")
+	app.RootCmd.PersistentFlags().IntVar(&hooksPool, "hooksPool", 64, "the total prewarm goja.Runtime instances for the JS app hooks execution")
 	app.RootCmd.PersistentFlags().StringVar(&migrationsDir, "migrationsDir", "", "the directory with the user defined JS migrations")
 	app.RootCmd.PersistentFlags().BoolVar(&automigrate, "automigrate", true, "enable/disable auto execution of JS migrations")
 	app.RootCmd.PersistentFlags().StringVar(&builtinPacksDir, "builtinPacksDir", "/packs", "the directory with builtin Pack resources")
@@ -266,8 +267,34 @@ func main() {
 		// each, never returned) when all pool slots are busy. Capping
 		// concurrent requests below the pool size ensures the pool never
 		// overflows, preventing heap exhaustion under load.
+		//
+		// Scope (2026-09-29): only requests that can execute JS hooks need
+		// gating — /api/collections/* + /api/files/* record APIs and any
+		// user routerAdd route. Go-managed routes (internal/*) never enter
+		// the jsvm pool and are exempt so they stay available while the
+		// gate is saturated. /api/realtime (SSE) is exempt because a
+		// long-lived connection would permanently hold a slot.
+		//
+		// Known limitation (accepted): a user routerAdd route sharing an
+		// exempt prefix (e.g. custom /api/vanblog/* handler) bypasses the
+		// gate too — pathological; hooks live in pb_hooks and use pb's own
+		// APIs, not custom routes.
 		hookSem := make(chan struct{}, hooksPool)
+		gateExemptPrefixes := []string{
+			"/api/vanblog/", "/api/hooks/",
+			"/api/feed.xml", "/api/atom.xml", "/api/sitemap.xml",
+			"/feed.xml", "/atom.xml", "/sitemap.xml",
+			"/api/palette.css", "/api/palettes", "/api/themes",
+			"/debug/",
+			"/api/realtime",
+		}
 		event.Router.BindFunc(func(e *core.RequestEvent) error {
+			path := e.Request.URL.Path
+			for _, prefix := range gateExemptPrefixes {
+				if strings.HasPrefix(path, prefix) {
+					return e.Next()
+				}
+			}
 			select {
 			case hookSem <- struct{}{}:
 				defer func() { <-hookSem }()
