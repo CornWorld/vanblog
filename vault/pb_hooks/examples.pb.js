@@ -74,7 +74,9 @@
 // --- Example 7: Push failure alerts to your own webhook ---
 // The platform writes result="failure" rows into `audits` when background
 // chains fail (e.g. action="revalidate.failure" when Astro cache
-// invalidation cannot be reached — see selfheal.pb.js).
+// invalidation cannot be reached — the Go layer retries every
+// few seconds and clears the pending file once Astro acknowledges;
+// the audits row is the admin-visible record that a failure happened).
 // Those rows are visible in the admin audits page; if you also want a PUSH
 // notification (Slack / DingTalk / your own endpoint), poll for recent
 // failure rows and forward them. Copy this into your own .pb.js file and

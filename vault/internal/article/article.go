@@ -62,8 +62,8 @@ type Manager struct {
 //   - OnRecordAfterCreateSuccess/UpdateSuccess/DeleteSuccess("posts"):
 //     invalidate Astro SSR cache so readers see the change immediately.
 //   - OnServe: register /api/vanblog/timeline and /api/vanblog/search.
-//   - OnServe: verify the JSVM self-heal cron actually registered (see
-//     verifySelfhealCron).
+//   - OnServe: start the durable revalidate retry loop (see
+//     startRevalidateRetry — replays failed cache invalidations).
 func New(app core.App) *Manager {
 	m := &Manager{app: app}
 	RegisterContentHygieneHooks(app)
@@ -75,7 +75,7 @@ func New(app core.App) *Manager {
 		se.Router.POST("/api/vanblog/posts/{id}/restore", m.handleRestoreEndpoint)
 		se.Router.POST("/api/vanblog/posts/{id}/unlock", m.handleUnlock)
 		se.Router.POST("/api/vanblog/posts/{id}/purge", m.handlePurgeEndpoint)
-		verifySelfhealCron(se.App)
+		startRevalidateRetry(se.App)
 		return se.Next()
 	})
 	return m
@@ -98,8 +98,9 @@ func (m *Manager) handlePostsCacheInvalidation(app core.App) {
 		invalidate()
 		return e.Next()
 	})
-	// 失效通知本体(go revalidateAstroCache)保持 Go 层。每日自愈 cron
-	// 在 pb_hooks/selfheal.pb.js(用户可关闭/改造,平台自带默认启用)。
+	// 失效通知本体(go revalidateAstroCache)保持 Go 层。失败进入
+	// pb_data/revalidate.pending.json 持久重试(astro_revalidate.go)——
+	// 原每日自愈 cron(pb_hooks/selfheal.pb.js)已被它取代并删除。
 }
 
 func (m *Manager) handleTimelineEndpoint(e *core.RequestEvent) error {
