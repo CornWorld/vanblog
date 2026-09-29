@@ -414,7 +414,10 @@ func New(app core.App) *Service {
 (~44MB 不归还),满载时返回 503 而非溢出。Go manager 路由(上表全部)与 SSE
 (`/api/realtime`)豁免:它们不进 jsvm 池,闸门饱和时仍可用。已知限制:用户
 `routerAdd` 注册 `/api/vanblog/*` 同前缀路由会一并豁免——病态场景,接受。
-jsvm 池溢出不归还问题已计划上游报 pocketbase issue(链接待补)。
+jsvm 池溢出不归还(pool.go 一次性 Runtime)**不上游报**:维护者已知情
+(源码注释自认"以后再调"),官方立场是钩子不进热路径——与本仓架构一致;
+缓解已全部本地完成,见 `lessons-learned.md` §3.3。若部署形态未来变为钩子
+进访客热路径或多租户可上传钩子,持生产数据再提。
 
 **Caddy Manager 的配置推送流程**（`internal/caddy/caddy.go::pushConfigToAdminAPI`）：
 
