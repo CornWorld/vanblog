@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/CornWorld/caddyadmin"
+	"github.com/cornworld/vanblog/internal/site"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -122,8 +123,8 @@ func GetTLSStatus(app core.App, caddyAdminURL string) (*TLSStatus, error) {
 	}
 
 	// 1. Read site config
-	site, err := app.FindFirstRecordByFilter("site", "")
-	if err == nil && site != nil {
+	site, err := site.Get(app)
+	if err == nil {
 		status.AllowedDomains = site.GetStringSlice("allowedDomains")
 		status.HttpsRedirect = site.GetBool("httpsRedirect")
 		// Surface the last bootstrap failure (if any) so the UI can show

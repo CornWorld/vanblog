@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/cornworld/vanblog/internal/site"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )
@@ -336,7 +337,7 @@ func ensureSite(app core.App) error {
 	if err != nil {
 		return err
 	}
-	rec, err := app.FindFirstRecordByFilter("site", "id!=''")
+	rec, err := site.Get(app)
 	if err == nil {
 		if rec.GetString("siteName") == "" {
 			rec.Set("siteName", gofakeit.AppName())

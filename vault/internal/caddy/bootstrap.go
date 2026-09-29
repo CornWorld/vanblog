@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/CornWorld/caddyadmin"
+	"github.com/cornworld/vanblog/internal/site"
 	"github.com/pocketbase/pocketbase/core"
 )
 
@@ -168,8 +169,8 @@ func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 	opts.BuiltinThemesDir = os.Getenv("VANBLOG_THEMES_BUILTIN_DIR")
 	opts.AdminDistDir = os.Getenv("VANBLOG_ADMIN_DIST_DIR")
 
-	site, err := app.FindFirstRecordByFilter("site", "")
-	if err != nil || site == nil {
+	site, err := site.Get(app)
+	if err != nil {
 		// Fresh install: no site record yet. System rules still apply.
 		return opts, nil
 	}
@@ -205,7 +206,7 @@ func loadBootstrapInputs(app core.App) (BuildOpts, []UserRule) {
 // onto the single site row. Silently ignores "no site record yet" — fresh
 // installs have nowhere to persist and that's fine.
 func setCaddyLastError(app core.App, msg string) error {
-	site, err := app.FindFirstRecordByFilter("site", "")
+	site, err := site.Get(app)
 	if err != nil {
 		// Fresh installs have no site row yet — nowhere to persist, and that's
 		// fine. Any other lookup error is real and must propagate, not be swallowed.

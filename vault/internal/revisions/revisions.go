@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"slices"
 
+	"github.com/cornworld/vanblog/internal/site"
 	"github.com/pocketbase/dbx"
 
 	"github.com/pocketbase/pocketbase/core"
@@ -57,7 +58,7 @@ func New(app core.App) *Manager {
 // before an HTTP update applies the new state. Failures are logged but
 // non-fatal — a missing revision is better than a blocked post save.
 func (m *Manager) snapshotBeforePostUpdate(e *core.RecordRequestEvent) error {
-	siteRec, err := m.app.FindFirstRecordByFilter("site", "")
+	siteRec, err := site.Get(m.app)
 	if err != nil {
 		// 读不到站点配置:保持捕获(缺省行为),跳过裁剪。
 		siteRec = nil
@@ -97,7 +98,7 @@ const defaultMaxKeep = 50
 // Absent/zero → defaultMaxKeep;<0 → 0(= 不限,Cleanup 对 <=0 是 no-op)。
 // 已持有 site 记录的调用方用 maxKeepFrom,避免重复查询。
 func (m *Manager) MaxKeep() int {
-	rec, err := m.app.FindFirstRecordByFilter("site", "")
+	rec, err := site.Get(m.app)
 	if err != nil {
 		return defaultMaxKeep
 	}

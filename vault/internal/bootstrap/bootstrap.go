@@ -34,6 +34,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/cornworld/vanblog/internal/site"
 )
 
 // SetupReq is the body of POST /api/vanblog/setup/complete. Username is
@@ -173,9 +175,9 @@ func CreateFirstAdmin(app core.App, req SetupReq) error {
 }
 
 func configureComments(app core.App, req SetupReq, adminEmail string) error {
-	site, err := app.FindFirstRecordByFilter("site", "")
-	if err != nil || site == nil {
-		return fmt.Errorf("bootstrap: site record not found: %w", err)
+	site, err := site.Get(app)
+	if err != nil {
+		return fmt.Errorf("bootstrap: %w", err)
 	}
 	provider := req.Comments.Provider
 	if provider == "" {
@@ -273,9 +275,9 @@ func (m *Manager) handleStatus(e *core.RequestEvent) error {
 // handleRuntimeComments is an internal, local-only readiness probe used by
 // the container entrypoint. It intentionally exposes no credentials.
 func (m *Manager) handleRuntimeComments(e *core.RequestEvent) error {
-	site, err := m.app.FindFirstRecordByFilter("site", "")
+	site, err := site.Get(m.app)
 	provider := "disabled"
-	if err == nil && site != nil {
+	if err == nil {
 		provider = site.GetString("commentsProvider")
 	}
 	return e.JSON(http.StatusOK, map[string]any{"provider": provider})
