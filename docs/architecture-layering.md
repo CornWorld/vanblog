@@ -448,6 +448,20 @@ jsvm 池溢出不归还问题已计划上游报 pocketbase issue(链接待补)�
 
 **JSVM 是"用户自定义扩展",不是"核心业务"**。
 
+边界事实(2026-09-29 论证沉淀):
+
+- **默认访客读路径零 JS**:页面/feeds/文章读取不进 goja——除非用户自己给
+  读事件加了钩子。QPS 最高的链路默认与 JSVM 无关。
+- **第一方住在 JSVM 里的只剩 Pack**:moments/bookmarks 各 8 行 author-stamping、
+  online 75 行心跳路由,外加 4 个 builtin pack 的 schema 迁移(JSVM migrations,
+  boot 时跑)——彻底移除 jsvm 会连 Pack 系统一并杀死。
+- **信任级别 = 管理员**:钩子文件需要服务器文件系统写权限,JSVM 不承接
+  不可信代码($os/$http/$app 全量暴露),它是管理员的进程内脚本面。
+- **资源语义**:pb 对钩子无超时、无内存阀(goja 无硬内存帽;池溢出行为见
+  §4.4 并发闸门)。放大被闸门限流,容器 OOM kill 兜底。
+- **fail-fast**:staged hooks 有语法/运行时错误 → 启动 panic
+  (`HooksWatch: false`,main.go),不会静默缺钩子继续服务。
+
 我们提供的 `pb_hooks/` 里:
 
 - `examples.pb.js` — 官方示例 (给用户学习的,6 个钩子,**当前全部注释掉,需复制到自己文件去掉注释才能生效**)

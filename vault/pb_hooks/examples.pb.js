@@ -1,11 +1,23 @@
 /// <reference path="./types.d.ts" />
 
-// ============================================================================
-// Vanblog Example Hooks (JSVM)
-// ============================================================================
-// These are examples for users to learn from and customize.
-// Copy any of these patterns into your own .pb.js file to extend vanblog.
-// ============================================================================
+/*
+ * Vanblog Example Hooks (JSVM)
+ * ===========================================================================
+ * These are examples for users to learn from and customize.
+ * Copy any of these patterns into your own .pb.js file to extend vanblog.
+ *
+ * Hook contract (JS has no compiler to catch these — the 2026-09-15
+ * media-chain regression was exactly this failure class):
+ *  1. onRecord*Request hooks MUST return e.next(), otherwise the default
+ *     save/update is skipped and the chain stops.
+ *  2. Event hooks (onRecordAfter*Success etc.) MUST "return e.next()" —
+ *     a bare return silently stops the chain for later subscribers.
+ *  3. Top-level const/function are INVISIBLE to event callbacks (each
+ *     callback is re-compiled per executor VM): only use PB globals inside.
+ *  4. There is no per-hook timeout or memory cap: a stuck hook holds a
+ *     jsvm pool slot (and a concurrency-gate slot) until process restart.
+ * ===========================================================================
+ */
 
 // --- Example 1: Send webhook notification on new published post ---
 // onRecordCreateRequest((e) => {
