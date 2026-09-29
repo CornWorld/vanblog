@@ -459,8 +459,11 @@ jsvm 池溢出不归还问题已计划上游报 pocketbase issue(链接待补)�
   不可信代码($os/$http/$app 全量暴露),它是管理员的进程内脚本面。
 - **资源语义**:pb 对钩子无超时、无内存阀(goja 无硬内存帽;池溢出行为见
   §4.4 并发闸门)。放大被闸门限流,容器 OOM kill 兜底。
-- **fail-fast**:staged hooks 有语法/运行时错误 → 启动 panic
-  (`HooksWatch: false`,main.go),不会静默缺钩子继续服务。
+- **加载期错误分档**(boot 预检,`main.go` + `internal/pack/preflight.go`):
+  用户钩子语法错 → 从 staging 剔除 + `hook.load.failed` 审计行(**响亮降级**,
+  站点照常);pack 钩子语法错 / 钩子顶层运行时错 → 可读 fatal 报告(文件/
+  行号/源码摘录 + boot ID,供 crash-loop 关联)后退出。"静默缺钩子继续服务"
+  在任何分档下都不存在。
 
 我们提供的 `pb_hooks/` 里:
 

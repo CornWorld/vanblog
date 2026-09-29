@@ -1,6 +1,7 @@
 package main
 
 import (
+	cryptoRand "crypto/rand"
 	"fmt"
 	"io/fs"
 	"log"
@@ -54,6 +55,39 @@ func resolveCoreSchemaSource(path string) (validation.ModelSource, error) {
 		return nil, fmt.Errorf("core schema artifact %q is a directory", path)
 	}
 	return validation.ArtifactSource{FS: os.DirFS(filepath.Dir(path)), Name: "core", Path: filepath.Base(path)}, nil
+}
+
+// bootID correlates all log/fatal lines of one process start — in a crash
+// loop, repeating failures show DIFFERENT ids (new boot each time); the
+// error text tells whether it is the same failure.
+var bootID = func() string {
+	b := make([]byte, 4)
+	if _, err := cryptoRand.Read(b); err != nil {
+		return fmt.Sprintf("bt_%d", os.Getpid())
+	}
+	return fmt.Sprintf("bt_%x", b)
+}()
+
+// printHookReport renders preflight failures PHP-style: file, parser
+// message, offending source line with a caret. Written to stderr so the
+// entrypoint's restart log keeps every attempt.
+func printHookReport(fatal, excluded []pack.Failure) {
+	fmt.Fprintf(os.Stderr, "\n================================================================\n")
+	fmt.Fprintf(os.Stderr, "VANBLOG hook 预检报告 (boot %s)\n", bootID)
+	for _, f := range fatal {
+		fmt.Fprintf(os.Stderr, "\n[FATAL] %s %s\n  %s\n", f.Owner, f.Path, f.Message)
+		if f.Snippet != "" {
+			fmt.Fprintln(os.Stderr, f.Snippet)
+		}
+	}
+	for _, f := range excluded {
+		fmt.Fprintf(os.Stderr, "\n[EXCLUDED] %s %s — 站点将不带此钩子启动,管理员请查看 audits (hook.load.failed)\n", f.Owner, f.Path)
+		fmt.Fprintf(os.Stderr, "  %s\n", f.Message)
+		if f.Snippet != "" {
+			fmt.Fprintln(os.Stderr, f.Snippet)
+		}
+	}
+	fmt.Fprintf(os.Stderr, "================================================================\n\n")
 }
 
 func main() {
@@ -183,6 +217,25 @@ func main() {
 			os.Exit(1)
 		}
 
+		// Preflight: syntax-check staged hooks BEFORE jsvm loads them —
+		// PHP-style report (file/line/snippet + boot ID for crash-loop
+		// correlation) instead of a Go panic dump. Broken USER hooks are
+		// excluded (loud degrade: site still boots; audits row lands on
+		// OnServe). Broken PACK hooks stay fatal (first-party code, CI
+		// should have caught it — a silently skipped invariant hook is
+		// worse than downtime).
+		excluded, fatal, perr := pack.Preflight(staging)
+		if perr != nil {
+			slog.Error("hook preflight", "err", perr)
+			os.Exit(1)
+		}
+		if len(fatal) > 0 || len(excluded) > 0 {
+			printHookReport(fatal, excluded)
+		}
+		if len(fatal) > 0 {
+			os.Exit(1)
+		}
+
 		// Resolve and stage the user-defined JS migrations dir (if any) as "core",
 		// then stage every loadable Pack's migrations/*.js into the same flat dir.
 		// jsvm loads JS migrations from MigrationsDir at register time (below), so
@@ -203,17 +256,34 @@ func main() {
 			os.Exit(1)
 		}
 
-		jsvm.MustRegister(app, jsvm.Config{
-			MigrationsDir: stagingMigrations,
-			HooksDir:      staging,
-			// jsvm's own HooksWatch watches the STAGING copy — written once
-			// at startup, never again, so it could never fire. The source-dir
-			// watcher (watchHookSources, started in OnServe) owns reloads.
-			// Bonus: false makes a broken hook file panic at startup (fail
-			// fast) instead of log-and-continue serving without hooks.
-			HooksWatch:    false,
-			HooksPoolSize: hooksPool,
-		})
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					// jsvm panics on hook load errors that preflight's
+					// parse-only check cannot see (top-level runtime
+					// errors). Render a readable fatal report instead of
+					// a Go panic + stack dump.
+					fmt.Fprintf(os.Stderr, "\n================================================================\n")
+					fmt.Fprintf(os.Stderr, "VANBLOG BOOT FAILED — hook 加载出错 (boot %s)\n", bootID)
+					fmt.Fprintf(os.Stderr, "%v\n", r)
+					fmt.Fprintf(os.Stderr, "修复或删除对应 .pb.js 后重启;钩子契约见 pb_hooks/examples.pb.js 头注释。\n")
+					fmt.Fprintf(os.Stderr, "================================================================\n\n")
+					os.Exit(1)
+				}
+			}()
+			jsvm.MustRegister(app, jsvm.Config{
+				MigrationsDir: stagingMigrations,
+				HooksDir:      staging,
+				// jsvm's own HooksWatch watches the STAGING copy — written once
+				// at startup, never again, so it could never fire. The source-dir
+				// watcher (watchHookSources, started in OnServe) owns reloads.
+				// false = a hook file that passes preflight's parse but throws
+				// at top-level execution panics here (fail fast, rendered as
+				// the readable report above) instead of log-and-continue.
+				HooksWatch:    false,
+				HooksPoolSize: hooksPool,
+			})
+		}()
 
 		// Loadable packs captured for OnServe schema resolution.
 		loadablePacks = loadable
@@ -231,6 +301,19 @@ func main() {
 	}
 
 	app.OnServe().BindFunc(func(event *core.ServeEvent) error {
+		// Loud-degrade bookkeeping: preflight-excluded hooks are audit-logged
+		// as soon as the DB is up, so the admin sees them in the audits page
+		// (the boot report on stderr is easy to miss behind a restart).
+		for _, f := range pack.LastPreflightExclusions() {
+			audit.OpsFailed(event.App, "hook.load.failed", f.Path, map[string]any{
+				"owner":  f.Owner,
+				"reason": f.Message,
+				"line":   f.Line,
+				"column": f.Column,
+			})
+			slog.Error("[hooks] excluded broken hook — site booted WITHOUT it", "file", f.Path, "line", f.Line, "col", f.Column, "err", f.Message)
+		}
+
 		// Hot hook reload: watch the SOURCE hook/migration dirs (jsvm's own
 		// HooksWatch watches the staging copy, which never changes after
 		// startup — structurally dead). On change: re-stage + execve restart.
