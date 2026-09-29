@@ -10,10 +10,14 @@ VanBlog 本身**不实现评论功能**，评论是外挂形态：
 
 - 后端（PocketBase / Go / Caddy）不存储评论内容，也不提供评论增删改查 API。
 - 评论正文始终存放在外部服务（Artalk 自托管实例、或任意第三方评论系统）。
-- VanBlog 只做三件事：
+- VanBlog 只做四件事：
   1. 存储并校验「用哪个评论 provider + 对应配置」这份**元数据**；
   2. 在站点配置里暴露 provider 选项，让用户选择；
-  3. 由 theme 组件在文章/关于页渲染对应的评论 widget。
+  3. 由 theme 组件在文章/关于页渲染对应的评论 widget；
+  4. (可选)评论 SSO 桥(`internal/commentssso`,`POST
+     /api/vanblog/comments-sso/token` + `/userinfo`):给自建评论服务签发
+     短时身份 token,让登录用户免重复登录。**默认关**(需 admin 且
+     `VANBLOG_COMMENTS_SSO_ENABLED=1`),不开时零行为。
 
 因此评论系统对 VanBlog 而言是一个**前端集成点**，而非后端领域模型的一部分。
 

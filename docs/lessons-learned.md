@@ -96,6 +96,37 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 - Caddy + nodejs + ca-certificates + tzdata
   - prod 实际包含 Node.js 并运行 Astro SSR server(见 `reference/deployment.md`),与早期"纯 SSG 无 Node"的设想不同
 
+### 3.3 容器 OOM 事故与三层修复（2026-08-28）
+
+**事故**:500 篇文章 + 1000 QPS 压测下 1g 内存容器 OOM(成功率跌到 36.8%),
+2g 也降级到 63.8%。vegeta 实测矩阵(见 `bench/README.md`;语料用
+`fetch-corpus.mjs --pin/--replay` 确定性重建,原始数据不入库):
+
+| 内存 | 文章数 | QPS  | success | p50    | p99    | OOM |
+| ---- | ------ | ---- | ------- | ------ | ------ | --- |
+| 1g   | 0      | 1000 | 100.0%  | 0.9ms  | 5.0ms  | no  |
+| 1g   | 500    | 1000 | 36.8%   | 34.9ms | 3433ms | YES |
+| 2g   | 0      | 1000 | 100.0%  | 1.1ms  | 5.7ms  | no  |
+| 2g   | 500    | 1000 | 63.8%   | 45.1ms | 273ms  | no  |
+
+**根因**:PB jsvm 的 goja Runtime 池满载时会**溢出创建一次性 Runtime
+(~44MB/个,永不归还)**——并发请求不受闸门约束时,几个突发就能把 1g 容器打穿。
+
+**三层修复**:
+
+1. **GOMEMLIMIT = cgroup×80%**(entrypoint 推导)——给 GC 一个硬上限视野;
+2. **hooksPool=64 + 并发信号量**(`vault/main.go`)——并发请求数 ≤ 池大小,
+   池永不溢出;满载返回 503 让客户端退避,而非分配新 VM;
+3. **GOGC=50**——突发流量下更积极回收。
+
+**收窄后续**(2026-09-29):信号量最初覆盖全部请求,把 Go 管理路由、SSE
+长连接也挡在闸门里(SSE 会永久占槽,存在慢泄漏)。已收窄为**只作用于执行
+JS hook 的路径**(`/api/collections/*`、`/api/files/*`、用户 `routerAdd`),
+Go 路由与 `/api/realtime` 豁免——详见 `architecture-layering.md` §4.4。
+
+**教训**:压测客户端本身要能打满目标 QPS(早期自写 Node 客户端 ~400 QPS 封顶,
+数据全部作废);内存参数(GOMEMLIMIT/GOGC)必须烧进镜像而不是运行时猜。
+
 ---
 
 ## 4. 测试策略
@@ -288,12 +319,12 @@ migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{...})
 
 本项目此前已在以下环节规避了此问题：
 
-| 环节               | 做法                                                                   | 状态                 |
-| ------------------ | ---------------------------------------------------------------------- | -------------------- |
-| `vault/Makefile`   | `go build -o bin/migrate ./cmd/migrate` + `make build` → `bin/vanblog` | ✅ (2026-07-20 改进) |
-| `Dockerfile`       | `go build -o /pocketbase .`                                            | ✅                   |
-| CI (`release.yml`) | `go build -o bin/migrate-$(goos)-$(goarch) ./cmd/migrate`              | ✅                   |
-| `.gitignore`       | `vault/vanblog` + `vault/bin/`                                         | ✅ (2026-07-20 补充) |
+| 环节                        | 做法                                  | 状态                 |
+| --------------------------- | ------------------------------------- | -------------------- |
+| `vault/Makefile`            | `go build -o $(OUTDIR)/vanblog .`     | ✅ (2026-07-20 改进) |
+| `Dockerfile`                | `go build -o /pocketbase .`           | ✅                   |
+| CI (`security-nuclei.yml`)  | `go build -o bin/vanblog .`           | ✅                   |
+| `.gitignore`                | `vault/vanblog` + `vault/bin/`        | ✅ (2026-07-20 补充) |
 
 ### 8.2 教训
 
@@ -309,9 +340,6 @@ OUTDIR ?= bin
 
 build:
     go build -o $(OUTDIR)/vanblog .
-
-migrate:
-    go build -o $(OUTDIR)/migrate ./cmd/migrate
 ```
 
 对应 `.gitignore`：

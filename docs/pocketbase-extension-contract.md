@@ -2,7 +2,7 @@
 
 > **文档类型**：治理文档 / fact。目标：让下一个 agent / 维护者不再靠读 PB 源码 + 撞墙才能搞清边界。
 > **目标读者**：vanblog 维护者、后续实施 agent、写 Pack/Theme 扩展的人。
-> **版本依据**：PocketBase v0.39.5（`vault/go.mod` 锁定）。
+> **版本依据**：PocketBase v0.40.1（`vault/go.mod` 锁定）。
 > **前置阅读**：`docs/architecture-layering.md`（三层架构）、`docs/pack-theme-schema-design.md`（Pack 自带 `migrations/*.js` 的设计）。
 
 ---

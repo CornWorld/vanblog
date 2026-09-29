@@ -92,28 +92,37 @@ await pb.collection('posts').create({ title: 'New Post' });
 
 ## Monorepo 结构
 
-> 注:`sdk/` 和 `app/` 直接位于仓库根目录(不是 `packages/sdk/`、`packages/app/`)。`pnpm-workspace.yaml` 声明 `packages: ['sdk', 'app']`。SDK 的所有 vanblog 服务集中在一个文件 `sdk/src/services.ts`(不是按服务拆分的子目录)。
+> 注:`sdk/`、`app/`、`lab/`、`themes/*` 直接位于仓库根目录(不是 `packages/…`)。
+> `pnpm-workspace.yaml` 声明 `packages: ['sdk', 'app', 'lab', 'themes/*']`。
+> SDK 的 vanblog 服务集中在 `sdk/src/services.ts`;`client.extend()` 机制**内联在
+> `sdk/src/client.ts`**(无独立 extend.ts);共享 record 模型在 `sdk/src/models/`。
 
 ```
 vanblog/                      ← git root
-  pnpm-workspace.yaml         ← workspace 声明(packages: ['sdk', 'app'])
+  pnpm-workspace.yaml         ← workspace 声明(packages: ['sdk', 'app', 'lab', 'themes/*'])
   package.json                ← root (scripts, devDeps)
-  sdk/                        ← @vanblog/sdk(根目录,非 packages/sdk)
+  sdk/                        ← @vanblog/sdk(根目录)
     package.json
     tsconfig.json
     src/
       index.ts                ← 统一导出
-      client.ts               ← createVanblogClient (工厂函数,挂载 .vanblog 命名空间)
+      client.ts               ← createVanblogClient (工厂函数;extend() 类型机制也在此)
       server.ts               ← createServerClient (SSR + cookie)
       browser.ts              ← createBrowserClient (客户端 + 同源)
-      services.ts             ← 所有 vanblog 服务命名空间(feed/timeline/search/tls/migrate/setup/posts/site/media/categories/tags/users/routing)
+      cookie.ts               ← cookie 读写辅助
+      dates.ts                ← 日期格式化
+      theme.ts                ← 主题侧辅助
+      services.ts             ← vanblog 服务命名空间(feed/timeline/search/tls/migrate/setup/posts/site/media/categories/tags/users/routing)
+      models/                 ← 共享 record 模型(posts/tags/categories/site/audits/visits/…)
       types.ts                ← Post, Site, Tag, Category, TLSStatus 等
-      extend.ts               ← client.extend() 类型机制
-  app/                        ← Astro 前端(根目录,非 packages/app)
+      utils.ts                ← 通用工具
+  app/                        ← Astro admin 前端
     package.json              ← "dependencies": { "@vanblog/sdk": "workspace:*" }
     astro.config.mjs
     src/
       ...
+  themes/<name>/              ← 各主题(独立 Astro 项目)
+  lab/                        ← dev 实验工具(非产品组件)
   vault/                      ← Go 后端 (不变)
   Dockerfile
 ```
@@ -124,6 +133,8 @@ vanblog/                      ← git root
 packages:
   - "sdk"
   - "app"
+  - "lab"
+  - "themes/*"
 ```
 
 ### app/package.json 依赖

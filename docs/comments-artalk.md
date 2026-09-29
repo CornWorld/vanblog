@@ -93,11 +93,11 @@ Artalk 管理员不通过命令行初始化。选择 `prod-artalk` 镜像后，�
 
 ## 数据迁移（Waline → Artalk）
 
-存量 Waline 评论数据用 Artransfer-CLI 迁移到 Artalk：
+存量 Waline 评论数据用 Artransfer-CLI（Artalk 官方工具）迁移：
 
 ```bash
-# 参考 admin 后台「迁移」页，或：
-# vault/cmd/migrate/main.go 内含交互式 Waline → Artalk 迁移引导
+# 用 Artransfer-CLI 把 Waline 导出转为 .artrans（用法见 Artalk 官方文档 artransfer 章节）
+# 产出的 .artrans 在 Artalk 控制中心 → 迁移 → 上传导入
 ```
 
 迁移产出 `.artrans` 文件，在 Artalk 控制中心 → 迁移 → 上传即可。

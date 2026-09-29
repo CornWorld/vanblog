@@ -75,7 +75,7 @@ JSVM **不适合**的场景:
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  Astro 前端 (prod SSG / dev server)                      │
+│  Astro 前端 (prod SSR, Node theme host)                  │
 │  - 通过 `sdk/` TypeScript 包调用 pb REST API            │
 │  - 上传图片时做 WASM 水印/压缩                            │
 └──────────────────────┬───────────────────────────────────┘
@@ -129,6 +129,14 @@ vault/
       cache.go                    # @id 缓存 / diff
     # Caddy admin API 客户端已独立为外部模块:
     # github.com/CornWorld/caddyadmin — 位于 ~/Code/caddyadmin/
+    #
+    # 为什么外置:它是独立演进的 Caddy admin HTTP 客户端(WaitForCaddy /
+    # dry-run Validate / Load 重试等传输层关注点),不依赖 vanblog 的业务
+    # 概念,可单独复用与测试。
+    # 升级流程:go.mod bump 版本 → vault/internal/caddy 适配新 API → 全量测试。
+    # 安全责任边界:SSRF 校验(ValidateTarget/DefaultAllowlist)、保留路径、
+    # 用户规则翻译都在**本仓** internal/caddy(translator.go / ssrf.go);
+    # caddyadmin 只做传输,不做任何目标地址合法性判断。
     revisions/
       revisions.go                # 快照写入 / diff / 恢复
     visits/
@@ -168,23 +176,42 @@ vault/
 
 ### 4.2 Go 业务层模块职责
 
-| 模块        | 对应原项目                     | 增量估计  | 关键 Go 库                                                                                                          |
-| ----------- | ------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------- |
-| `article`   | article.provider.ts (980)      | ~120      | pb `filter`/`sort` 覆盖查询；增量=字数统计+时间线聚合+搜索+回收站                                                   |
-| `media`     | static.provider.ts (560)       | ~100      | pb FileField + thumbs 内置；增量=MD5 去重+S3 驱动                                                                   |
-| `migration` | backup.controller.ts (137)     | ~150      | `encoding/json` + `app.RunInTransaction` 事务                                                                       |
-| `caddy`     | caddy.provider.ts (136)        | ~80       | `net/http` + `net/url` (SSRF)                                                                                       |
-| `revisions` | — (新增)                       | ~80       | `github.com/sergi/go-diff` (快照+diff+恢复)                                                                         |
-| `visits`    | visit+viewer.provider.ts (241) | ~80       | SQL `UPDATE SET count = count + 1` + 日聚合                                                                         |
-| `feed`      | rss+sitemap.provider.ts (230)  | ~150      | 标准库 `encoding/xml`；RSS/Atom/Sitemap 生成 + 路由注册                                                             |
-| `site`      | meta/setting.provider.ts (526) | ~50       | 站点配置单行读取                                                                                                    |
-| `devseed`   | — (新增)                       | ~30       | 开发环境假数据填充                                                                                                  |
-| `pack`      | — (新增)                       | ~150      | Pack kernel: `Pack` struct、builtin/local 发现与解析、whole-Pack replacement、hook 原子暂存、`vanblog pack add` CLI |
-| `admin`     | — (新增)                       | ~40       | admin 专属 DELETE 路由(categories/tags/users)                                                                       |
-| `bootstrap` | — (新增)                       | ~80       | 首次启动 setup 引导(status / complete)                                                                              |
-| **总计**    |                                | **~1110** | **(pb 覆盖 + 裁剪 ~4000 行不计)**                                                                                   |
+按域实测行数（`wc -l`，2026-09-29，`vault/internal/`，`pb_migrations`/`pb_hooks` 不计）：
 
-**对比原项目**:原 NestJS 5012 行 → Go 真实增量 **~600-1000 行**(pb 原生覆盖 ~2400 行 CRUD/auth/权限,裁剪 ~800 行 picgo/waline 托管/ISR/pipeline)。
+| 模块            | 非测试 | 测试  | 职责                                                   |
+| --------------- | ------ | ----- | ------------------------------------------------------ |
+| `caddy`         | 2797   | 2718  | Caddy admin 客户端 / SSRF 校验 / 路由翻译 / TLS 状态    |
+| `pack`          | 1531   | 1364  | Pack kernel: 发现/解析/原子暂存/whole-Pack 替换         |
+| `article`       | 1056   | 1063  | 查询/发布/时间线/回收站 + Astro 缓存失效与持久重试      |
+| `packcli`       | 893    | 405   | `vanblog pack` CLI                                     |
+| `media`         | 706    | 1376  | 存储驱动 (local/S3) / MD5 查重 / 缩略图                 |
+| `admin`         | 634    | 400   | backups / export / admin 删改路由                       |
+| `mcp`           | 630    | 345   | MCP 文件端点（**dev-only**）                            |
+| `validation`    | 548    | 636   | core schema + Pack schema 校验                          |
+| `system`        | 498    | 55    | restart / metrics                                      |
+| `devseed`       | 414    | 0     | 开发种子数据（**dev-only**）                            |
+| `migration`     | 353    | 463   | ZIP 导入（导出在 `admin`）                              |
+| `bootstrap`     | 352    | 202   | 首次启动 setup 引导                                     |
+| `revisions`     | 315    | 484   | 修订快照 / diff / 恢复                                  |
+| `audit`         | 292    | 383   | 通配 Request 审计                                      |
+| `agent`         | 292    | 57    | 容器内 agent 端点（**dev-only**）                       |
+| `site`          | 279    | 99    | 站点配置单行读取（`site.Get`）                          |
+| `visits`        | 275    | 209   | 原子计数 / 日聚合                                       |
+| `feed`          | 188    | 316   | RSS/Atom/Sitemap 路由                                   |
+| `rss`           | 169    | 116   | RSS/Atom XML 序列化                                     |
+| `commentssso`   | 159    | 181   | 评论 SSO 桥（默认关）                                   |
+| `theme`         | 146    | 101   | `/api/themes`                                          |
+| `palette`       | 136    | 0     | 调色板                                                  |
+| `mediaurl`      | 123    | 101   | 媒体 URL 解析                                           |
+| `schema`        | 55     | 0     | `/api/vanblog/schema`                                  |
+| `sitemap`       | 54     | 68    | Sitemap XML 序列化                                      |
+| `migrationschema` | 28   | 67    | 导出/导入共享 schema                                    |
+| `traceid`       | 15     | 0     | 请求 trace id                                          |
+| **总计**        | 13,458 | 11,209 | 27 个域                                                |
+
+**对比原项目**:原 NestJS provider 层 5012 行被 pb 原生能力大幅吸收——pb 自动提供
+`/api/collections/{name}/records` CRUD(分页/过滤/排序/关联展开)与 auth/权限规则,
+原项目大部分代码是围绕这两件事的手写包装。
 
 > **修正**(用户反馈):之前估算 ~2400 行是把 NestJS 模板代码直接搬到 Go,没扣除 pb 原生能力。真实增量细分:
 >
@@ -217,6 +244,14 @@ JSVM 钩子直接使用 pb 原生全局 API
 > `app.Cron().MustAdd("visits-daily-aggregate", "0 0 * * *", ...)`,原
 > `system.pb.js` 已删除。JS 侧 `cronAdd` 留给用户自定义定时作业(`examples.pb.js`
 > 示例 5)。
+
+> **每日自愈 cron 已被 Go 持久重试取代**(2026-09-29 退役):原
+> `pb_hooks/selfheal.pb.js` 每天 04:00 盲重发一次 Astro 缓存失效。现在
+> `internal/article/astro_revalidate.go` 在失效 POST 失败时把 tags 合并进
+> `pb_data/revalidate.pending.json`,后台循环(`startRevalidateRetry`,5s 节拍 +
+> 启动首扫)重放成功即删——发布后秒级自愈,不再等每日一班。失败仍写
+> `result="failure"` 审计行(admin 可见)。`site.displayOptions.revalidateSelfHeal`
+> 开关随之作废(无 UI 绑定,字段留在 schema 兼容旧数据)。
 
 > **审计在 Go 层**(2026-09-17 迁移):`internal/audit` 用**通配** `onRecord*Request`
 > 覆盖全部 collection(含 Pack 运行时建表),action 字符串与 row 形状与旧 JS 版
@@ -311,36 +346,75 @@ func New(app core.App) *Service {
 | 阶段接口（PhasePreServe / PhaseOnServe） | 本质还是主程序在做事，只是改写法。                                                                             |
 | 命名约定 + 强制接口                      | 「又臭又长」—— 一个文件 8 行 register 函数堆叠。                                                               |
 
-**所有 vanblog 自定义路由（来自各 Manager 的 OnServe）**：
+**所有 vanblog 自定义路由（来自各 Manager 的 OnServe，2026-09-29 实测 58 条）**：
 
-| Manager     | 路由                                   | Handler                   |
-| ----------- | -------------------------------------- | ------------------------- |
-| `feed`      | `GET /api/feed.xml`                    | `serveRSS`                |
-| `feed`      | `GET /api/atom.xml`                    | `serveAtom`               |
-| `feed`      | `GET /api/sitemap.xml`                 | `serveSitemap`            |
-| `article`   | `GET /api/vanblog/timeline`            | `handleTimelineEndpoint`  |
-| `article`   | `GET /api/vanblog/search?q=`           | `handleSearchEndpoint`    |
-| `article`   | `GET /api/vanblog/posts/trash`         | `handleTrashEndpoint`     |
-| `article`   | `POST /api/vanblog/posts/{id}/restore` | `handleRestoreEndpoint`   |
-| `article`   | `POST /api/vanblog/posts/{id}/purge`   | `handlePurgeEndpoint`     |
-| `media`     | `DELETE /api/vanblog/media/{id}`       | `handleDelete`            |
-| `caddy`     | `GET /api/hooks/caddy/ask`             | `handleAskEndpoint`       |
-| `caddy`     | `GET /api/vanblog/tls/status`          | `handleTLSStatusEndpoint` |
-| `caddy`     | `GET /api/vanblog/routing/rules`       | `handleListRules`         |
-| `caddy`     | `GET /api/vanblog/routing/status`      | `handleRoutingStatus`     |
-| `caddy`     | `GET /api/vanblog/routing/audits`      | `handleRoutingAudits`     |
-| `caddy`     | `GET /api/vanblog/routing/render`      | `handleRenderConfig`      |
-| `caddy`     | `PUT /api/vanblog/routing/rules`       | `handleReplaceRules`      |
-| `caddy`     | `POST /api/vanblog/routing/validate`   | `handleValidateRule`      |
-| `caddy`     | `POST /api/vanblog/routing/apply`      | `handleApply`             |
-| `admin`     | `DELETE /api/vanblog/categories/{id}`  | `handleDeleteCategory`    |
-| `admin`     | `DELETE /api/vanblog/tags/{id}`        | `handleDeleteTag`         |
-| `admin`     | `DELETE /api/vanblog/users/{id}`       | `handleDeleteUser`        |
-| `bootstrap` | `GET /api/vanblog/setup/status`        | `handleStatus`            |
-| `bootstrap` | `POST /api/vanblog/setup/complete`     | `handleComplete`          |
-| `migration` | `POST /api/vanblog/migrate/import`     | `handleImport`            |
+| Manager     | 路由                                     | Handler                   |
+| ----------- | ---------------------------------------- | ------------------------- |
+| `feed`      | `GET /api/feed.xml`                      | `serveRSS`                |
+| `feed`      | `GET /api/atom.xml`                      | `serveAtom`               |
+| `feed`      | `GET /api/sitemap.xml`                   | `serveSitemap`            |
+| `feed`      | `GET /feed.xml`（别名）                  | `serveRSS`                |
+| `feed`      | `GET /atom.xml`（别名）                  | `serveAtom`               |
+| `feed`      | `GET /sitemap.xml`（别名）               | `serveSitemap`            |
+| `article`   | `GET /api/vanblog/timeline`              | `handleTimelineEndpoint`  |
+| `article`   | `GET /api/vanblog/search?q=`             | `handleSearchEndpoint`    |
+| `article`   | `GET /api/vanblog/posts/trash`           | `handleTrashEndpoint`     |
+| `article`   | `POST /api/vanblog/posts/{id}/restore`   | `handleRestoreEndpoint`   |
+| `article`   | `POST /api/vanblog/posts/{id}/purge`     | `handlePurgeEndpoint`     |
+| `article`   | `POST /api/vanblog/posts/{id}/unlock`    | `handleUnlock`            |
+| `media`     | `DELETE /api/vanblog/media/{id}`         | `handleDelete`            |
+| `media`     | `POST /api/vanblog/posts/{id}/ingest-images` | `handleIngestImages`  |
+| `caddy`     | `GET /api/hooks/caddy/ask`               | `handleAskEndpoint`       |
+| `caddy`     | `GET /api/vanblog/tls/status`            | `handleTLSStatusEndpoint` |
+| `caddy`     | `GET /api/vanblog/routing/rules`         | `handleListRules`         |
+| `caddy`     | `GET /api/vanblog/routing/status`        | `handleRoutingStatus`     |
+| `caddy`     | `GET /api/vanblog/routing/audits`        | `handleRoutingAudits`     |
+| `caddy`     | `GET /api/vanblog/routing/render`        | `handleRenderConfig`      |
+| `caddy`     | `PUT /api/vanblog/routing/rules`         | `handleReplaceRules`      |
+| `caddy`     | `POST /api/vanblog/routing/validate`     | `handleValidateRule`      |
+| `caddy`     | `POST /api/vanblog/routing/apply`        | `handleApply`             |
+| `caddy`     | `POST /api/vanblog/themes/reload`        | `handleThemeReload`       |
+| `admin`     | `GET /api/vanblog/backups`               | `handleListBackups`       |
+| `admin`     | `POST /api/vanblog/backups`              | `handleCreateBackup`      |
+| `admin`     | `GET /api/vanblog/backups/{key}/download` | `handleDownloadBackup`   |
+| `admin`     | `DELETE /api/vanblog/backups/{key}`      | `handleDeleteBackup`      |
+| `admin`     | `POST /api/vanblog/backups/{key}/restore` | `handleRestoreBackup`    |
+| `admin`     | `GET /api/vanblog/export/all`            | `handleExportAll`         |
+| `admin`     | `GET /api/vanblog/export/post/{id}`      | `handleExportPost`        |
+| `admin`     | `DELETE /api/vanblog/categories/{id}`    | `handleDeleteCategory`    |
+| `admin`     | `DELETE /api/vanblog/tags/{id}`          | `handleDeleteTag`         |
+| `admin`     | `DELETE /api/vanblog/users/{id}`         | `handleDeleteUser`        |
+| `bootstrap` | `GET /api/vanblog/setup/status`          | `handleStatus`            |
+| `bootstrap` | `POST /api/vanblog/setup/complete`       | `handleComplete`          |
+| `bootstrap` | `GET /api/vanblog/runtime/comments`      | `handleRuntimeComments`   |
+| `migration` | `POST /api/vanblog/migrate/import`       | 内联闭包 → `ImportZip`    |
+| `visits`    | `POST /api/vanblog/visits/record`        | `handleRecord`            |
+| `visits`    | `GET /api/vanblog/visits/summary`        | `handleSummary`           |
+| `system`    | `POST /api/vanblog/system/restart`       | `handleRestart`           |
+| `system`    | `GET /api/vanblog/system/metrics`        | `handleMetrics`           |
+| `schema`    | `GET /api/vanblog/schema`                | `handleSchema`            |
+| `theme`     | `GET /api/themes`                        | `serveThemes`             |
+| `palette`   | `GET /api/palettes`                      | `servePalettes`           |
+| `palette`   | `GET /api/palette.css`                   | `servePaletteCSS`         |
+| `commentssso` | `POST /api/vanblog/comments-sso/token` | `handleIssueToken`        |
+| `commentssso` | `GET /api/vanblog/comments-sso/userinfo` | `handleUserinfo`        |
+| `mcp`       | `POST /api/vanblog/mcp/list_dir`（**dev-only**） | `handleListDir`   |
+| `mcp`       | `POST /api/vanblog/mcp/read_file`（**dev-only**） | `handleReadFile`  |
+| `mcp`       | `POST /api/vanblog/mcp/write_file`（**dev-only**） | `handleWriteFile` |
+| `mcp`       | `GET /api/vanblog/mcp/override_check`（**dev-only**） | `handleOverrideCheck` |
+| `agent`     | `GET /api/vanblog/agent/terminal`（**dev-only**） | `handleTerminal`  |
+| `agent`     | `POST /api/vanblog/agent/validate`（**dev-only**） | `handleValidate`  |
+| `main.go`   | `GET /debug/pprof/{key}` 等 5 条（pprof，仅 localhost 可达——Caddy 不代理 `/debug/*`，用户路由规则也禁止占用该前缀） | `pprof.*` |
 
-> 注：`handleImport` 是 `migration.Manager.Import` 的 HTTP 包装（内联闭包）。
+其余入口不在上表:pb 原生 CRUD 走 `/api/collections/*`,`/api/realtime` 为 pb SSE。
+
+**并发闸门**（`main.go`,2026-09-29 收窄）:根路由 BindFunc 信号量,容量 = `hooksPool`
+(默认 64,与 entrypoint 一致),**只作用于会执行 JS hook 的路径**(`/api/collections/*`、
+`/api/files/*`、用户 `routerAdd` 路由)——PB jsvm 池溢出会创建一次性 goja Runtime
+(~44MB 不归还),满载时返回 503 而非溢出。Go manager 路由(上表全部)与 SSE
+(`/api/realtime`)豁免:它们不进 jsvm 池,闸门饱和时仍可用。已知限制:用户
+`routerAdd` 注册 `/api/vanblog/*` 同前缀路由会一并豁免——病态场景,接受。
+jsvm 池溢出不归还问题已计划上游报 pocketbase issue(链接待补)。
 
 **Caddy Manager 的配置推送流程**（`internal/caddy/caddy.go::pushConfigToAdminAPI`）：
 
@@ -501,61 +575,32 @@ interface VanblogSite {
 
 ## 7. 迁移工具的特殊处理
 
-迁移工具是最重的逻辑 (50MB JSON + 批量事务 + 字段映射)。**必须在 Go 层**。
+迁移工具是最重的逻辑（ZIP 二进制 + 图片重传 + 事务）。**必须在 Go 层**。
 
-### Go 实现
+实际形态是 **ZIP 导入导出 roundtrip**（非 JSON）:
+
+- **导出**（`internal/admin/export.go`）: `GET /api/vanblog/export/all` /
+  `GET /api/vanblog/export/post/{id}` → ZIP(`posts.json`/`post.json` +
+  `images/{collId}/{recId}/{filename}`),schema 由 `internal/migrationschema`
+  的共享结构(`migrationschema.Post`)定义。
+- **导入**（`internal/migration/zip_import.go`）: `POST /api/vanblog/migrate/import`
+  (admin-only,body 限 100MB,单事务):
 
 ```go
-// internal/migration/migration.go
-func (m *Manager) Import(jsonData string) (*MigrationResult, error) {
-    var data LegacyBackup
-    if err := json.Unmarshal([]byte(jsonData), &data); err != nil {
-        return nil, err
-    }
-
-    result := &MigrationResult{}
-    err := m.app.RunInTransaction(func(txApp core.App) error {
-        // 1. articles + drafts → posts (合并, oldId 偏移)
-        for _, article := range data.Articles {
-            if article.Deleted { continue } // skip soft-deleted
-            post := mapArticleToPost(article, "published")
-            txApp.Save(post)
-        }
-        for _, draft := range data.Drafts {
-            if draft.Deleted { continue }
-            post := mapDraftToPost(draft, "draft")
-            txApp.Save(post)
-        }
-
-        // 2. tags (去重 + relation)
-        // 3. meta → site (单行 JSON)
-        // 4. static → media
-        // 5. 不兼容数据 → 迁移档案 post
-        return nil
-    })
-    return result, err
+// internal/migration/zip_import.go
+func (imp *Importer) ImportZip(zipData []byte) (*Result, error) {
+    // 1. 读 posts.json(全量)或 post.json(单篇,单对象)
+    // 2. 逐篇建 posts 记录——导出的 ID 是临时的,一律新建
+    // 3. content 里引用的图片:上传为**新** media 记录(二进制来自
+    //    images/…),重写 <img src> 指向新文件 URL
+    // 4. 分类/标签按名字解析为 ID(不存在则建)
+    // 5. 不兼容数据进 result.Errors,不中断整体
 }
 ```
 
-### 路由注册 (Go 层, 非 JSVM)
-
-迁移端点通过 Go 代码直接注册到 pb Router, 不走 JSVM:
-
-```go
-// internal/migration/routes.go
-func RegisterRoutes(app core.App) {
-    imp := New(app)
-    app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-        se.Router.POST("/api/vanblog/migrate/import", func(e *core.RequestEvent) error {
-            // 读取 body(限 100MB) → imp.Import(body) → JSON 返回 MigrationResult
-            return e.JSON(http.StatusOK, result)
-        })
-        return se.Next()
-    })
-}
-```
-
-> 仅注册 `POST /api/vanblog/migrate/import` 一个端点(无 `migrate/status`),导入进度由调用方自行跟踪。
+> 仅注册 `POST /api/vanblog/migrate/import` 一个导入端点(无 `migrate/status`),
+> 导入进度由调用方自行跟踪;admin UI 也可通过 backups(`admin.handleCreateBackup`)
+> 做整站快照级备份恢复。
 
 ---
 

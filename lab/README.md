@@ -1,5 +1,8 @@
 # @vanblog/lab — Agent Experiment Reports
 
+> **dev 工具，非产品组件**：不进生产镜像，不在 CI 必须路径上。仅用于 agent 实验
+> report 的本地查看与归档。
+
 agent 实验的 **report 落地页 + 历史溯源** UI。每个 run 即一份 report：结论先行，
 再看配置、评测明细、指标、证据链（transcript / container.log / score / run）。
 
