@@ -41,7 +41,10 @@ type UserRule struct {
 }
 
 // ReservedPaths are vanblog's own routes that user rules cannot override.
-// User rules matching these paths will be rejected.
+// User rules matching these paths will be rejected. /debug guards the
+// localhost-only pprof endpoints mounted in main.go: without this entry a
+// user proxy rule from /debug/* to the pb upstream would expose pprof to
+// whatever traffic reaches Caddy.
 var ReservedPaths = []string{
 	"/api/*",
 	"/static/*",
@@ -52,6 +55,8 @@ var ReservedPaths = []string{
 	"/sitemap.xml",
 	"/atom.xml",
 	"/rss/*",
+	"/debug",
+	"/debug/*",
 }
 
 // Translate converts a single UserRule to a Caddy route.

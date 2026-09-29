@@ -151,6 +151,24 @@ func TestTranslateAll_ReservedPath(t *testing.T) {
 	}
 }
 
+// TestTranslateAll_DebugPathRejected 钉住 /debug 保留路径:pprof 只允许
+// localhost 访问(Caddy 不代理 /debug/*)。没有这条,用户自定义
+// from=/debug/* 的代理规则会把 pprof 暴露给所有能打到 Caddy 的流量。
+// 三种写法都必须被拒:精确 /debug、通配 /debug/*、子路径 /debug/pprof。
+func TestTranslateAll_DebugPathRejected(t *testing.T) {
+	for _, from := range []string{"/debug", "/debug/*", "/debug/pprof"} {
+		rules := []UserRule{{
+			ID:   "expose-pprof",
+			Type: "proxy",
+			From: from,
+			To:   "http://127.0.0.1:8090",
+		}}
+		if _, err := TranslateAll(rules, nil); err == nil {
+			t.Fatalf("from=%s: expected reserved-path rejection, got nil", from)
+		}
+	}
+}
+
 func TestTranslateAll_SSRFCheck(t *testing.T) {
 	rules := []UserRule{{
 		ID:   "metadata-steal",
