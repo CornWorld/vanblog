@@ -236,14 +236,14 @@ JSVM 钩子直接使用 pb 原生全局 API
 
 | 文件                   | 说明                                                                     |
 | ---------------------- | ------------------------------------------------------------------------ |
-| `examples.pb.js`       | 学习示例钩子,**当前全部以注释形式保留**(不执行),供用户参考复制到自己文件 |
+| `examples.pb.js`       | 学习示例钩子,**当前全部以 `/* */` 块注释保留**(不执行),供用户参考复制到自己文件 |
 | `lib/vanblog.d.ts`     | pb + vanblog 类型声明 (TypeScript 姿态, IDE 补全)                        |
 
 > **cron 也在 Go 层**(2026-09-17 迁移):`cronAdd` 只是 PB Go API `app.Cron()` 的
 > JS 绑定(jsvm `binds.go`),并非 JSVM 独有能力。核心聚合由 `internal/visits` 直挂
 > `app.Cron().MustAdd("visits-daily-aggregate", "0 0 * * *", ...)`,原
 > `system.pb.js` 已删除。JS 侧 `cronAdd` 留给用户自定义定时作业(`examples.pb.js`
-> 示例 5)。
+> 示例 4/7)。
 
 > **每日自愈 cron 已被 Go 持久重试取代**(2026-09-29 退役):原
 > `pb_hooks/selfheal.pb.js` 每天 04:00 盲重发一次 Astro 缓存失效。现在
@@ -258,7 +258,7 @@ JSVM 钩子直接使用 pb 原生全局 API
 > 逐字节兼容。用户要记自定义事件,直接写 `audits` collection(见
 > `examples.pb.js` 示例 6),无需重新注册核心事件。
 
-> `examples.pb.js` 的 5 个示例(webhook/slug/tag 限制/daily stats/custom header)目前都被 `//` 注释掉,文件不执行任何钩子。把它们视为学习样板,复制到你自己的 `.pb.js` 并去掉注释即可启用。
+> `examples.pb.js` 的 7 个示例(webhook/slug/tag 限制/daily stats/custom header/自定义审计/失败告警)以 `/* */` 块注释保留,文件不执行任何钩子。把它们视为学习样板,复制到你自己的 `.pb.js` 并去掉注释即可启用。
 
 ### 4.4 Manager 自挂 pb hook 模式（启动架构）
 
@@ -470,7 +470,7 @@ jsvm 池溢出不归还(pool.go 一次性 Runtime)**不上游报**:维护者已�
 
 我们提供的 `pb_hooks/` 里:
 
-- `examples.pb.js` — 官方示例 (给用户学习的,6 个钩子,**当前全部注释掉,需复制到自己文件去掉注释才能生效**)
+- `examples.pb.js` — 官方示例 (给用户学习的,7 个钩子示例 + 6 条 hook 契约,**整个文件以 `/* */` 块注释保留,不执行任何钩子;复制到自己的 `.pb.js` 去掉注释才生效**)
 - `lib/vanblog.d.ts` — pb + vanblog 类型声明 (TypeScript 姿态, IDE 补全)
 
 **不提供的**(核心业务在 Go 里):
@@ -647,7 +647,7 @@ func (imp *Importer) ImportZip(zipData []byte) (*Result, error) {
 | 文件                            | 状态    | 说明                             |
 | ------------------------------- | ------- | -------------------------------- |
 | `pb_hooks/lib/vanblog.d.ts`     | ✅ 完成 | pb + vanblog 类型声明 (IDE 补全) |
-| `pb_hooks/examples.pb.js`       | ✅ 完成 | 6 个学习示例                     |
+| `pb_hooks/examples.pb.js`       | ✅ 完成 | 7 个学习示例 + hook 契约(块注释) |
 
 ### TypeScript SDK (已完成)
 

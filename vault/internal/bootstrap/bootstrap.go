@@ -175,7 +175,7 @@ func CreateFirstAdmin(app core.App, req SetupReq) error {
 }
 
 func configureComments(app core.App, req SetupReq, adminEmail string) error {
-	site, err := site.Get(app)
+	siteRec, err := site.Get(app)
 	if err != nil {
 		return fmt.Errorf("bootstrap: %w", err)
 	}
@@ -183,13 +183,13 @@ func configureComments(app core.App, req SetupReq, adminEmail string) error {
 	if provider == "" {
 		provider = "disabled"
 	}
-	site.Set("commentsProvider", provider)
+	siteRec.Set("commentsProvider", provider)
 	if provider == "artalk" {
 		server := "https://localhost/comments"
-		if baseURL := strings.TrimRight(site.GetString("baseUrl"), "/"); baseURL != "" {
+		if baseURL := strings.TrimRight(siteRec.GetString("baseUrl"), "/"); baseURL != "" {
 			server = baseURL + "/comments"
 		}
-		site.Set("commentsConfig", map[string]any{
+		siteRec.Set("commentsConfig", map[string]any{
 			"server": server,
 			"site":   strings.TrimSpace(req.Comments.ArtalkSite),
 		})
@@ -197,9 +197,9 @@ func configureComments(app core.App, req SetupReq, adminEmail string) error {
 			return err
 		}
 	} else {
-		site.Set("commentsConfig", map[string]any{})
+		siteRec.Set("commentsConfig", map[string]any{})
 	}
-	if err := app.Save(site); err != nil {
+	if err := app.Save(siteRec); err != nil {
 		return fmt.Errorf("bootstrap: failed to save comments config: %w", err)
 	}
 	return nil
@@ -275,10 +275,10 @@ func (m *Manager) handleStatus(e *core.RequestEvent) error {
 // handleRuntimeComments is an internal, local-only readiness probe used by
 // the container entrypoint. It intentionally exposes no credentials.
 func (m *Manager) handleRuntimeComments(e *core.RequestEvent) error {
-	site, err := site.Get(m.app)
+	siteRec, err := site.Get(m.app)
 	provider := "disabled"
 	if err == nil {
-		provider = site.GetString("commentsProvider")
+		provider = siteRec.GetString("commentsProvider")
 	}
 	return e.JSON(http.StatusOK, map[string]any{"provider": provider})
 }

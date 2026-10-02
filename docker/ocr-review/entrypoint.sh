@@ -30,6 +30,16 @@ git pull --ff-only "$GIT_REMOTE" "$GIT_BRANCH" 2>&1 || {
 
 CURR_HEAD=$(git rev-parse HEAD)
 
+# 原子推进 STATE_FILE:tmp + rename。直接 `echo >` 在半写/被 kill 时留下
+# 截断 SHA,守卫会把它降级成冷启动扩窗;rename 保证读端只见旧值或新值。
+# (launchd 同一 job 不并发起两份,kickstart 也串行,无需加锁。)
+advance_state() {
+    local tmp
+    tmp=$(mktemp "$REFS_DIR/.ocr-last-head.XXXXXX")
+    printf '%s\n' "$1" > "$tmp"
+    mv -f "$tmp" "$STATE_FILE"
+}
+
 # ── Step 2: Determine baseline ───────────────────────────────────
 # STATE_FILE 只在 review 实际跑过之后推进(见 Step 6),「无增量」即跳过——
 # 否则安静期每 6h 重烧同一批旧提交(实测一轮 31 万 token)。
@@ -61,7 +71,7 @@ CHANGES=$(git diff --name-only "$BASELINE"..HEAD 2>/dev/null | \
 
 if [ "${CHANGES:-0}" -eq 0 ]; then
     echo "[ocr-review] $(date -u +%H:%M:%S) No source changes, skipping."
-    echo "$CURR_HEAD" > "$STATE_FILE"   # 增量已判定为空,推进避免每轮重复判定
+    advance_state "$CURR_HEAD"   # 增量已判定为空,推进避免每轮重复判定
     exit 0
 fi
 echo "[ocr-review] $(date -u +%H:%M:%S) $CHANGES changed files"
@@ -138,14 +148,14 @@ print(f\"{s.get('comments','?')} issues, {tt_str} tokens in {s.get('elapsed','?'
 
 if [ "$OCR_EXIT" -eq 0 ] && [ "$STATUS" != "failed" ]; then
     rm -f "$RESUME_FILE"
-    echo "$CURR_HEAD" > "$STATE_FILE"
+    advance_state "$CURR_HEAD"
     echo "[ocr-review] $(date -u +%H:%M:%S) ✅ $SUMMARY_LINE → $OUTPUT_FILE"
 else
     echo "[ocr-review] $(date -u +%H:%M:%S) ❌ review failed (ocr_exit=$OCR_EXIT, status=$STATUS): $SUMMARY_LINE → $OUTPUT_FILE"
     FAILED_SID=$(python3 -c "import json; print(json.load(open('$OUTPUT_FILE')).get('session_id') or '')" 2>/dev/null || true)
     if [ -n "$FAILED_SID" ]; then
         printf '%s\t%s\n' "$BASELINE" "$FAILED_SID" > "$RESUME_FILE"
-        echo "$CURR_HEAD" > "$STATE_FILE"   # 增量已消费,续跑兜底在 RESUME_FILE
+        advance_state "$CURR_HEAD"   # 增量已消费,续跑兜底在 RESUME_FILE
         echo "[ocr-review] saved session for resume next window: $FAILED_SID"
     fi
     # 无 session_id 的失败不推进 STATE_FILE → 下轮整段重试,宁可重烧不漏审

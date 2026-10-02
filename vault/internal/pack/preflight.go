@@ -1,7 +1,9 @@
 package pack
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -57,6 +59,16 @@ func Preflight(staging string) (excluded []Failure, fatal []Failure, err error) 
 		path := filepath.Join(staging, name)
 		content, err := os.ReadFile(path)
 		if err != nil {
+			// 用户 hook 中途消失(restage/手工删除):不是语法错误,按响亮降级
+			// 处理——报告并跳过,不升级为致命 staging 错误;pack hook 仍致命
+			// (staging 由 pack 独占,消失即 pack 自身 bug)。
+			if errors.Is(err, fs.ErrNotExist) && !strings.HasPrefix(name, "pack--") {
+				if rmErr := os.Remove(path); rmErr != nil && !errors.Is(rmErr, fs.ErrNotExist) {
+					return nil, nil, fmt.Errorf("exclude broken hook %q: %w", name, rmErr)
+				}
+				excluded = append(excluded, Failure{Path: name, Owner: "user", Message: "hook file disappeared during preflight: " + err.Error()})
+				continue
+			}
 			return nil, nil, fmt.Errorf("read staged hook %q: %w", name, err)
 		}
 
@@ -126,9 +138,13 @@ func renderSnippet(content string, line, col int) string {
 	num := fmt.Sprintf("%4d", line)
 	caret := ""
 	if col > 0 {
-		caret = strings.Repeat(" ", numLen+col) + "^"
+		if col > len(src)+1 { // 越界列号钳到行尾,不让 caret 飘出源码行
+			col = len(src) + 1
+		}
+		// 源码从第 numLen+3 列开始("%4d | "),caret 指向第 col 个字符
+		caret = strings.Repeat(" ", numLen+3+col-1) + "^"
 	} else {
-		caret = strings.Repeat(" ", numLen+1) + "^"
+		caret = strings.Repeat(" ", numLen+3) + "^"
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s | %s\n", num, src)

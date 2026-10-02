@@ -22,6 +22,8 @@
 
 import { setTimeout as sleep } from "node:timers/promises";
 import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // ---------------------------------------------------------------------------
 // arg parsing: [--pin | --replay] [count]
@@ -34,7 +36,9 @@ const COUNT = parseInt(args.find((a) => /^\d+$/.test(a)) || "1000", 10);
 const HN_COUNT = Math.floor(COUNT * 0.7);
 const ARXIV_COUNT = COUNT - HN_COUNT;
 
-const IDS_FILE = new URL("./corpus.ids.json", import.meta.url).pathname;
+// fileURLToPath + resolve:URL.pathname 在 Windows 上产生 /C:/... 这类
+// readFileSync 解析不可靠的路径
+const IDS_FILE = resolve(dirname(fileURLToPath(import.meta.url)), "corpus.ids.json");
 
 // ---------------------------------------------------------------------------
 // Hacker News (Algolia) — ask_hn / show_hn 有正文
@@ -54,7 +58,9 @@ async function fetchHNPage(page) {
       title: h.title,
       content: hnTextToMarkdown(h.story_text || h.text),
       author: h.author || "unknown",
-      created: h.created_at,
+      // 与 fetchHNById 相同的秒精度归一:search 端点目前给秒,但若哪天对齐
+      // items 端点的毫秒格式,replay 输出会静默偏离 pin 输出
+      created: (h.created_at || "").replace(/\.\d+Z$/, "Z"),
       points: h.points || 0,
       url: h.url || "",
       source: "hn",
@@ -149,24 +155,21 @@ async function fetchArxivBatch(start) {
   return parseArxivXml(await res.text());
 }
 
-// 按 ID 批量抓取（--replay 用，id_list 支持逗号分隔，50 一批）
+// 按 ID 批量抓取（--replay 用）。调用方已按 50 预分块——id_list 单请求
+// 上限 50,这里不再二次分块;批量节流(sleep)也归调用方。
 async function fetchArxivByIds(ids) {
+  const url = `https://export.arxiv.org/api/query?id_list=${ids.join(",")}&max_results=${ids.length}`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
+  if (!res.ok) throw new Error(`arXiv id_list ${res.status}`);
+  const got = parseArxivXml(await res.text());
+  // id_list 的返回顺序不保证与请求一致（实测按提交历史）——按请求
+  // ID 序重排,缺席的点名抛错,保证 --replay 输出与 --pin 逐字节一致。
+  const byId = new Map(got.map((e) => [e.id, e]));
   const out = [];
-  for (let i = 0; i < ids.length; i += 50) {
-    const chunk = ids.slice(i, i + 50);
-    const url = `https://export.arxiv.org/api/query?id_list=${chunk.join(",")}&max_results=${chunk.length}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
-    if (!res.ok) throw new Error(`arXiv id_list ${res.status}`);
-    const got = parseArxivXml(await res.text());
-    // id_list 的返回顺序不保证与请求一致（实测按提交历史）——按请求
-    // ID 序重排，保证 --replay 输出与 --pin 逐字节一致。
-    const byId = new Map(got.map((e) => [e.id, e]));
-    for (const id of chunk) {
-      const e = byId.get(id);
-      if (!e) throw new Error(`arXiv id_list missing ${id}`);
-      out.push(e);
-    }
-    if (i + 50 < ids.length) await sleep(1000); // be polite
+  for (const id of ids) {
+    const e = byId.get(id);
+    if (!e) throw new Error(`arXiv id_list missing ${id}`);
+    out.push(e);
   }
   return out;
 }
@@ -209,7 +212,20 @@ function emit(all) {
 }
 
 if (MODE === "replay") {
-  const pinned = JSON.parse(readFileSync(IDS_FILE, "utf8"));
+  // 「复现或响亮失败」是本脚本的契约:manifest 读不出/形状不对给可读错误,
+  // 而不是裸 ENOENT/SyntaxError/TypeError 栈
+  let pinned;
+  try {
+    pinned = JSON.parse(readFileSync(IDS_FILE, "utf8"));
+  } catch (e) {
+    console.error(`[fetch-corpus] cannot read manifest ${IDS_FILE}: ${e.message} (先跑 --pin 生成)`);
+    process.exit(1);
+  }
+  if (!pinned || !Array.isArray(pinned.ids) || pinned.ids.length === 0 ||
+      pinned.ids.some((x) => !x || !x.source || !x.id)) {
+    console.error(`[fetch-corpus] malformed manifest ${IDS_FILE}: 期望非空 ids[] 且每项含 {source,id}`);
+    process.exit(1);
+  }
   const hnIds = pinned.ids.filter((x) => x.source === "hn").map((x) => x.id);
   const arxivIds = pinned.ids.filter((x) => x.source === "arxiv").map((x) => x.id);
   console.error(`[fetch-corpus] replay: ${hnIds.length} hn + ${arxivIds.length} arxiv from corpus.ids.json (pinned ${pinned.pinnedAt})`);
@@ -225,12 +241,8 @@ if (MODE === "replay") {
     }
     await sleep(300);
   }
-  if (failures > hnIds.length * 0.1 && hnIds.length > 0) {
-    console.error(`[fetch-corpus] too many HN replay failures (${failures}/${hnIds.length}), aborting`);
-    process.exit(1);
-  }
-  failures = 0;
   for (let i = 0; i < arxivIds.length; i += 50) {
+    if (i > 0) await sleep(1000); // be polite
     try {
       all.push(...(await fetchArxivByIds(arxivIds.slice(i, i + 50))));
     } catch (e) {
@@ -238,8 +250,11 @@ if (MODE === "replay") {
       console.error(`[fetch-corpus] arxiv batch: ${e.message}`);
     }
   }
-  if (failures > 0 && all.length === 0) {
-    console.error("[fetch-corpus] arxiv replay failed entirely, aborting");
+  // README 契约:重建失败 abort 而非静默缺篇——缺任何一篇都不许 exit 0,
+  // 两源同一标准(旧实现 HN 容忍 10%、arXiv 仅全灭才 abort,均弱于契约)
+  const wantTotal = hnIds.length + arxivIds.length;
+  if (failures > 0 || all.length !== wantTotal) {
+    console.error(`[fetch-corpus] replay incomplete (${all.length}/${wantTotal}, ${failures} 个抓取错误), aborting`);
     process.exit(1);
   }
   emit(all);
@@ -249,6 +264,17 @@ if (MODE === "replay") {
   await collect(fetchArxivBatch, ARXIV_COUNT, "arxiv", all);
 
   if (MODE === "pin") {
+    // 拒绝退化 manifest:某源彻底颗粒无收时(如 HN 被限流耗尽 5 次重试),
+    // 静默 pin 会把单源语料固化为「复现基准」
+    const hn = all.filter((x) => x.source === "hn").length;
+    if (all.length === 0 || all.some((x) => !x.id)) {
+      console.error(`[fetch-corpus] refusing to pin a degenerate manifest (collected ${all.length} articles, 存在缺 id 项)`);
+      process.exit(1);
+    }
+    if ((HN_COUNT > 0 && hn === 0) || (ARXIV_COUNT > 0 && all.length - hn === 0)) {
+      console.error(`[fetch-corpus] refusing to pin a one-sided manifest (hn ${hn}/${HN_COUNT}, arxiv ${all.length - hn}/${ARXIV_COUNT})`);
+      process.exit(1);
+    }
     const payload = {
       pinnedAt: new Date().toISOString(),
       count: all.length,

@@ -1,12 +1,13 @@
 package main
 
 import (
-	cryptoRand "crypto/rand"
+	"crypto/rand"
 	"fmt"
 	"io/fs"
 	"log"
 	"log/slog"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,7 +41,6 @@ import (
 	"github.com/cornworld/vanblog/internal/validation"
 	"github.com/cornworld/vanblog/internal/visits"
 	_ "github.com/cornworld/vanblog/pb_migrations"
-	"net/http/pprof"
 )
 
 func resolveCoreSchemaSource(path string) (validation.ModelSource, error) {
@@ -62,7 +62,7 @@ func resolveCoreSchemaSource(path string) (validation.ModelSource, error) {
 // error text tells whether it is the same failure.
 var bootID = func() string {
 	b := make([]byte, 4)
-	if _, err := cryptoRand.Read(b); err != nil {
+	if _, err := rand.Read(b); err != nil {
 		return fmt.Sprintf("bt_%d", os.Getpid())
 	}
 	return fmt.Sprintf("bt_%x", b)
