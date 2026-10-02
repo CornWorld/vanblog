@@ -4,14 +4,24 @@ set -euo pipefail
 REPO_DIR="${REPO_DIR:-/workspace}"
 REFS_DIR="${REFS_DIR:-/workspace/refs}"
 RESUME_FILE="$REFS_DIR/ocr-resume-session.txt"
+STATE_FILE="$REFS_DIR/ocr-last-head.txt"
 GIT_REMOTE="${GIT_REMOTE:-origin}"
 GIT_BRANCH="${GIT_BRANCH:-$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)}"
 
 cd "$REPO_DIR"
 mkdir -p "$REFS_DIR"
 
-# ── Step 1: Record current HEAD & pull latest ────────────────────
-PREV_HEAD=$(git rev-parse HEAD 2>/dev/null || echo "")
+# ── Step 1: Load last-reviewed HEAD & pull latest ────────────────
+# 增量基线读落盘的 STATE_FILE,不读运行时 HEAD——工作区就是开发用的同一份
+# clone,提交发生在两次运行之间时 pull 永远 no-op,读运行时 HEAD 会把本地
+# 提交全部漏掉(9-28 失败轮后一整周代码零审查即此因)。
+LAST_HEAD=$(cat "$STATE_FILE" 2>/dev/null || echo "")
+# history rewrite 后旧 SHA 可能悬空:diff 失败会被当「无源码变更」静默跳过,
+# 校验失效即降级冷启动。
+if [ -n "$LAST_HEAD" ] && ! git rev-parse --verify -q "$LAST_HEAD^{commit}" >/dev/null 2>&1; then
+    echo "[ocr-review] stale state ($LAST_HEAD unreachable), falling back to cold start"
+    LAST_HEAD=""
+fi
 
 echo "[ocr-review] $(date -u +%H:%M:%S) Pulling $GIT_REMOTE/$GIT_BRANCH..."
 git pull --ff-only "$GIT_REMOTE" "$GIT_BRANCH" 2>&1 || {
@@ -21,15 +31,15 @@ git pull --ff-only "$GIT_REMOTE" "$GIT_BRANCH" 2>&1 || {
 CURR_HEAD=$(git rev-parse HEAD)
 
 # ── Step 2: Determine baseline ───────────────────────────────────
-# PREV_HEAD 不落盘,「pull 无新提交」意味着本窗口没有可review的增量——
-# 旧实现的 HEAD~10 fallback 会在安静期每 6h 重review同一批旧提交(实测一轮
-# 白烧 31 万 token),改为直接跳过。HEAD~10 仅作冷启动兜底(PREV_HEAD 为空)。
+# STATE_FILE 只在 review 实际跑过之后推进(见 Step 6),「无增量」即跳过——
+# 否则安静期每 6h 重烧同一批旧提交(实测一轮 31 万 token)。
+# HEAD~10 仅作冷启动兜底(STATE_FILE 不存在)。
 RESUME_ID=""
-if [ -n "$PREV_HEAD" ] && [ "$PREV_HEAD" != "$CURR_HEAD" ]; then
-    BASELINE="$PREV_HEAD"
+if [ -n "$LAST_HEAD" ] && [ "$LAST_HEAD" != "$CURR_HEAD" ]; then
+    BASELINE="$LAST_HEAD"
     rm -f "$RESUME_FILE"   # 新增量到来,旧的失败 session 已过期
-    echo "[ocr-review] $(date -u +%H:%M:%S) Reviewing $PREV_HEAD → $CURR_HEAD"
-elif [ -z "$PREV_HEAD" ]; then
+    echo "[ocr-review] $(date -u +%H:%M:%S) Reviewing $LAST_HEAD → $CURR_HEAD"
+elif [ -z "$LAST_HEAD" ]; then
     BASELINE="${BASELINE_FALLBACK:-HEAD~10}"
     echo "[ocr-review] $(date -u +%H:%M:%S) Cold start, using fallback: $BASELINE"
 elif [ -s "$RESUME_FILE" ]; then
@@ -46,10 +56,12 @@ fi
 # ── Step 3: Check for source changes ─────────────────────────────
 CHANGES=$(git diff --name-only "$BASELINE"..HEAD 2>/dev/null | \
     grep -v '^\.snow/' | grep -v '^refs/' | grep -v 'node_modules/' | \
+    grep -v '^bench/results/' | grep -v '^bench/corpus' | \
     grep -v '\.md$' | wc -l | tr -d ' ') || true
 
 if [ "${CHANGES:-0}" -eq 0 ]; then
     echo "[ocr-review] $(date -u +%H:%M:%S) No source changes, skipping."
+    echo "$CURR_HEAD" > "$STATE_FILE"   # 增量已判定为空,推进避免每轮重复判定
     exit 0
 fi
 echo "[ocr-review] $(date -u +%H:%M:%S) $CHANGES changed files"
@@ -106,6 +118,8 @@ if [ $OCR_EXIT -ne 0 ]; then
 fi
 
 # ── Step 6: Summary ─────────────────────────────────────────────
+# 注意: quota probe 提前退出 / 无输出失败 / 中途被 kill 都不写 STATE_FILE,
+# 下轮会把同一段增量整段重试——重烧可接受,静默漏审不可接受。
 if [ ! -s "$OUTPUT_FILE" ]; then
     echo "[ocr-review] $(date -u +%H:%M:%S) ❌ Failed (no output)"
     exit 1
@@ -124,13 +138,16 @@ print(f\"{s.get('comments','?')} issues, {tt_str} tokens in {s.get('elapsed','?'
 
 if [ "$OCR_EXIT" -eq 0 ] && [ "$STATUS" != "failed" ]; then
     rm -f "$RESUME_FILE"
+    echo "$CURR_HEAD" > "$STATE_FILE"
     echo "[ocr-review] $(date -u +%H:%M:%S) ✅ $SUMMARY_LINE → $OUTPUT_FILE"
 else
     echo "[ocr-review] $(date -u +%H:%M:%S) ❌ review failed (ocr_exit=$OCR_EXIT, status=$STATUS): $SUMMARY_LINE → $OUTPUT_FILE"
     FAILED_SID=$(python3 -c "import json; print(json.load(open('$OUTPUT_FILE')).get('session_id') or '')" 2>/dev/null || true)
     if [ -n "$FAILED_SID" ]; then
         printf '%s\t%s\n' "$BASELINE" "$FAILED_SID" > "$RESUME_FILE"
+        echo "$CURR_HEAD" > "$STATE_FILE"   # 增量已消费,续跑兜底在 RESUME_FILE
         echo "[ocr-review] saved session for resume next window: $FAILED_SID"
     fi
+    # 无 session_id 的失败不推进 STATE_FILE → 下轮整段重试,宁可重烧不漏审
     exit 1
 fi
