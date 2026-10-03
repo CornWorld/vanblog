@@ -44,7 +44,14 @@ COPY sdk/src/models/ ./sdk/src/models/
 RUN pnpm build:models
 
 # --- Stage 3: Build Go binary (PocketBase + vanblog SDK) ---
-FROM golang:alpine AS go-build
+# Pin the Go 1.27 line: PocketBase 0.40.x builds on go1.27 and recommends
+# >=1.27.1 (database/sql + encoding/json/v2 stdlib fixes), so the Go patch
+# floats within 1.27.x to pick up security patches. The Alpine minor is
+# pinned because the unversioned "-alpine" tag silently jumps base OS
+# releases (3.23 -> 3.24 happened with the 2026-08 Alpine release); a
+# floating builder base can break "apk add" mid-minor even though the
+# CGO_ENABLED=0 artifact itself is base-independent.
+FROM golang:1.27-alpine3.24 AS go-build
 ARG GOPROXY
 ENV GOPROXY=${GOPROXY}
 
