@@ -5,6 +5,8 @@ import type {
   TLSStatus,
   MigrationResult,
   TrashEntry,
+  PackFrontendManifest,
+  ThemeSettingsResponse,
 } from "./types";
 import type { PostExpand, RouteRule, Site } from "./models";
 import type { PaletteMeta } from "./theme";
@@ -128,10 +130,28 @@ export interface VanblogServices {
       restart_needed: boolean;
       error?: string;
     }>;
+    /** Merged theme settings (schema defaults ← stored row), anonymous read. */
+    settings(theme: string): Promise<ThemeSettingsResponse>;
+    /** Validate + upsert theme settings values (admin-only server-side). */
+    saveSettings(
+      theme: string,
+      values: Record<string, unknown>
+    ): Promise<ThemeSettingsResponse>;
   };
   palettes: {
     /** List installed palettes (name / label / version / type). */
     list(): Promise<PaletteMeta[]>;
+  };
+  packs: {
+    /**
+     * Runtime pack-frontend manifest: pack nav metadata plus the
+     * styles/scripts every pack injects into public pages. Served live
+     * from the merged (builtin + user) pack directories — a pack dropped
+     * into VANBLOG_PACKS_DIR shows up here after its PB restart, no theme
+     * rebuild involved. Go sets `Cache-Control: max-age=10`; keep the
+     * Node-side layout cache (app/src/lib/pack-frontend.ts) in sync.
+     */
+    frontend(): Promise<PackFrontendManifest>;
   };
   routing: {
     list(): Promise<{ rules: RouteRule[]; allowlist: string[] }>;
@@ -386,6 +406,15 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
           restart_needed: boolean;
           error?: string;
         }>,
+      settings: (theme: string) =>
+        pb.send(`/api/vanblog/theme-settings/${encodeURIComponent(theme)}`, {
+          method: "GET",
+        }) as Promise<ThemeSettingsResponse>,
+      saveSettings: (theme: string, values: Record<string, unknown>) =>
+        pb.send(`/api/vanblog/theme-settings/${encodeURIComponent(theme)}`, {
+          method: "PUT",
+          body: { values },
+        }) as Promise<ThemeSettingsResponse>,
     },
     palettes: {
       list: async () => {
@@ -396,6 +425,12 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
         }>);
         return res.palettes ?? [];
       },
+    },
+    packs: {
+      frontend: () =>
+        pb.send("/api/vanblog/packs/frontend", {
+          method: "GET",
+        }) as Promise<PackFrontendManifest>,
     },
     routing: {
       list: () =>

@@ -5,9 +5,8 @@ import '../styles/global.css';
 // the article displays duplicated math. Loaded globally (not just in editor)
 // because post content is rendered server-side via markdown pipeline.
 import 'katex/dist/katex.css';
-import { safe, stripMarkdown, buildThemeInitScript, buildPaletteTypeMap, paletteCssUrl } from '@vanblog/sdk';
-import { packs as packMetadata } from 'virtual:vanblog/packs';
-import { contributions as packContributions } from 'virtual:vanblog/pack-frontend';
+import { safe, stripMarkdown, buildThemeInitScript, buildPaletteTypeMap, paletteCssUrl, postMetaString } from '@vanblog/sdk';
+import { getPackFrontend } from '@vanblog/base/lib/pack-frontend';
 import type { Site, Post } from '@vanblog/sdk';
 import themeMeta from '../../theme.json';
 
@@ -85,8 +84,22 @@ const websiteSchema = {
 // block (JSON.stringify does not escape `</script>` sequences).
 const safeJsonLd = (obj: unknown) => JSON.stringify(obj).replace(/</g, '\\u003c');
 
-// Pack nav items are resolved at build time by the Astro Pack integration.
-const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
+// Pack nav + asset injection now resolve at request time from the live
+// (builtin + user) pack directories — installing a pack needs no theme
+// rebuild. 10s module cache, shared with Head.astro via the same lib.
+const packFrontend = await getPackFrontend(pb);
+const packNavItems = packFrontend.packs.flatMap((pack) => pack.nav ? [pack.nav] : []);
+
+// Theme settings (theme.json `settings` DSL; values from the admin /
+// PUT /api/vanblog/theme-settings). Typed guards: values arrive as JSON
+// primitives, defaults already merged server-side.
+const themeSettings = await Astro.locals.getThemeSettings();
+const footerText = typeof themeSettings.footerText === 'string' ? themeSettings.footerText.trim() : '';
+const bannerUrl = typeof themeSettings.bannerUrl === 'string' ? themeSettings.bannerUrl.trim() : '';
+const showBackToTop = themeSettings.showBackToTop !== false; // default true
+
+// Per-post custom field → og:image (posts.meta; key convention cover/image/ogImage).
+const ogImage = postMetaString(post?.meta, 'cover', 'image', 'ogImage');
 
 // Categories for the nav sub-menu (migrated from original NavBar showSubMenu).
 const navCategories = await safe(() => pb.collection('categories').getFullList<{ id: string; name: string }>(), 'nav-categories');
@@ -143,7 +156,7 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
       <link rel="stylesheet" href={paletteCssUrl(effectivePalette, site?.updated)} data-vanblog-palette />
     )}
 
-    {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (
+    {packFrontend.contributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (
       <link rel="stylesheet" href={href} data-vanblog-pack-style />
     ))}
 
@@ -153,11 +166,13 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     <meta property="og:site_name" content={siteName} />
     <meta property="og:type" content={post ? 'article' : 'website'} />
     {canonicalURL && <meta property="og:url" content={canonicalURL} />}
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    {ogImage && <meta name="twitter:image" content={ogImage} />}
     {post && <meta property="article:published_time" content={post.created} />}
     {post && <meta property="article:modified_time" content={post.updated} />}
 
     <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
     <meta name="twitter:title" content={post?.title || title || siteName} />
     <meta name="twitter:description" content={desc} />
 
@@ -210,6 +225,7 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
       sitePalette={site?.palette || ''}
     />
     <ToastProviderIsland client:load />
+    {bannerUrl && <img src={bannerUrl} alt="" class="mx-auto mt-2 max-w-4xl px-4" loading="eager" />}
     <div class="mx-auto lg:px-6 md:py-4 py-2 px-2 md:px-4 text-gray-700">
       <div class="flex mx-auto justify-center">
         <div class="shrink grow md:max-w-3xl xl:max-w-4xl w-full vanblog-main">
@@ -219,6 +235,7 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
           <slot name="sideBar" />
         </div>
       </div>
+      {footerText && <p class="mx-auto max-w-4xl px-4 pb-2 text-center text-xs text-[var(--text-muted)]">{footerText}</p>}
       <Footer site={site} />
     <script>
       // ── 全局 markdown 交互委托(上游 bytemd viewerEffect 语义,全页生效)──
@@ -245,10 +262,10 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     </script>
     </div>
     <ImageZoom client:load />
-    <BackToTopIsland client:load />
+    {showBackToTop && <BackToTopIsland client:load />}
     <Watermark enabled={site?.enableWaterMark === true} text={site?.watermarkText || siteName} />
 
-    {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (
+    {packFrontend.contributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (
       <script is:inline type="module" src={src} data-vanblog-pack-script></script>
     ))}
 <!-- Custom HTML（原版 CustomLayout，站点后台自定义注入；script 已在 head） -->

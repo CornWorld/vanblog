@@ -5,48 +5,13 @@ declare module "vanblog:theme" {
   export const Page: AstroComponentFactory;
 }
 
-// Shared base type for pack frontend contributions.
-interface PackFrontendContributionBase {
-  scope: "public";
-  styles: string[];
-  scripts: string[];
-}
-
-declare module "virtual:vanblog/pack-frontend" {
-  export interface PackFrontendContribution
-    extends PackFrontendContributionBase {
-    name: string;
-  }
-  export const contributions: PackFrontendContribution[];
-  export default contributions;
-}
-
-declare module "virtual:vanblog/packs" {
-  export interface PackRouteMetadata {
-    pattern: string;
-    page: string;
-  }
-
-  export type { PackFrontendContributionBase as PackFrontendContribution };
-
-  export interface PackMetadata {
-    name: string;
-    version: string;
-    title: string;
-    nav: { label: string; href: string } | null;
-    routes: PackRouteMetadata[];
-    frontend?: PackFrontendContribution;
-  }
-
-  export const packs: PackMetadata[];
-  export default packs;
-}
 
 declare namespace App {
   interface Locals {
     pb: import("@vanblog/sdk").VanblogClient;
     pbUrl: string;
     getSite(): Promise<Partial<import("@vanblog/sdk").Site> | null>;
+    getThemeSettings(): Promise<Record<string, unknown>>;
   }
 }
 

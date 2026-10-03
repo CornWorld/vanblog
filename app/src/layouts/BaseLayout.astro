@@ -13,9 +13,8 @@
 import '../styles/global.css';
 // KaTeX CSS: 编辑器/渲染链路需要 (admin/edit 的 ByteMdEditor 依赖)。
 import 'katex/dist/katex.css';
-import { stripMarkdown, safe, buildPaletteTypeMap } from '@vanblog/sdk';
-import { packs as packMetadata } from 'virtual:vanblog/packs';
-import { contributions as packContributions } from 'virtual:vanblog/pack-frontend';
+import { stripMarkdown, safe, buildPaletteTypeMap, postMetaString } from '@vanblog/sdk';
+import { getPackFrontend } from '../lib/pack-frontend';
 import type { Site, Post } from '@vanblog/sdk';
 import Head from './partials/Head.astro';
 
@@ -36,7 +35,8 @@ const baseUrl = site?.baseUrl || '';
 const canonicalURL = baseUrl && path ? `${baseUrl.replace(/\/$/, '')}${path}` : undefined;
 const desc = post ? stripMarkdown(post.content) || siteDesc : siteDesc;
 
-const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
+const packFrontend = await getPackFrontend(Astro.locals.pb);
+const packNavItems = packFrontend.packs.flatMap((pack) => pack.nav ? [pack.nav] : []);
 const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
 const isLoggedIn = Astro.locals.pb.authStore.isValid;
 
@@ -58,6 +58,7 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
       palettes={paletteTypeMap}
       ogTitle={post?.title || title}
       ogType={post ? 'article' : 'website'}
+      ogImage={postMetaString(post?.meta, 'cover', 'image', 'ogImage')}
     />
   </head>
   <body class="min-h-screen flex flex-col">
@@ -87,7 +88,7 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
       <p>{site?.copyrightAgreement || ''} {site?.author || ''} · Powered by Vanblog</p>
     </footer>
 
-    {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (
+    {packFrontend.contributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (
       <script is:inline type="module" src={src} data-vanblog-pack-script></script>
     ))}
   </body>

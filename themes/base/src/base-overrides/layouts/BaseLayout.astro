@@ -18,8 +18,7 @@
 // - JSON-LD（非必需）
 
 import { safe, stripMarkdown, buildPaletteTypeMap } from '@vanblog/sdk';
-import { packs as packMetadata } from 'virtual:vanblog/packs';
-import { contributions as packContributions } from 'virtual:vanblog/pack-frontend';
+import { getPackFrontend } from '@vanblog/base/lib/pack-frontend';
 import type { Site, Post } from '@vanblog/sdk';
 import themeMeta from '../../../theme.json';
 import Head from '@vanblog/base/layouts/partials/Head.astro';
@@ -48,7 +47,13 @@ const baseUrl = site?.baseUrl || '';
 const canonicalURL = baseUrl && path ? `${baseUrl.replace(/\/$/, '')}${path}` : undefined;
 const desc = post ? stripMarkdown(post.content) || siteDesc : siteDesc;
 
-const packNavItems = packMetadata.flatMap((pack) => pack.nav ? [pack.nav] : []);
+const packFrontend = await getPackFrontend(Astro.locals.pb);
+const packNavItems = packFrontend.packs.flatMap((pack) => pack.nav ? [pack.nav] : []);
+
+// Theme settings (same DSL/contract as the vanblog theme).
+const themeSettings = await Astro.locals.getThemeSettings();
+const footerText = typeof themeSettings.footerText === 'string' ? themeSettings.footerText.trim() : '';
+const bannerUrl = typeof themeSettings.bannerUrl === 'string' ? themeSettings.bannerUrl.trim() : '';
 const hasAbout = !!(site?.aboutContent && site.aboutContent.trim());
 const pb = Astro.locals.pb;
 const isLoggedIn = pb.authStore.isValid;
@@ -95,6 +100,7 @@ const paletteTypeMap = buildPaletteTypeMap(
         )}
       </nav>
     </header>
+    {bannerUrl && <img src={bannerUrl} alt="" style="display:block;margin:1rem auto 0;max-width:100%;" />}
 
     <main>
       <slot />
@@ -102,6 +108,7 @@ const paletteTypeMap = buildPaletteTypeMap(
 
     <footer>
       <hr />
+      {footerText && <p>{footerText}</p>}
       <p>
         {site?.copyrightAgreement || ''} {site?.author || ''}
         {site?.since && ` · since ${new Date(site.since).getFullYear()}`}
@@ -109,7 +116,7 @@ const paletteTypeMap = buildPaletteTypeMap(
       <p>Powered by Vanblog</p>
     </footer>
 
-    {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (
+    {packFrontend.contributions.filter((item) => item.scope === 'public').flatMap((item) => item.scripts).map((src) => (
       <script is:inline type="module" src={src} data-vanblog-pack-script></script>
     ))}
   </body>

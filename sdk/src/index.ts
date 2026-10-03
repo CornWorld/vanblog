@@ -15,6 +15,11 @@ export type {
   TrashEntry,
   TLSStatus,
   MigrationResult,
+  PackNav,
+  PackMeta,
+  PackContribution,
+  PackFrontendManifest,
+  ThemeSettingsResponse,
 } from "./types";
 
 // Service factory (for advanced usage)
@@ -49,7 +54,7 @@ export { parseDate, fmtDate, fmtDateTime, fmtRelativeTime } from "./dates";
 export { stripMarkdown } from "./services";
 
 // General utilities
-export { getPage, buildPageHref } from "./utils";
+export { getPage, buildPageHref, postMetaString } from "./utils";
 
 // Theme & palette persistence helpers (browser-side, SSR-safe)
 export * from "./theme";

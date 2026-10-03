@@ -13,7 +13,7 @@
 //   - favicon / sitePalette 均「传了才渲染」，由调用方决定。
 // ============================================================
 import { buildThemeInitScript, paletteCssUrl } from '@vanblog/sdk';
-import { contributions as packContributions } from 'virtual:vanblog/pack-frontend';
+import { getPackFrontend } from '../../lib/pack-frontend';
 
 interface Props {
   title: string;
@@ -26,6 +26,7 @@ interface Props {
   palettes?: Record<string, 'light' | 'dark'>;
   ogTitle?: string; // 渲染 og:title，未传回退到 title
   ogType?: 'article' | 'website'; // 渲染 og:type，默认 website
+  ogImage?: string; // 渲染 og:image + twitter 大卡片（传了才渲染）
 }
 
 const {
@@ -39,7 +40,12 @@ const {
   palettes,
   ogTitle,
   ogType = 'website',
+  ogImage,
 } = Astro.props;
+
+// Same module-level cache as the layouts — one fetch per TTL window per
+// process, shared by Head (styles) and every BaseLayout (scripts + nav).
+const packFrontend = await getPackFrontend(Astro.locals.pb);
 ---
 
 <head>
@@ -66,7 +72,7 @@ const {
     <link rel="stylesheet" href={paletteCssUrl(sitePalette, siteUpdated)} data-vanblog-palette />
   )}
 
-  {packContributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (
+  {packFrontend.contributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (
     <link rel="stylesheet" href={href} data-vanblog-pack-style />
   ))}
 
@@ -76,6 +82,9 @@ const {
   <meta property="og:site_name" content={siteName} />
   <meta property="og:type" content={ogType} />
   {canonicalURL && <meta property="og:url" content={canonicalURL} />}
+  {ogImage && <meta property="og:image" content={ogImage} />}
+  {ogImage && <meta name="twitter:card" content="summary_large_image" />}
+  {ogImage && <meta name="twitter:image" content={ogImage} />}
 
   <!-- RSS auto-discovery -->
   <link rel="alternate" type="application/rss+xml" title={`${siteName} RSS`} href="/api/feed.xml" />

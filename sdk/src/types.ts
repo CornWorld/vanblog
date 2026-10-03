@@ -49,3 +49,39 @@ export interface MigrationResult {
   /** Per-post import errors (non-fatal, import continues). */
   errors: string[];
 }
+
+// ── Pack frontend manifest (GET /api/vanblog/packs/frontend) ──────────
+
+export interface PackNav {
+  label: string;
+  /** Always normalized to /p/<name> by the server. */
+  href: string;
+}
+
+export interface PackMeta {
+  name: string;
+  title: string;
+  version: string;
+  nav: PackNav | null;
+}
+
+export interface PackContribution {
+  name: string;
+  scope: "public";
+  /** Stable /pack-static/<pack>/<path> URLs served from the live pack dirs. */
+  styles: string[];
+  scripts: string[];
+}
+
+export interface PackFrontendManifest {
+  packs: PackMeta[];
+  contributions: PackContribution[];
+}
+
+// ── Theme settings (GET/PUT /api/vanblog/theme-settings/<theme>) ──────
+
+export interface ThemeSettingsResponse {
+  theme: string;
+  /** Full-merged values (schema defaults ← stored row); flat primitive map. */
+  values: Record<string, unknown>;
+}
