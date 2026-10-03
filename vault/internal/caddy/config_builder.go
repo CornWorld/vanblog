@@ -458,7 +458,15 @@ func buildManagementServerRoutes(opts BuildOpts) *caddyadmin.Server {
 			}},
 		},
 	}
-	routes = append(routes, buildStaticRoutes(opts)...)
+	// Mirror the public table's static routes WITHOUT their @id values:
+	// Caddy >= 2.10 rejects a /load whose route IDs repeat across servers
+	// ("indexing config: duplicate ID ..."), and the public server owns
+	// these IDs — user overrides via site.routing and status probes target
+	// the public surface. The mgmt mirror is not individually addressable.
+	for _, r := range buildStaticRoutes(opts) {
+		r.ID = ""
+		routes = append(routes, r)
+	}
 	routes = append(routes, caddyadmin.Route{
 		// Catch-all fallback to Astro.
 		Handle: []caddyadmin.Handler{{

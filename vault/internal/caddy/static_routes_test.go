@@ -239,10 +239,17 @@ func TestManagementServerIncludesStaticRoutes(t *testing.T) {
 	if len(srv.Routes) != want {
 		t.Fatalf("expected %d routes (2 pb + static + fallback), got %d", want, len(srv.Routes))
 	}
+	// The mirror repeats the public static routes WITHOUT @id (Caddy >= 2.10
+	// rejects duplicate IDs across servers), so locate the admin static route
+	// structurally: /_astro/* path match + terminal file_server handler.
 	found := false
 	for i, r := range srv.Routes {
-		if r.ID == "vanblog-static-admin-astro" {
+		if len(r.Match) == 1 && len(r.Match[0].Path) == 1 && r.Match[0].Path[0] == "/_astro/*" &&
+			len(r.Handle) > 0 && r.Handle[len(r.Handle)-1].Handler == "file_server" {
 			found = true
+		}
+		if r.ID != "" {
+			t.Errorf("mgmt mirror route %d must be anonymous (no @id), got %q", i, r.ID)
 		}
 		if i == len(srv.Routes)-1 && (len(r.Handle) == 0 || r.Handle[0].Handler != "reverse_proxy") {
 			t.Errorf("last mgmt route should be the Astro fallback, got %+v", r)

@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -515,6 +516,45 @@ func TestBuildFullConfig_HTTPOnly_NoTLS(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("user rule should sit immediately before fallback, got order: %v", ids)
+	}
+}
+
+func TestBuildFullConfig_RouteIDsGloballyUnique(t *testing.T) {
+	// Caddy >= 2.10 rejects a /load whose route @id repeats anywhere in the
+	// config ("indexing config: duplicate ID ..."), which strands the site
+	// in maintenance mode. The public server owns the system/static IDs;
+	// the srv_mgmt mirror repeats the routes but must stay anonymous.
+	// Surfaced by the alpine 3.24 / caddy 2.11 baseline bump.
+	admin := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(admin, "client"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	themes := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(themes, "base", "dist", "client"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	rules := []UserRule{{ID: "test-proxy", Type: "proxy", From: "/my/*", To: "http://127.0.0.1:3000"}}
+
+	for name, opts := range map[string]BuildOpts{
+		"https":     {Email: "x@y.z", AdminDistDir: admin, ThemesDir: themes},
+		"http-only": {Email: "x@y.z", AdminDistDir: admin, ThemesDir: themes, HTTPOnly: true},
+	} {
+		cfg, err := BuildFullConfig(opts, rules)
+		if err != nil {
+			t.Fatalf("%s: BuildFullConfig: %v", name, err)
+		}
+		seen := map[string]string{}
+		for srvName, srv := range cfg.Apps.HTTP.Servers {
+			for i, r := range srv.Routes {
+				if r.ID == "" {
+					continue
+				}
+				if prev, dup := seen[r.ID]; dup {
+					t.Errorf("%s: duplicate route ID %q at %s and %s/routes/%d", name, r.ID, prev, srvName, i)
+				}
+				seen[r.ID] = srvName + "/routes/" + strconv.Itoa(i)
+			}
+		}
 	}
 }
 
