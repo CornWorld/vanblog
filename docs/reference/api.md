@@ -19,6 +19,9 @@
 | `GET /api/vanblog/tls/status` | TLS 状态（HTTP_ONLY 下降级 `onDemandTLS: false`） |
 | `POST /api/vanblog/migrate/import` | 数据导入（ZIP，限 100MB，事务） |
 | `POST /api/vanblog/themes/reload` | 手动重扫主题 |
+| `GET /api/vanblog/packs/frontend` | Pack 前端运行时清单（匿名；nav + 注入 URL，10s 缓存） |
+| `GET /pack-static/*` | Pack 前端资产（活目录直出，ETag 重验；Caddy 系统路由反代 PB） |
+| `GET/PUT /api/vanblog/theme-settings/<name>` | 主题设置读（匿名，默认值合并）/写（admin-only，schema 校验） |
 | `GET/POST /api/vanblog/posts/...` | 文章（含回收站 `posts/trash`、恢复 `posts/{id}/restore`、密码解锁 `posts/{id}/unlock`）。密码锁语义：匿名 API 读 `posts` 时锁定文章的 `content`/`password` 被遮蔽（`hasPassword` 保留），`categories` 的 `password` 同样遮蔽；解锁凭密码或 HMAC 签名 cookie，正文仅经 `posts/{id}/unlock` 返回。RSS/搜索不含锁定文章 |
 | `POST /api/vanblog/mcp/*` | MCP（admin-only，agent 扩展；仅 dev 容器注册，prod 无） |
 | `POST /api/vanblog/agent/validate` | schema 写入前预检（admin-only，仅 dev 容器） |

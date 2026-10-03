@@ -5,5 +5,24 @@
   "author": "vanblog",
   "description": "mereithhh 的 vanblog 前端迁移主题: 完整视觉/信息架构/交互, 独立于 base 主题。",
   "recommendedPalette": "vanblog-classic",
-  "paletteMigrationMode": "keep"
+  "paletteMigrationMode": "keep",
+  "settings": {
+    "footerText": {
+      "type": "text",
+      "label": "页脚附言",
+      "default": "",
+      "placeholder": "显示在页脚组件上方的一行文字（留空不显示）"
+    },
+    "bannerUrl": {
+      "type": "string",
+      "label": "首页横幅图 URL",
+      "default": "",
+      "placeholder": "https://example.com/banner.jpg（留空不显示）"
+    },
+    "showBackToTop": {
+      "type": "boolean",
+      "label": "显示「回到顶部」按钮",
+      "default": true
+    }
+  }
 }

@@ -2,15 +2,20 @@ package theme
 
 import (
 	"cmp"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
+	"time"
 
 	"github.com/pocketbase/pocketbase/core"
+
+	"github.com/cornworld/vanblog/internal/article"
 )
 
 // themeNamePattern is the accepted theme identifier shape — the same contract
@@ -23,6 +28,8 @@ var themeNamePattern = regexp.MustCompile(`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`)
 func New(app core.App) {
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.GET("/api/themes", serveThemes)
+		se.Router.GET("/api/vanblog/theme-settings/{theme}", serveThemeSettings)
+		se.Router.PUT("/api/vanblog/theme-settings/{theme}", handleSaveThemeSettings)
 		return se.Next()
 	})
 }
@@ -97,14 +104,15 @@ func serveThemes(e *core.RequestEvent) error {
 	}
 
 	type themeMeta struct {
-		Name                 string `json:"name"`
-		Label                string `json:"label,omitempty"`
-		Version              string `json:"version,omitempty"`
-		Author               string `json:"author,omitempty"`
-		Description          string `json:"description,omitempty"`
-		Screenshot           string `json:"screenshot,omitempty"`
-		RecommendedPalette   string `json:"recommendedPalette,omitempty"`
-		PaletteMigrationMode string `json:"paletteMigrationMode,omitempty"`
+		Name                 string                 `json:"name"`
+		Label                string                 `json:"label,omitempty"`
+		Version              string                 `json:"version,omitempty"`
+		Author               string                 `json:"author,omitempty"`
+		Description          string                 `json:"description,omitempty"`
+		Screenshot           string                 `json:"screenshot,omitempty"`
+		RecommendedPalette   string                 `json:"recommendedPalette,omitempty"`
+		PaletteMigrationMode string                 `json:"paletteMigrationMode,omitempty"`
+		Settings             map[string]SettingSpec `json:"settings,omitempty"`
 	}
 
 	var themes []themeMeta
@@ -137,10 +145,103 @@ func serveThemes(e *core.RequestEvent) error {
 				}
 			}
 		}
+		meta.Settings = ReadSettingsSchema(dir)
 		themes = append(themes, meta)
 	}
 
 	slices.SortFunc(themes, func(a, b themeMeta) int { return cmp.Compare(a.Name, b.Name) })
 
 	return e.JSON(http.StatusOK, map[string]any{"themes": themes})
+}
+
+// serveThemeSettings returns the theme's MERGED settings (schema defaults,
+// then the stored row overlaid) so SSR consumers never need the schema: the
+// row is full-merged at write time and defaults are overlaid again here for
+// themes that gained new keys since the last save. Anonymous + 10s cache —
+// same shape as the pack-frontend manifest.
+func serveThemeSettings(e *core.RequestEvent) error {
+	name := e.Request.PathValue("theme")
+	dir := ResolveDir(name)
+	if dir == "" {
+		return e.NotFoundError("theme not found", "")
+	}
+	values, err := storedSettingsValues(e.App, name)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), "")
+	}
+	merged := MergeSettings(ReadSettingsSchema(dir), values)
+	e.Response.Header().Set("Cache-Control", "public, max-age=10")
+	return e.JSON(http.StatusOK, map[string]any{"theme": name, "values": merged})
+}
+
+// handleSaveThemeSettings validates the incoming values against the theme's
+// declared schema and upserts the full-merged row. Admin-only. Follows the
+// custom-code pattern: the revalidate is scheduled past the middleware's
+// settings cache window so the next render observes the new values.
+func handleSaveThemeSettings(e *core.RequestEvent) error {
+	if e.Auth == nil || e.Auth.GetString("role") != "admin" {
+		return e.ForbiddenError("admin role required", "")
+	}
+	name := e.Request.PathValue("theme")
+	dir := ResolveDir(name)
+	if dir == "" {
+		return e.NotFoundError("theme not found", "")
+	}
+	var body struct {
+		Values map[string]any `json:"values"`
+	}
+	if err := e.BindBody(&body); err != nil || body.Values == nil {
+		return e.BadRequestError("body must be {\"values\": {...}}", "")
+	}
+	schema := ReadSettingsSchema(dir)
+	validated, err := ValidateSettingsValues(schema, body.Values)
+	if err != nil {
+		return e.BadRequestError(err.Error(), "")
+	}
+	stored, err := storedSettingsValues(e.App, name)
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), "")
+	}
+	merged := MergeSettings(schema, stored, validated)
+
+	col, err := e.App.FindCachedCollectionByNameOrId("theme_settings")
+	if err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), "")
+	}
+	// The theme name is regex-validated ([a-z][a-z0-9-]*) so it cannot
+	// break out of the quoted filter literal.
+	row, err := e.App.FindFirstRecordByFilter("theme_settings", "theme='"+name+"'")
+	if err != nil {
+		row = core.NewRecord(col)
+		row.Set("theme", name)
+	}
+	row.Set("values", merged)
+	if err := e.App.Save(row); err != nil {
+		return e.Error(http.StatusInternalServerError, err.Error(), "")
+	}
+
+	time.AfterFunc(12*time.Second, func() {
+		article.RevalidateCache(e.App, []string{"posts", "home"})
+	})
+	return e.JSON(http.StatusOK, map[string]any{"theme": name, "values": merged})
+}
+
+// storedSettingsValues reads the theme's persisted row (empty map when the
+// theme was never configured). ResolveDir-style name validation happens in
+// the callers.
+func storedSettingsValues(app core.App, name string) (map[string]any, error) {
+	row, err := app.FindFirstRecordByFilter("theme_settings", "theme='"+name+"'")
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, err // real lookup failure — do not mask as "unset"
+		}
+		return map[string]any{}, nil // no row yet
+	}
+	values := map[string]any{}
+	if err := row.UnmarshalJSONField("values", &values); err == nil {
+		return filterStoredValues(values), nil
+	}
+	// Malformed row falls back to defaults only — the merged GET response is
+	// advisory and one bad row must not take the theme's settings page down.
+	return map[string]any{}, nil
 }

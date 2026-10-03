@@ -2,6 +2,7 @@ package packcli
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -100,6 +101,15 @@ func addThemeCommand(root *cobra.Command) {
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "removed theme %q\n", args[0])
 			return nil
+		},
+	})
+
+	theme.AddCommand(&cobra.Command{
+		Use:   "settings <name> [key=value ...]",
+		Short: "Read (or, with key=value args + VANBLOG_ADMIN_TOKEN, write) a theme's settings",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runThemeSettings(cmd, args[0], args[1:])
 		},
 	})
 
@@ -434,4 +444,87 @@ func readActiveTheme() (string, bool) {
 		return "", false
 	}
 	return body.Items[0].ActiveTheme, true
+}
+
+// runThemeSettings reads a theme's merged settings over the public Go route;
+// with key=value args it issues an admin PUT instead, authenticating with
+// VANBLOG_ADMIN_TOKEN (the CLI runs without a core.App handle, so writes
+// need an explicit token — same trust level as any admin UI session).
+func runThemeSettings(cmd *cobra.Command, name string, pairs []string) error {
+	if !themeNamePattern.MatchString(name) {
+		return fmt.Errorf("invalid theme name %q", name)
+	}
+	base := os.Getenv("PB_URL")
+	if base == "" {
+		base = "http://127.0.0.1:8090"
+	}
+	url := base + "/api/vanblog/theme-settings/" + name
+
+	if len(pairs) == 0 {
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+		if err != nil {
+			return err
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("theme settings read (PB at %s): %w", base, err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))
+			return fmt.Errorf("theme settings read: HTTP %d: %s", resp.StatusCode, errBody)
+		}
+		var out struct {
+			Values map[string]any `json:"values"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+			return err
+		}
+		enc := json.NewEncoder(cmd.OutOrStdout())
+		enc.SetIndent("", "  ")
+		return enc.Encode(out.Values)
+	}
+
+	token := os.Getenv("VANBLOG_ADMIN_TOKEN")
+	if token == "" {
+		return fmt.Errorf("writing theme settings requires VANBLOG_ADMIN_TOKEN (a users authRefresh token)")
+	}
+	values := map[string]any{}
+	for _, pair := range pairs {
+		key, raw, ok := strings.Cut(pair, "=")
+		if !ok || key == "" {
+			return fmt.Errorf("bad pair %q (want key=value)", pair)
+		}
+		// Boolean literals map to bool; everything else stays a string —
+		// string/text/select are stringly typed in the DSL anyway.
+		switch strings.ToLower(raw) {
+		case "true":
+			values[key] = true
+		case "false":
+			values[key] = false
+		default:
+			values[key] = raw
+		}
+	}
+	payload, err := json.Marshal(map[string]any{"values": values})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, url, bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("theme settings write: %w", err)
+	}
+	defer resp.Body.Close()
+	errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("theme settings write: HTTP %d: %s", resp.StatusCode, errBody)
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "saved theme %q settings: %s\n", name, errBody)
+	return nil
 }

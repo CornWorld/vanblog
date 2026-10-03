@@ -213,6 +213,11 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
   let siteFetchTime = 0;
   const SITE_CACHE_TTL = 60_000; // 1 min
 
+  // Lazy theme-settings cache (per active theme, process lifetime)
+  let cachedThemeSettings: { theme: string; values: Record<string, unknown> } | null = null;
+  let themeSettingsFetchTime = 0;
+  const THEME_SETTINGS_CACHE_TTL = 10_000; // 10s — matches the Go response header
+
   return async (
     context: {
       request: Request;
@@ -249,6 +254,29 @@ export function createVanblogMiddleware(opts: VanblogMiddlewareOptions = {}) {
         console.warn("[vanblog] getSite failed, returning cached/default");
       }
       return cachedSite;
+    };
+
+    // Theme settings for the ACTIVE theme (merged server-side: schema
+    // defaults ← stored row). Consumers get a flat primitive map; a failed
+    // fetch keeps the last good values ({} before the first success).
+    context.locals.getThemeSettings = async () => {
+      const site = await context.locals.getSite();
+      const theme = site?.activeTheme || "vanblog";
+      if (
+        cachedThemeSettings &&
+        cachedThemeSettings.theme === theme &&
+        Date.now() - themeSettingsFetchTime < THEME_SETTINGS_CACHE_TTL
+      ) {
+        return cachedThemeSettings.values;
+      }
+      try {
+        const res = await client.vanblog.themes.settings(theme);
+        cachedThemeSettings = { theme, values: res.values ?? {} };
+        themeSettingsFetchTime = Date.now();
+      } catch {
+        console.warn("[vanblog] getThemeSettings failed, keeping cached");
+      }
+      return cachedThemeSettings?.values ?? {};
     };
 
     // Auth refresh — if PocketBase is down this throws, which means the

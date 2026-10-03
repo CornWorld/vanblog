@@ -5,5 +5,19 @@
   "author": "vanblog",
   "description": "纯布局 + 简单颜色的 minimal 主题: 验证后端能力, 提供最基本前端能力, 作为兜底/降级主题。",
   "recommendedPalette": "default",
-  "paletteMigrationMode": "keep"
+  "paletteMigrationMode": "keep",
+  "settings": {
+    "footerText": {
+      "type": "text",
+      "label": "页脚附言",
+      "default": "",
+      "placeholder": "显示在页脚版权行上方的一行文字（留空不显示）"
+    },
+    "bannerUrl": {
+      "type": "string",
+      "label": "首页横幅图 URL",
+      "default": "",
+      "placeholder": "https://example.com/banner.jpg（留空不显示）"
+    }
+  }
 }

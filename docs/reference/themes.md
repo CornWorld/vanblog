@@ -26,6 +26,18 @@
 - admin / login / setup 是平台层 control plane，主题不编译它们。
 - 运行期按 `site.activeTheme` 切换（后台「外观」页）。
 
+## 主题设置（settings）
+
+主题在 `theme.json` 里声明可配置项（四种类型:`string` / `text` / `boolean` / `select`），站点管理员改值、主题 SSR 消费——**改页脚/横幅/开关不再需要 fork 主题**：
+
+- **读取**:`GET /api/vanblog/theme-settings/<name>`（匿名,10s 缓存）返回 schema 默认值 ← 存量行合并后的全量值。SSR 侧 `Astro.locals.getThemeSettings()`（middleware 惰性加载,10s 进程缓存）。
+- **写入**:`PUT /api/vanblog/theme-settings/<name>`（admin-only,body `{"values":{...}}`）,服务端按 theme.json 校验（类型/select 枚举/单值 64KB/总量 256KB）,未知 key 原样保留（主题升降级恢复）,写入后延迟失效页面缓存。
+- **CLI**:`./vanblog.sh pack theme settings <name>` 读;`... <name> key=value ...` 写（需 `VANBLOG_ADMIN_TOKEN`）。
+- 存储:专用 `theme_settings` collection（一行一主题,切换主题配置保留）。**公开可读——只放外观参数,凭据一律 `site_secrets`**。
+- 两个内置主题已声明:`footerText`（页脚附言）、`bannerUrl`（横幅图）、`showBackToTop`（仅 vanblog）。
+
+- **兼容性声明**：`theme.json` 可写 `"vanblogCompatibility": "^1"`——theme host 加载时校验 major，不匹配/无法解析即拒绝加载并保持当前主题（fail-closed；缺省 = 不限制）。主版本随主题契约的破坏性变更递增。
+
 ## 安装 / 切换
 
 - **切换**：后台「外观」→ 选择主题（实时预览）。
