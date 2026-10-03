@@ -59,20 +59,8 @@ FROM golang:1.27-alpine3.24 AS go-build
 ARG GOPROXY
 ENV GOPROXY=${GOPROXY}
 
-# Install tools for fetching caddyadmin (replace directive target).
-RUN apk add --no-cache curl tar
-
-WORKDIR /build
-
-# /caddyadmin. Fetch it there before go mod download runs. Use codeload's
-# tarball endpoint: git clone over https is frequently blocked on restricted
-# networks, while codeload (the download endpoint) stays reachable.
-ARG CADDYADMIN_VERSION=v0.3.0
-RUN curl -fsSL -o /tmp/caddyadmin.tar.gz \
-      "https://codeload.github.com/CornWorld/caddyadmin/tar.gz/refs/tags/${CADDYADMIN_VERSION}" \
-    && mkdir -p /caddyadmin \
-    && tar xzf /tmp/caddyadmin.tar.gz -C /caddyadmin --strip-components=1 \
-    && rm /tmp/caddyadmin.tar.gz
+# caddyadmin is a normal module dependency resolved via GOPROXY (vault/go.mod)
+# — the historical codeload fetch + local replace is long gone.
 COPY vault/go.mod vault/go.sum ./
 RUN go mod download
 COPY vault/ ./

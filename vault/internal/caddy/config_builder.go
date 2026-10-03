@@ -499,8 +499,16 @@ func buildTLSApp(email string, allowedDomains []string) *caddyadmin.TLSApp {
 	return &caddyadmin.TLSApp{
 		Automation: &caddyadmin.Automation{
 			Policies: []caddyadmin.AutomationPolicy{policy},
+			// Caddy >= 2.11 requires a permission module for on-demand TLS
+			// and rejects a config that still carries the deprecated bare
+			// "ask" (or sets both — that is a hard conflict). The http
+			// permission module is the drop-in successor: same endpoint
+			// protocol (2xx allows, ?domain= param appended, no redirects).
 			OnDemand: &caddyadmin.OnDemandTLS{
-				Ask: askEndpoint,
+				Permission: &caddyadmin.PermissionHTTP{
+					Module:   "http",
+					Endpoint: askEndpoint,
+				},
 			},
 		},
 	}

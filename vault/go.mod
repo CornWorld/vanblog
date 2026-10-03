@@ -3,7 +3,7 @@ module github.com/cornworld/vanblog
 go 1.27
 
 require (
-	github.com/CornWorld/caddyadmin v0.3.0
+	github.com/CornWorld/caddyadmin v0.3.1
 	github.com/brianvoe/gofakeit/v7 v7.15.0
 	github.com/creack/pty v1.1.24
 	github.com/dop251/goja v0.0.0-20260901132549-43234fa61381

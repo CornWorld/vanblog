@@ -81,7 +81,7 @@ func TestBuildBootstrapConfig(t *testing.T) {
 		`"listen":"127.0.0.1:2019"`,
 		`"origins":["127.0.0.1:2019"]`,
 		`"root":"/data/caddy"`,
-		`"ask":"http://127.0.0.1:8090/api/hooks/caddy/ask"`,
+		`"permission":{"module":"http","endpoint":"http://127.0.0.1:8090/api/hooks/caddy/ask"}`,
 		`"status_code":503`,
 		`"Retry-After"`,
 		`"module":"acme"`,
@@ -555,6 +555,22 @@ func TestBuildFullConfig_RouteIDsGloballyUnique(t *testing.T) {
 				seen[r.ID] = srvName + "/routes/" + strconv.Itoa(i)
 			}
 		}
+	}
+}
+
+func TestBuildTLSAppOnDemandPermission(t *testing.T) {
+	// Caddy >= 2.11 provisions on-demand TLS only with a permission module,
+	// and a config carrying BOTH 'ask' and 'permission' is a hard conflict
+	// ("please use only the permission module"). Surfaced by the caddy
+	// 2.8.4 -> 2.11.4 baseline bump.
+	tlsApp := buildTLSApp("x@y.z", nil)
+	od := tlsApp.Automation.OnDemand
+	if od == nil || od.Permission == nil ||
+		od.Permission.Module != "http" || od.Permission.Endpoint != askEndpoint {
+		t.Fatalf("on_demand.permission must be the http module at %s, got %+v", askEndpoint, od)
+	}
+	if od.Ask != "" {
+		t.Fatalf("deprecated on_demand.ask must not be emitted alongside permission, got %q", od.Ask)
 	}
 }
 
