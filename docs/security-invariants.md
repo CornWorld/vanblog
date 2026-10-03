@@ -17,8 +17,9 @@
 |---|---|---|
 | `site` | 公开读（渲染需要） | **零凭据字段**。s3Config/syncConfig/syncRemote/outputConfig 一律在 `site_secrets`；对 site 行的写入由钩子自动剥离密钥（`internal/site.MoveSecretsFromRecord`） |
 | `site_secrets` | 不可列不可读（admin-only 五规则） | 唯一凭据存放处 |
-| `posts` | 仅 `deleted=false && status="published" && private=false` | 密码锁文章：匿名读到的 `content`/`password` 必须为空（`OnRecordEnrich` 遮蔽），`hasPassword` 保留供 UI 判断 |
+| `posts` | 仅 `deleted=false && status="published" && private=false` | 密码锁文章：匿名读到的 `content`/`password`/`meta` 必须为空（`OnRecordEnrich` 遮蔽），`hasPassword` 保留供 UI 判断 |
 | `categories` | 公开读 | `password` 对匿名必须为空（enrich 遮蔽） |
+| `theme_settings` | 公开读（主题渲染需要） | **仅外观参数**（theme.json settings DSL 校验写入）。禁止存凭据——凭据唯一存放处是 `site_secrets` |
 | `tags` | 公开读 | 无敏感字段 |
 | `users` | 登录且 admin-or-self | email/password/tokenKey 等认证字段框架级隐藏 |
 | `revisions`/`audits`/`visits`/`media`（非 img）/`_superusers`/`_mfas` 等 | 不可匿名读 | — |
@@ -54,7 +55,13 @@
 - 字段级响应整形用 `OnRecordEnrich`（按 `e.RequestInfo.Auth` 区分身份）；新增敏感字段时必须同时回答"落在哪个集合、谁可读、enrich 是否遮蔽"。
 - Go 层直写（`app.Save`）绕过 `OnRecord*Request` 钩子；依赖写路径钩子的逻辑（审计、密钥剥离）必须确认写入来源全集。
 
-## 6. 变更流程
+## 6. 进程权限
+
+- 容器内**任何长驻服务不得以 root 运行**：entrypoint 以 root 启动仅限「修复卷属主 + `su-exec` 降权重执行」一段（`docker/entrypoint.prod.sh`）；新增服务必须挂在降权之后的启动序列里。
+- Caddy 的 `:80/:443` 特权端口绑定依赖镜像内的文件能力 `setcap cap_net_bind_service=+ep`（`Dockerfile` prod 阶段）；修改 Caddy 安装方式时必须保留该能力，且不得改为要求 `--privileged` / `--cap-add`。
+- 扩展代码（Pack hooks/schema/migrations、Theme entry.mjs、用户 `.pb.js`）的信任级别 = 拥有服务器文件系统/CLI 权限的管理员；**不存在 HTTP 上传扩展的入口**。新增任何「安装扩展」的端点/UI 必须先回答完整性校验（签名/checksum）与来源可信问题（见 `docs/theme-host-design.md` §10.2 #8）。
+
+## 7. 变更流程
 
 - 新集合/新字段/新路由/新消费方，PR 描述必须含"公开读面影响"一节。
 - 违反不变量的应急修复：先加守护测试钉住（红→绿），再改实现。

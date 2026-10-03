@@ -135,7 +135,10 @@ FROM alpine:3.24 AS prod
 WORKDIR /app
 
 # Install Caddy + Node.js (for Astro SSR) + ca-certificates
-RUN apk add --no-cache caddy nodejs ca-certificates tzdata curl
+RUN apk add --no-cache caddy nodejs ca-certificates tzdata curl su-exec libcap \
+    && addgroup -g 1000 vanblog \
+    && adduser -D -u 1000 -G vanblog vanblog \
+    && setcap cap_net_bind_service=+ep "$(command -v caddy)"
 
 # Artalk is provided by the separate prod-artalk target.
 # image intentionally has no Artalk binary; prod-artalk adds it below.
@@ -184,11 +187,13 @@ COPY docker/bootstrap-http-only.json /etc/caddy/bootstrap-http-only.json
 COPY docker/entrypoint.prod.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Create data directories. /var/lib/vanblog/themes is the USER themes volume
-# mount point (compose mounts themes_data there, persistent). Builtin themes
-# stay read-only at /build/themes and are resolved via VANBLOG_THEMES_BUILTIN_DIR.
-# NO symlink here — a symlink would shadow the mounted volume and break installs.
-RUN mkdir -p /pb_data /data/caddy /data/artalk /var/log /var/lib/vanblog
+# Dedicated unprivileged runtime user. The container still STARTS as root
+# (docker default) only so the entrypoint can fix ownership of volumes left
+# behind by older root-running images; it then drops every service to
+# `vanblog` via su-exec (see entrypoint.prod.sh). Fixed uid/gid 1000 keeps
+# host bind-mount ownership predictable across upgrades.
+RUN mkdir -p /pb_data /data/caddy /data/artalk /var/log /var/lib/vanblog \
+    && chown -R vanblog:vanblog /pb_data /data/caddy /data/artalk /var/log /var/lib/vanblog
 
 ENV VANBLOG_MODE=prod
 # 80  = HTTP → redirect to HTTPS

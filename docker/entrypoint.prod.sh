@@ -45,6 +45,25 @@ export VANBLOG_THEMES_BUILTIN_DIR="${VANBLOG_THEMES_BUILTIN_DIR:-/build/themes}"
 export VANBLOG_ADMIN_DIST_DIR="${VANBLOG_ADMIN_DIST_DIR:-/build/app/dist}"
 export VANBLOG_ENTRYPOINT=1
 
+# --- Drop root: every service runs as the unprivileged 'vanblog' user ---
+# The container still STARTS as root (docker default) only for this pass:
+# fix ownership of runtime-writable volumes (bind mounts created by host
+# tooling or older root-running images), then re-exec the entrypoint as
+# vanblog via su-exec. Nothing below this block ever runs as root. Operators
+# may also start directly with `--user 1000` (volumes must be pre-owned).
+VANBLOG_RUN_USER="${VANBLOG_RUN_USER:-vanblog}"
+if [ "$(id -u)" = "0" ]; then
+  echo "[vanblog] running as root; adopting writable dirs, then dropping to '${VANBLOG_RUN_USER}'"
+  CHOWN_DIRS="$PB_DATA /data/caddy /data/artalk /var/log /var/lib/vanblog"
+  for d in "${VANBLOG_THEMES_DIR:-}" "${VANBLOG_PACKS_DIR:-}"; do
+    [ -n "$d" ] && CHOWN_DIRS="$CHOWN_DIRS $d"
+  done
+  for d in $CHOWN_DIRS; do
+    [ -d "$d" ] && chown -R "$VANBLOG_RUN_USER:$VANBLOG_RUN_USER" "$d" || true
+  done
+  exec su-exec "$VANBLOG_RUN_USER:$VANBLOG_RUN_USER" "$0" "$@"
+fi
+
 # Go GC tuning: derive GOMEMLIMIT from the cgroup memory limit so the GC
 # works harder BEFORE the kernel OOM-kills the process.
 #   - cgroup v2: /sys/fs/cgroup/memory.max ("max" = unlimited)

@@ -89,6 +89,17 @@ docker run -d -p 80:80 -p 443:443 -p 8080:8080 \
 
 或者直接:`./vanblog.sh maintenance`(脚本会自动添加 8080 映射并重启容器)。
 
+
+## 进程权限（非 root 运行）
+
+容器内三个服务（Caddy / PocketBase / theme host，含可选 Artalk）全部以专用用户 **`vanblog`（uid/gid 1000）** 运行：
+
+- 容器仍以 root **启动**（docker 默认），但 entrypoint 只用 root 做一件事：把运行时可写目录（`/pb_data`、`/data/caddy`、`/data/artalk`、`/var/lib/vanblog`、`/var/log`）`chown` 给 `vanblog`，随后经 `su-exec` 降权**重新执行自身**——之后任何服务都不再以 root 运行。这是老版本（root 时代）数据卷的无感升级路径。
+- Caddy 绑定特权端口 `:80/:443` 依赖镜像内 `setcap cap_net_bind_service=+ep`（文件能力），**无需** `--cap-add=NET_BIND_SERVICE`。
+- 升级首次启动时，bind mount 的宿主目录属主会被改为 `1000:1000`（`vanblog.sh` 生成的部署即此形态）；宿主 root 仍可正常读写与备份。
+- 可直接 `--user 1000:1000` 启动（跳过 root 阶段），前提是卷属主已是 1000。
+- `docker exec` 默认用户仍是镜像默认（root）；`vanblog.sh pack ...` 走该路径，落盘文件为 root 属主，对只读消费方（PB/hooks）无影响。
+
 ## HTTP_ONLY 模式(外置反代用户)
 
 已有 Traefik / Nginx Proxy Manager / Cloudflare Tunnel / K8s Inress 的用户,可以让外置反代终止 TLS,容器内只跑 HTTP:
@@ -140,6 +151,7 @@ Request → Caddy (:80/:443)
            ├── /api/*       → PocketBase (:8090)
            ├── /_/          → PocketBase Admin UI
            ├── /themes/*    → Caddy file_server（主题静态：_astro immutable，稳定文件 must-revalidate）
+           ├── /pack-static/* → PocketBase（Pack 前端资产，活目录直出 + ETag 重验）
            ├── /_astro/* + /emoji-data.json + /robots.txt → Caddy file_server（admin 静态）
            └── /*           → theme host (:4321)
                                 ├── /admin /login /setup → admin SSR（app/dist）
