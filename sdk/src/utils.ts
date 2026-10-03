@@ -21,3 +21,21 @@ export function buildPageHref(
   const qs = p.toString();
   return qs ? `${base}?${qs}` : base;
 }
+
+/**
+ * Read a string-valued custom field from a post's `meta` (per-post custom
+ * fields, posts.meta JSON). Keys are tried in order and the first non-empty
+ * string wins — the canonical convention is documented in
+ * docs/theme-implementer-guide.md (e.g. cover / image / ogImage → og:image).
+ */
+export function postMetaString(
+  meta: Record<string, unknown> | null | undefined,
+  ...keys: string[]
+): string | undefined {
+  if (!meta) return undefined;
+  for (const key of keys) {
+    const value = meta[key];
+    if (typeof value === 'string' && value.trim() !== '') return value.trim();
+  }
+  return undefined;
+}

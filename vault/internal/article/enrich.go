@@ -33,8 +33,11 @@ func RegisterContentHygieneHooks(app core.App) {
 			return e.Next()
 		}
 		if e.Record.GetString("password") != "" {
+			// meta carries per-post content extras (covers, subtitles) —
+			// masked with the body so a locked teaser leaks nothing.
 			e.Record.Set("content", "")
 			e.Record.Set("password", "")
+			e.Record.Set("meta", nil)
 		}
 		return e.Next()
 	})

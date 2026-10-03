@@ -13,6 +13,7 @@ import { UserSchema } from "./users";
 export const PostSchema = SystemFieldsSchema.extend({
   title: z.string().min(1),
   content: z.string().optional(),
+  meta: z.record(z.string(), z.unknown()).optional(),
   copyright: z.string().optional(),
   deleted: z.boolean().optional(),
   lastVisitedAt: IsoDateTimeSchema.optional(),

@@ -49,6 +49,7 @@ func createLockedPost(t *testing.T, app core.App, pathname, password string) *co
 	r.Set("status", "published")
 	r.Set("pathname", pathname)
 	r.Set("password", password)
+	r.Set("meta", map[string]any{"cover": "https://example.com/secret-cover.png"})
 	if err := app.Save(r); err != nil {
 		t.Fatalf("create locked post: %v", err)
 	}
@@ -105,6 +106,9 @@ func TestMasking_AnonymousCannotReadLockedRow(t *testing.T) {
 	}
 	if got, _ := body["password"].(string); got != "" {
 		t.Errorf("anon password leaked: %q", got)
+	}
+	if body["meta"] != nil {
+		t.Errorf("anon meta leaked: %v", body["meta"])
 	}
 	if got, _ := body["hasPassword"].(bool); !got {
 		t.Errorf("hasPassword should stay visible for the lock UI, got %v", body["hasPassword"])
