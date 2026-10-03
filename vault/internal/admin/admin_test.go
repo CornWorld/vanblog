@@ -19,7 +19,7 @@ func setupBackupApp(t *testing.T) core.App {
 	if err := app.Bootstrap(); err != nil {
 		t.Fatalf("Bootstrap: %v", err)
 	}
-	t.Cleanup(func() { _ = app.ResetBootstrapState() })
+	t.Cleanup(func() { _ = app.ClearBootstrap() })
 	if err := app.RunAppMigrations(); err != nil {
 		t.Fatalf("Migration: %v", err)
 	}
