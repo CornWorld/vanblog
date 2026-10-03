@@ -2,7 +2,7 @@
 
 > **文档类型**：治理文档 / fact。目标：让下一个 agent / 维护者不再靠读 PB 源码 + 撞墙才能搞清边界。
 > **目标读者**：vanblog 维护者、后续实施 agent、写 Pack/Theme 扩展的人。
-> **版本依据**：PocketBase v0.40.1（`vault/go.mod` 锁定）。
+> **版本依据**：PocketBase v0.40.4（`vault/go.mod` 锁定）。
 > **前置阅读**：`docs/architecture-layering.md`（三层架构）、`docs/pack-theme-schema-design.md`（Pack 自带 `migrations/*.js` 的设计）。
 
 ---
@@ -38,7 +38,7 @@ vanblog 的扩展性不是 PB 白送的，而是由这些显式接线决定的�
 
 ## 2. 隐式边界（12 条踩坑实证）
 
-> 这是本次重构撞墙后固化的契约。每条 = 事实 + 约束。源码依据可追溯到 PB v0.39.5;事实 9-12 基于 v0.40.1 源码与容器实测(v0.40.1 为当前 go.mod 版本)。
+> 这是本次重构撞墙后固化的契约。每条 = 事实 + 约束。源码依据可追溯到 PB v0.39.5;事实 9-12 基于 v0.40.1 源码与容器实测(升级到 v0.40.4 后行为无变化——0.40.2~0.40.4 均为修复性发布)。
 
 ### 事实 1：JS 迁移由 `jsvm` 加载，不是 `migratecmd`；`Automigrate` 只生成快照
 
