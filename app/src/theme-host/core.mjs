@@ -25,6 +25,26 @@ import { pathToFileURL } from 'node:url';
 // HTTP callers already gate through listAvailableThemes()).
 const themeNamePattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
+// THEME_COMPAT_VERSION is the host-side theme contract major (docs/
+// theme-host-design.md §10.2 #10: "all installed themes must be built
+// against the host's Astro/contract generation"). A theme.json may declare
+// `vanblogCompatibility` ("^1", "1", "1.x", "*", absent = any); a declared
+// major mismatch refuses the load — switchTheme then keeps the current
+// theme serving instead of crashing into an incompatible one.
+export const THEME_COMPAT_VERSION = 1;
+
+function assertThemeCompatibility(name, themeJson) {
+  const range = themeJson?.vanblogCompatibility;
+  if (range === undefined || range === null || range === '*') return;
+  const match = typeof range === 'string' ? /^\^?\s*(\d+)/.exec(range.trim()) : null;
+  const major = match ? Number(match[1]) : NaN;
+  if (major !== THEME_COMPAT_VERSION) {
+    throw new Error(
+      `theme '${name}' declares vanblogCompatibility "${String(range)}" but this host provides ${THEME_COMPAT_VERSION} — refusing to load`
+    );
+  }
+}
+
 /**
  * @typedef {object} ThemeHostOptions
  * @property {string} [themesDir]          Directory holding one subdir per theme.
@@ -152,6 +172,8 @@ export function createThemeHost(options = {}) {
         );
       }
     }
+    assertThemeCompatibility(name, themeJson);
+
 
     // ASTRO_NODE_AUTOSTART=disabled prevents the theme from starting its own server.
     process.env.ASTRO_NODE_AUTOSTART = 'disabled';

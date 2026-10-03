@@ -1,0 +1,11 @@
+{
+  "name": "_template",
+  "version": "0.1.0",
+  "title": "模板",
+  "nav": { "label": "模板" },
+  "frontend": {
+    "scope": "public",
+    "styles": ["style.css"],
+    "scripts": ["script.js"]
+  }
+}

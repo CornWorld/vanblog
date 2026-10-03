@@ -12,7 +12,7 @@
 
 ## 启用 / 安装一个 Pack
 
-内置 Pack（bookmarks / moments / visits / live2d-companion）随镜像提供，**后台或前端路由即用**（如收藏页 `/p/bookmarks`）。
+内置 Pack（bookmarks / moments / online / live2d-companion）随镜像提供，**后台或前端路由即用**（如收藏页 `/p/bookmarks`）。
 
 要安装自定义 Pack：
 
@@ -27,5 +27,5 @@
 ## 常见问题
 
 - **装了但没生效** → `./vanblog.sh pack status` 看生命周期；确认 `VANBLOG_PACKS_DIR` 卷挂载正确。
-- **想自己写 Pack** → 参考内置 Pack 结构（`packs/*`）+ [developer/README.md](../developer/README.md)。
+- **想自己写 Pack** → `node scripts/build/pack-init.mjs my-pack` 生成骨架（pack.json + 页面/前端/钩子/迁移模板），参考 [developer/README.md](../developer/README.md)。
 - **superuser 直写 moments/bookmarks 报 400**(`validation_missing_rel_records`)→ 这两个 pack 的 `author`/`owner` 回填钩子假设 users 身份登录(产品内 admin 后台即此路径);`_superusers` 身份不在 users 关系表里,绕过后台直接调 API 建记录会被关系校验拒绝。用 users 管理员身份操作即可。

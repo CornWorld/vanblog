@@ -586,7 +586,7 @@ const MAX_LOADED_THEMES = 3;
 7. **【P2】跨 theme session 共享**：cookie 按 domain 存，跨 theme 不丢。但每个 theme 的 `middleware.ts` 是独立 module instance，AsyncLocalStorage 也独立——认证状态能否跨 theme 正确传递需要实测。
 8. **【P2】Theme 上传安全模型**：theme host `import()` 一个 theme 的 entry.mjs = 信任它执行任意代码。Phase 3 必须：签名验证 / 官方 marketplace / 沙箱（vm2 已不可用，isolated-vm 复杂）。
 9. **【P3】多租户场景**：一个 vanblog 实例按 host 路由到不同 theme。当前设计假设单 site。明确「单 site 假设」写入契约，未来如需多租户再扩展。
-10. **【P0】Astro 版本升级**：所有已安装 theme 必须用 theme host 的 Astro 版本。theme host 加载时检查 `themeJson.vanblogCompatibility` semver，拒绝不兼容的 theme。
+10. **【P0】Astro 版本升级**：~~theme host 加载时检查 `themeJson.vanblogCompatibility` semver~~ **已实现（2026-10-03）**：`app/src/theme-host/core.mjs` 的 `assertThemeCompatibility` 按 major 校验（`^N`/`N`/`*`/缺省），不匹配或无法解析即拒绝加载、保持当前主题（fail-closed；lifecycle.test.mjs 有行为钉子）。`THEME_COMPAT_VERSION` 随主题契约的破坏性变更递增。
 11. **【P3】可观测性**：metrics（每 theme 请求量、加载时间、内存占用）+ 日志格式（区分 theme）+ 健康检查端点契约。MVP 不致命，生产化前必须补。
 12. **【P0】Astro experimental.cache 与 theme host 的交互**：见 §13。
 

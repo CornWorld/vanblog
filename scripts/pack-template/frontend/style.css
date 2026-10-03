@@ -1,0 +1,5 @@
+/* Pack 前端样式:经 /pack-static/<pack>/style.css 运行时注入每页。 */
+.vanblog-pack-__NAME__ {
+  /* CSS 永远用 var(--color-*),不要硬编码颜色 */
+  color: var(--color-text, inherit);
+}

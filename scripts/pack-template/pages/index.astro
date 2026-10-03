@@ -1,0 +1,10 @@
+---
+// Pack 公共页面:路由 /p/<pack>(build-time——随镜像/主题构建烧入;
+// 运行时安装的 pack 无编译产物,此页面不生效,但 frontend/hooks/migrations 照常)。
+// Page 来自 vanblog:theme 虚拟模块(主题提供的 PackPage host 布局)。
+import { Page } from 'vanblog:theme';
+---
+
+<Page title="__NAME__">
+  <p>__NAME__ pack 页面骨架。数据经 Astro.locals.pb 读自己的 collection。</p>
+</Page>

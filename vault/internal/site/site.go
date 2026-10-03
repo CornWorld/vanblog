@@ -50,7 +50,6 @@ type Info struct {
 	Description      string
 	CommentsProvider string
 	AnalyticsScript  string
-	Theme            string
 	AllowedDomains   []string
 }
 
@@ -77,7 +76,6 @@ func GetInfo(app core.App) (*Info, error) {
 		Author:           record.GetString("author"),
 		CommentsProvider: record.GetString("commentsProvider"),
 		AnalyticsScript:  record.GetString("analyticsScript"),
-		Theme:            record.GetString("theme"),
 		AllowedDomains:   record.GetStringSlice("allowedDomains"),
 	}
 

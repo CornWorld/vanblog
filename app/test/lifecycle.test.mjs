@@ -67,11 +67,14 @@ function writePack(root, name, identity = { name, version: '1.0.0' }) {
 
 // A theme: theme.json + dist/server/entry.mjs exporting a distinguishable
 // handler that echoes its marker + the request URL.
-function writeTheme(root, name, marker) {
+function writeTheme(root, name, marker, themeJson = {}) {
   const dir = join(root, name);
   const dist = join(dir, 'dist', 'server');
   mkdirSync(dist, { recursive: true });
-  writeFileSync(join(dir, 'theme.json'), JSON.stringify({ name, label: marker }));
+  writeFileSync(
+    join(dir, 'theme.json'),
+    JSON.stringify({ name, label: marker, ...themeJson })
+  );
   writeFileSync(
     join(dist, 'entry.mjs'),
     [
@@ -412,6 +415,28 @@ describe('theme degradation edge cases', () => {
     const host = createThemeHost({ themesDir, defaultThemeName: 'alpha' });
     await host.switchTheme('nohandler');
     assert.equal(host.registrySnapshot().activeTheme, 'alpha');
+  });
+
+  it('declared vanblogCompatibility major mismatch refuses the load', async () => {
+    const { themesDir } = themeFixtureSet();
+    writeTheme(themesDir, 'future', 'FUTURE', { vanblogCompatibility: '^99' });
+    writeTheme(themesDir, 'matching', 'MATCH', { vanblogCompatibility: '^1' });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha' });
+
+    await assert.rejects(() => host.loadTheme('future'), /vanblogCompatibility/);
+    await host.switchTheme('future');
+    assert.equal(host.registrySnapshot().activeTheme, 'alpha', 'must stay on current theme');
+
+    // A matching declaration (and an absent one) still loads.
+    await host.switchTheme('matching');
+    assert.equal(host.registrySnapshot().activeTheme, 'matching');
+  });
+
+  it('an unparsable vanblogCompatibility fails closed', async () => {
+    const { themesDir } = themeFixtureSet();
+    writeTheme(themesDir, 'typo', 'TYPO', { vanblogCompatibility: 'one-point-oh' });
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha' });
+    await assert.rejects(() => host.loadTheme('typo'), /vanblogCompatibility/);
   });
 
   it('invalid theme.json falls back to {name} metadata without blocking load', async () => {

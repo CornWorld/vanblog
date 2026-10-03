@@ -33,8 +33,8 @@ func TestGet(t *testing.T) {
 	if record == nil {
 		t.Fatal("expected non-nil site record")
 	}
-	if record.GetString("theme") != "default" {
-		t.Errorf("theme = %q, want 'default'", record.GetString("theme"))
+	if record.GetString("activeTheme") != "vanblog" {
+		t.Errorf("activeTheme = %q, want 'vanblog' (1783400000 backfill)", record.GetString("activeTheme"))
 	}
 }
 
