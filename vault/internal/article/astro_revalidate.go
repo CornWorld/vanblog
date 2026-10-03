@@ -87,6 +87,15 @@ func revalidateAstroCache(app core.App, tags []string) {
 	slog.Info("[article] revalidate: cache invalidated", "tags", tags)
 }
 
+// RevalidateCache exposes revalidateAstroCache to the other managers: the
+// pack custom-code writer (vault/internal/pack/routes.go) busts stale page
+// caches after rewriting the managed pack, since cached HTML embeds the
+// pack-frontend manifest's <link>/<script> list. Durable-failure semantics
+// are identical to the record-hook callers.
+func RevalidateCache(app core.App, tags []string) {
+	revalidateAstroCache(app, tags)
+}
+
 // revalidateRetryInterval is the replay cadence for the durable backlog.
 // Package-level so tests can shorten it.
 var revalidateRetryInterval = 5 * time.Second

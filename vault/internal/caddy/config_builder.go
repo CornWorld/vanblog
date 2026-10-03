@@ -424,6 +424,19 @@ func buildFullRouteTable(opts BuildOpts, userRules []UserRule) ([]caddyadmin.Rou
 		})
 	}
 	routes = append(routes, buildStaticRoutes(opts)...)
+	// Pack static assets: one catch-all route reverse-proxied to pb, which
+	// serves them live from the merged (builtin + user, user-wins) pack
+	// directories — installing a pack into the volume takes effect without
+	// a Caddy resync. ETag + must-revalidate semantics live in the pb
+	// handler (vault/internal/pack/routes.go).
+	routes = append(routes, caddyadmin.Route{
+		ID:    "vanblog-system-pack-static",
+		Match: []caddyadmin.MatchRule{{Path: []string{"/pack-static/*"}}},
+		Handle: []caddyadmin.Handler{{
+			Handler:   "reverse_proxy",
+			Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
+		}},
+	})
 	routes = append(routes, rules...)
 	routes = append(routes, caddyadmin.Route{
 		ID: systemFallbackID,

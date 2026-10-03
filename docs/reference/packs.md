@@ -26,18 +26,42 @@ Pack 是 vanblog 的扩展单元，通过 `pack.json` 描述自身，可携带�
 }
 ```
 
-- `styles`/`scripts`:经 Vite `?url` 发射为**哈希化**资产并注入每页
-  (`<link>` / `<script type="module">`)。适合自包含单文件贡献。
-- `static`:列 `frontend/` 下的子目录,整树**原样(不哈希)**发射到
-  `/pack-static/<pack>/<dir>/`,供按相对路径加载兄弟文件的第三方 widget
+- `styles`/`scripts`:**运行时注入**。SSR 布局每请求从
+  `GET /api/vanblog/packs/frontend`（匿名，10s 缓存）读取清单，把
+  `/pack-static/<pack>/<file>` 以 `<link>` / `<script type="module">` 注入每页。
+  文件从**活目录**（内置 `/packs` + 用户卷，用户覆盖优先）经 Go 文件服务直出，
+  ETag 重验（304）——装包/改文件即生效，无需 theme rebuild。
+- `static`:列 `frontend/` 下的子目录,整树原样服务于同一
+  `/pack-static/<pack>/<dir>/` URL 空间,供按相对路径加载兄弟文件的第三方 widget
   (如 live2d-widgets 的 `chunk/` 动态分块)。目录必须存在,拒绝越界路径。
-  路径不进 `_astro/` 哈希档,走 SSR 代理(ETag 重验)——pack 升级即生效,无 immutable 陈旧窗口。dev 模式由集成中间件按同前缀服务。示例:`packs/live2d-companion`。
+  Caddy 有专用的 `/pack-static/*` 系统路由反代 PB(用户自定义路由不得占用,
+  见 translator ReservedPaths);dev 模式由集成中间件按同前缀服务。
+  示例:`packs/live2d-companion`。
+
+### 前端生效边界
+
+- `frontend/`（styles/scripts/static）与 `nav`:**装进卷即生效**(清单每请求
+  重组;已缓存页面最迟 `maxAge`(默认 300s)后刷新,`PUT /api/vanblog/custom-code`
+  会主动触发缓存失效)。
+- `pages/*.astro`:**仍是 build-time**(需编译,内置 pack 随镜像/主题构建烧入)。
+  运行时安装的 pack 没有编译产物,`/p/<name>` 页面 404——hooks/migrations/schema
+  照常生效。
+
+## 自定义代码(admin)
+
+`PUT /api/vanblog/custom-code`(admin-only,body `{"css":"...","js":"..."}`,单项
+≤512KiB)把站长手写的 CSS/JS 写成受管伪 pack `site-custom`(落盘
+`VANBLOG_PACKS_DIR/site-custom`,带 `.vanblog-managed` 标记;两项均空则卸载)。
+它与 CLI 安装的用户 pack 走**同一条机制**——同清单、同 `/pack-static` 服务、
+同下次启动时的 pack 校验。名字 `site-custom` 保留:已存在非受管同名 pack 时
+返回 400 拒绝覆盖。
 
 ## 生命周期与安装位置
 
 - 内置 Pack：镜像内（`/build/packs`，只读）。
 - 用户 Pack：持久卷 `VANBLOG_PACKS_DIR`（默认 `/var/lib/vanblog/packs`）。**用户覆盖优先**。
 - `vanblog.sh pack list` 列出已安装 Pack；`pack status` 看生命周期状态；`pack plan` 部署预检（只读）；`pack inspect <name>` 看详情；`pack add <name>` 添加本地覆盖。
+- 新写 Pack：`node scripts/build/pack-init.mjs <name> [dest]`（模板在 `scripts/pack-template/`，含 `__NAME__` 占位替换与 hook 文件重命名）。
 
 ## 现有 Pack（内置）
 

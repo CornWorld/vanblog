@@ -47,6 +47,7 @@ type UserRule struct {
 // whatever traffic reaches Caddy.
 var ReservedPaths = []string{
 	"/api/*",
+	"/pack-static/*",
 	"/static/*",
 	"/admin/*",
 	"/favicon*",

@@ -458,6 +458,7 @@ func main() {
 	_ = feed.New(app)
 	palette.New(app)
 	theme.New(app)
+	pack.RegisterRoutes(app, builtinPacksDir, packsDir)
 	_ = caddy.New(app)
 	_ = agent.New(app)
 	_ = mcp.New(app)
