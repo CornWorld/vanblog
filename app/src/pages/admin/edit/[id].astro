@@ -121,6 +121,15 @@ const currentAuthorId: string = post.author || user.id;
     </div>
   </details>
 
+  <details class="mb-4">
+    <summary class="cursor-pointer">自定义字段（meta）</summary>
+    <div id="meta-rows" class="flex flex-col gap-2 py-2"></div>
+    <div class="flex gap-2 items-center">
+      <button type="button" id="meta-add" class="px-3 py-1 border border-[var(--border)] rounded">添加字段</button>
+      <small class="text-[var(--text-muted)]">字符串键值（值为 true/false 存为布尔）。主题可读取：如 <code>cover</code> → 文章分享卡片图。</small>
+    </div>
+  </details>
+
   <ByteMdEditor initialContent={post.content || ''} mediaConfig={mediaConfig} />
 
   <div class="mt-2 flex gap-4">
@@ -128,9 +137,39 @@ const currentAuthorId: string = post.author || user.id;
     <button id="btn-publish" type="button">保存并发布</button>
     <a href="/admin">取消</a>
   </div>
-<script is:inline type="application/json" id="editor-data" set:html={JSON.stringify({ postId: isNew ? null : id, authorId: currentAuthorId }).replace(/<\//g, '<\\/')} />
+<script is:inline type="application/json" id="editor-data" set:html={JSON.stringify({ postId: isNew ? null : id, authorId: currentAuthorId, meta: post.meta ?? {} }).replace(/<\//g, '<\\/')} />
 <script is:inline>
-    const { postId, authorId } = JSON.parse(document.getElementById('editor-data').textContent);
+    const { postId, authorId, meta: postMeta } = JSON.parse(document.getElementById('editor-data').textContent);
+
+    // ── 自定义字段（meta）键值行：字符串值，true/false 存为布尔 ──
+    const metaRows = document.getElementById('meta-rows');
+    const metaAdd = document.getElementById('meta-add');
+    function addMetaRow(key = '', value = '') {
+      const row = document.createElement('div');
+      row.className = 'flex gap-2';
+      row.innerHTML =
+        '<input class="meta-k w-44 px-1.5 py-0.5" placeholder="key（如 cover）" />' +
+        '<input class="meta-v flex-1 px-1.5 py-0.5" placeholder="value" />' +
+        '<button type="button" class="meta-del px-2 border border-[var(--border)] rounded">删除</button>';
+      row.querySelector('.meta-k').value = key;
+      row.querySelector('.meta-v').value = value;
+      row.querySelector('.meta-del').addEventListener('click', () => row.remove());
+      metaRows.appendChild(row);
+    }
+    for (const [k, v] of Object.entries(postMeta || {})) addMetaRow(k, String(v ?? ''));
+    metaAdd.addEventListener('click', () => addMetaRow());
+    function collectMeta() {
+      const out = {};
+      for (const row of metaRows.children) {
+        const k = row.querySelector('.meta-k').value.trim();
+        if (!k) continue;
+        let v = row.querySelector('.meta-v').value;
+        if (v === 'true') v = true;
+        else if (v === 'false') v = false;
+        out[k] = v;
+      }
+      return Object.keys(out).length ? out : null;
+    }
     const save = async (publish) => {
       const pb = self.vanblog.pb;
       if (!pb) return alert('未登录');
@@ -149,6 +188,7 @@ const currentAuthorId: string = post.author || user.id;
         private: document.getElementById('f-private').checked,
         password: document.getElementById('f-password').value,
         author: authorId,
+        meta: collectMeta(),
         deleted: false,
       };
 

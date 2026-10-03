@@ -46,21 +46,29 @@ const boolField = (k: keyof Site, def = false): boolean => {
 };
 
 // 外观：服务端并行拉取主题 / 调色盘列表（卡片 SSR 直出，避免客户端闪烁）。
-// GET /api/themes 返回 { themes: [{ name, label, ... }] }；palettes 走 SDK。
-const [themesRes, palettesRes] = await Promise.all([
+// GET /api/themes 返回 { themes: [{ name, label, settings? }] }（settings 为
+// theme.json 声明的可配置项 schema）；主题设置当前值走 SDK themes.settings。
+const [themesRes, palettesRes, settingsRes] = await Promise.all([
   safe(
     async () =>
       (await pb.send('/api/themes', { method: 'GET' })) as {
-        themes?: Array<{ name: string; label?: string }>;
+        themes?: Array<{
+          name: string;
+          label?: string;
+          settings?: Record<string, { type: string; label?: string; default?: unknown; values?: string[]; placeholder?: string }>;
+        }>;
       },
     'admin/site/themes'
   ),
   safe(() => pb.vanblog.palettes.list(), 'admin/site/palettes'),
+  safe(() => pb.vanblog.themes.settings(field('activeTheme') || 'vanblog'), 'admin/site/theme-settings'),
 ]);
 const themes = themesRes.data?.themes ?? [];
 const palettes = palettesRes.data ?? [];
 const currentTheme = field('activeTheme') || 'vanblog';
 const currentPalette = field('palette') || 'default';
+const themeSettingsValues = (settingsRes.data?.values ?? {}) as Record<string, unknown>;
+const settingsSchema = themes.find((t) => t.name === currentTheme)?.settings ?? {};
 ---
 <AdminLayout title="站点配置">
   <h1>站点配置</h1>
@@ -150,6 +158,37 @@ const currentPalette = field('palette') || 'default';
       </fieldset>
 
       <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
+        <legend>主题设置（{currentTheme}）</legend>
+        {Object.keys(settingsSchema).length === 0 ? (
+          <p class="text-sm text-[var(--text-muted)] col-span-2">当前主题未声明可配置项（theme.json 的 settings 字段）。</p>
+        ) : (
+          Object.entries(settingsSchema).map(([key, spec]) => (
+            <Fragment>
+              <label>{spec.label || key}</label>
+              {spec.type === 'boolean' ? (
+                <input type="checkbox" data-theme-setting={key} checked={themeSettingsValues[key] !== undefined ? !!themeSettingsValues[key] : spec.default === true} />
+              ) : spec.type === 'select' ? (
+                <select data-theme-setting={key} class="px-1.5 py-0.5 w-fit">
+                  {(spec.values ?? []).map((v) => (
+                    <option value={v} selected={String(themeSettingsValues[key] ?? spec.default ?? '') === v}>{v}</option>
+                  ))}
+                </select>
+              ) : spec.type === 'text' ? (
+                <textarea rows="2" data-theme-setting={key} placeholder={spec.placeholder || ''} class="px-1.5 py-0.5">{String(themeSettingsValues[key] ?? spec.default ?? '')}</textarea>
+              ) : (
+                <input data-theme-setting={key} value={String(themeSettingsValues[key] ?? spec.default ?? '')} placeholder={spec.placeholder || ''} class="px-1.5 py-0.5" />
+              )}
+            </Fragment>
+          ))
+        )}
+        <div class="col-span-2 flex items-center gap-2">
+          <button type="button" id="theme-settings-save" class="px-3 py-1 border border-[var(--border)] rounded w-fit">保存主题设置</button>
+          <span id="theme-settings-status" class="text-sm text-[var(--text-muted)]"></span>
+        </div>
+        <small class="text-[var(--text-muted)] col-span-2">由主题 theme.json 声明、独立于上方表单保存；保存后页面缓存约 12s 内刷新。切换主题并保存后，此表单变为新主题的配置。</small>
+      </fieldset>
+
+      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
         <legend>评论</legend>
         <label>评论 provider</label>
         <select name="commentsProvider" id="commentsProvider">
@@ -182,6 +221,19 @@ const currentPalette = field('palette') || 'default';
         <textarea name="customScript" rows="3" class="px-1.5 py-0.5 font-mono">{field('customScript')}</textarea>
       </fieldset>
 
+      <fieldset class="flex flex-col gap-2 border border-[var(--border)] p-4">
+        <legend>自定义代码（站点级 CSS / JS）</legend>
+        <label>自定义 CSS（注入每页 &lt;head&gt;）</label>
+        <textarea id="custom-css" rows="6" class="px-1.5 py-0.5 font-mono text-sm" placeholder="/* 例如: .site-custom-probe { color: red } */"></textarea>
+        <label>自定义 JS（&lt;script type="module"&gt; 注入每页底部）</label>
+        <textarea id="custom-js" rows="4" class="px-1.5 py-0.5 font-mono text-sm" placeholder="console.log('hello')"></textarea>
+        <div class="flex items-center gap-2">
+          <button type="button" id="custom-code-save" class="px-3 py-1 border border-[var(--border)] rounded w-fit">保存自定义代码</button>
+          <span id="custom-code-status" class="text-sm text-[var(--text-muted)]"></span>
+        </div>
+        <small class="text-[var(--text-muted)]">以受管 pack（site-custom）落盘，与 Pack 前端同一注入链路；两项均空保存 = 卸载。已有 customHead/customScript 字段继续可用（raw 注入，优先级更高）。</small>
+      </fieldset>
+
       <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
         <legend>修订</legend>
         <label>启用修订</label>
@@ -201,7 +253,11 @@ const currentPalette = field('palette') || 'default';
   <script is:inline type="application/json" id="theme-preview-data" set:html={JSON.stringify({ sitePalette: field('palette'), palettes }).replace(/<\//g, '<\\/')} />
   <script is:inline>
     const { siteId, commentsConfig: commentsConfigJson } = JSON.parse(document.getElementById('site-data').textContent);
-    const pb = self.vanblog.pb;
+    // window.vanblog is set by AdminLayout's deferred module script, which
+    // runs AFTER this synchronous inline block — resolve lazily inside each
+    // handler instead of at parse time (that TypeError used to kill every
+    // handler on this page, including the pre-existing ones).
+    const getPb = () => self.vanblog && self.vanblog.pb;
     if (siteId) {
       // ── Show/hide provider-specific config panels ──
       const providerSelect = document.getElementById('commentsProvider');
@@ -231,6 +287,54 @@ const currentPalette = field('palette') || 'default';
           if (ta) ta.textContent = existingConfig.customScript;
         }
       } catch (_) {}
+
+      // ── 主题设置：schema 驱动表单 → PUT theme-settings（独立保存）──
+      const tsSave = document.getElementById('theme-settings-save');
+      if (tsSave) {
+        tsSave.addEventListener('click', async () => {
+          const status = document.getElementById('theme-settings-status');
+          const themeName = document.querySelector('[name="activeTheme"]')?.value || 'vanblog';
+          const values = {};
+          document.querySelectorAll('[data-theme-setting]').forEach((el) => {
+            values[el.getAttribute('data-theme-setting')] = el.type === 'checkbox' ? el.checked : el.value;
+          });
+          try {
+            status.textContent = '保存中…';
+            const pb = getPb();
+            if (!pb) { status.textContent = '客户端未就绪，请刷新重试'; return; }
+            await pb.vanblog.themes.saveSettings(themeName, values);
+            status.textContent = '已保存（页面缓存约 12s 内刷新）';
+          } catch (err) {
+            status.textContent = '保存失败: ' + (err?.message ?? err);
+          }
+        });
+      }
+
+      // ── 自定义代码：预拉活资产内容，PUT custom-code（site-custom 受管 pack）──
+      const ccSave = document.getElementById('custom-code-save');
+      if (ccSave) {
+        const cssTa = document.getElementById('custom-css');
+        const jsTa = document.getElementById('custom-js');
+        const status = document.getElementById('custom-code-status');
+        Promise.all([
+          fetch('/pack-static/site-custom/style.css').then((r) => (r.ok ? r.text() : '')).catch(() => ''),
+          fetch('/pack-static/site-custom/script.js').then((r) => (r.ok ? r.text() : '')).catch(() => ''),
+        ]).then(([css, js]) => {
+          cssTa.value = css;
+          jsTa.value = js;
+        });
+        ccSave.addEventListener('click', async () => {
+          try {
+            status.textContent = '保存中…';
+            const pb = getPb();
+            if (!pb) { status.textContent = '客户端未就绪，请刷新重试'; return; }
+            await pb.send('/api/vanblog/custom-code', { method: 'PUT', body: { css: cssTa.value, js: jsTa.value } });
+            status.textContent = '已保存（页面缓存约 12s 内刷新）';
+          } catch (err) {
+            status.textContent = '保存失败: ' + (err?.message ?? err);
+          }
+        });
+      }
 
       // ── Submit ──
       document.getElementById('site-form').addEventListener('submit', async (e) => {
@@ -271,6 +375,8 @@ const currentPalette = field('palette') || 'default';
           aboutUpdatedAt: new Date().toISOString().slice(0, 10),
         };
         try {
+          const pb = getPb();
+          if (!pb) { alert('客户端未就绪，请刷新重试'); return; }
           await pb.collection('site').update(siteId, data);
           alert('已保存');
         } catch (err) { alert('保存失败: ' + err.message); }
@@ -282,7 +388,7 @@ const currentPalette = field('palette') || 'default';
         manageBtn.addEventListener('click', async () => {
           const server = (document.querySelector('[name="artalk_server"]')?.value || '').replace(/\/+$/, '');
           if (!server) { alert('请先填写 Artalk Server 并保存'); return; }
-          const authToken = pb.authStore?.token || '';
+          const authToken = (getPb() || {}).authStore?.token || '';
           try {
             const tokRes = await fetch('/api/vanblog/comments-sso/token', {
               method: 'POST',
@@ -313,6 +419,8 @@ const currentPalette = field('palette') || 'default';
           reloadBtn.disabled = true;
           if (reloadStatus) reloadStatus.textContent = '重新加载中…';
           try {
+            const pb = getPb();
+            if (!pb) { if (reloadStatus) reloadStatus.textContent = '客户端未就绪，请刷新重试'; return; }
             const res = await pb.vanblog.themes.reload();
             if (res.error) {
               if (reloadStatus) reloadStatus.textContent = '加载失败：' + res.error;

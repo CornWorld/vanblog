@@ -104,6 +104,45 @@ themes/{name}/                       ← 单个 theme 的根
 
 > `name` 是主仓库 `site.activeTheme` 字段要填的值——admin 改这个字段切换主题。
 
+#### settings（可选）——主题可配置项
+
+声明主题的外观参数,管理员经后台/CLI 改值,不必 fork 主题源码。四种类型:
+
+```jsonc
+"settings": {
+  "footerText": { "type": "text",    "label": "页脚附言", "default": "" },
+  "bannerUrl":  { "type": "string",  "label": "横幅图 URL", "placeholder": "https://..." },
+  "showToc":    { "type": "boolean", "label": "显示目录", "default": true },
+  "cardStyle":  { "type": "select",  "label": "卡片样式", "values": ["flat", "bordered"], "default": "flat" }
+}
+```
+
+消费（任意 `.astro`,通常是 BaseLayout）:
+
+```astro
+---
+const themeSettings = await Astro.locals.getThemeSettings();
+const footerText = typeof themeSettings.footerText === 'string' ? themeSettings.footerText.trim() : '';
+---
+{footerText && <p>{footerText}</p>}
+```
+
+规则:key 即存储 key;值是 JSON 原始类型;服务端按声明校验写入(select 必须 in values)。**设置值公开可读——禁止用来存任何凭据**。存储/接口细节见 [reference/themes.md](../reference/themes.md)。
+
+#### 消费 post.meta（每篇文章的自定义字段）
+
+`posts.meta` 是扁平 JSON 自定义字段（写入走 admin 编辑器/pb Admin UI/REST，单篇 ≤64KB），主题用它做 per-post 变体。SDK 提供 `postMetaString(meta, ...keys)` 按 key 顺序取第一个非空字符串。平台已有约定：**`cover` / `image` / `ogImage` → og:image + twitter 大卡片**（平台 BaseLayout 与 vanblog 主题均已接线），其余 key 由主题自定义：
+
+```astro
+---
+import { postMetaString } from '@vanblog/sdk';
+const subtitle = postMetaString(post?.meta, 'subtitle');
+---
+{subtitle && <p class="post-subtitle">{subtitle}</p>}
+```
+
+注意：密码锁定文章对匿名读者的 `meta` 与 `content` 一同遮蔽（`internal/article/enrich.go`）——不要把解锁前的关键信息放进去。
+
 ### 2.2 package.json（最小示例）
 
 ```json

@@ -52,19 +52,17 @@ function loadSsrConfig() {
   }
 }
 
-// 本地 vendored 副本发射在客户端输出的 pack-static/live2d-companion/widget/
-//(构建管线原样拷贝,不经 _astro 哈希化,升级即重验)。本脚本经
-// <script type="module" src=…> 注入(BaseLayout),模块上下文里
-// document.currentScript 为 null,只能用 import.meta.url 取自身地址;文件
-// 内容原样发射,URL 不被构建改写。
-// dev 例外:astro dev 下 Vite 以 /@fs/<绝对路径> 服役本文件,且
-// vite:asset-import-meta-url 会把可静态分析的 new URL 重写为 /@fs 资产
-// 地址(尾斜杠被吞)——故 dev 分支改为站点根绝对路径,由集成的
-// /pack-static dev 中间件服役;相对段用变量间接,避免被插件静态改写。
+// 本脚本从 /pack-static/live2d-companion/ 直接服役(运行时清单注入,P0),
+// widget 目录是它的兄弟目录——相对 import.meta.url 一跳即达。
+// 历史注记:旧构建管线把本脚本哈希进 /_astro/,曾需 "../pack-static/…"
+// 回退到站点根;新链路下那是双重前缀 bug(2026-10-03 浏览器实测发现)。
+// dev 例外:astro dev 下 Vite 以 /@fs/<绝对路径> 服役本文件,vite:asset-
+// import-meta-url 会改写可静态分析的 new URL——dev 分支改为站点根绝对路径,
+// 由集成的 /pack-static dev 中间件服役;相对段用变量间接避免静态改写。
 function deriveLocalWidgetPath() {
   try {
     const self = import.meta.url;
-    const rel = "../pack-static/live2d-companion/widget/";
+    const rel = "widget/";
     if (self.includes("/@fs/")) {
       return new URL("/pack-static/live2d-companion/widget/", self).href;
     }
