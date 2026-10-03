@@ -19,7 +19,11 @@
 #
 
 # --- Stage 1: Install shared Node workspace dependencies ---
-FROM node:lts-alpine AS workspace-deps
+# Pin Node 24 (current LTS) on Alpine 3.24 — same digest as the old floating
+# node:lts-alpine today, but it can no longer silently jump majors when Node 26
+# flips LTS. Alpine 3.24's nodejs apk (24.18.1) matches this major, so builder
+# and prod runtime (which gets nodejs from apk) stay on one line.
+FROM node:24-alpine3.24 AS workspace-deps
 ARG NPM_MIRROR
 RUN corepack enable pnpm
 WORKDIR /build
@@ -134,7 +138,11 @@ RUN for pack in packs/*/; do \
     done
 
 # --- Stage 5: PROD image (Caddy + pb + Node SSR) ---
-FROM alpine:3.21 AS prod
+# Alpine 3.24 is the current stable (3.21 hits EOL 2026-11). This bump also
+# moves the runtime toolchain: nodejs 22.23.2 -> 24.18.1 (matches the builder
+# major above) and caddy 2.8.4 -> 2.11.4 (2.x config schema unchanged —
+# on_demand ask / acme / file_system storage all stable).
+FROM alpine:3.24 AS prod
 
 WORKDIR /app
 
