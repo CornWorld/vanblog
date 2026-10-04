@@ -4,7 +4,7 @@
 #
 # 前提: scripts/dev/dev-verify.sh 已起容器(或等价全栈在 BASE 可达)。
 # 覆盖: caddy ReservedPaths 反代、锁定文 teaser 卡(不泄漏正文)、
-#       私密文列表/首页缺席、private 详情重定向 /admin、UnLockCard
+#       私密文列表/首页缺席、private 详情匿名 404、UnLockCard
 #       服务端渲染、写钩子缓存失效实时性、theme 切换全链路
 #       (site.activeTheme → theme-host poll → 根路径渲染切换 + 前缀路由)。
 # 浏览器面(解锁点击流)用 xd://browser 或手工走查,本脚本为 HTTP 断言面。
@@ -138,8 +138,9 @@ check "echo \"\$HOME_HTML\" | grep -q 'E2E-LOCKED-MARKER'" "T2 首页含锁定�
 check "echo \"\$HOME_HTML\" | grep -q '该文章已加密'" "T2 锁定卡加密提示渲染"
 check "! echo \"\$HOME_HTML\" | grep -q 'SECRET-E2E-LOCKED'" "T2 锁定卡不泄漏正文"
 check "! echo \"\$HOME_HTML\" | grep -q 'E2E-PRIVATE-MARKER'" "T3 私密文首页缺席"
-PRIV_REDIRECT=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$BASE/post/e2e-private")
-check "echo \"\$PRIV_REDIRECT\" | grep -qE '^30[27] '" "T4 私密文详情重定向 /admin"
+PRIV_STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/post/e2e-private")
+PRIV_PAGE=$(curl -s "$BASE/post/e2e-private")
+check "[ \"$PRIV_STATUS\" = 404 ] && echo \"\$PRIV_PAGE\" | grep -q '文章不存在'" "T4 私密文详情匿名访问 → 404 页(不存在/无权限对匿名不可区分,统一 404;2026-10-05 起,不再弹 /admin/)"
 LOCKED_PAGE=$(curl -s "$BASE/post/e2e-locked")
 check "echo \"\$LOCKED_PAGE\" | grep -q '请输入密码'" "T5 锁定文详情渲染 UnLockCard(上游文案)"
 check "! echo \"\$LOCKED_PAGE\" | grep -q 'SECRET-E2E-LOCKED'" "T5 详情不泄漏正文"
