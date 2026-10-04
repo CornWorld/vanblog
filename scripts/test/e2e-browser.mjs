@@ -333,8 +333,92 @@ async function clickabilitySweep(path, label) {
   });
 }
 await clickabilitySweep('/', '首页');
+await clickabilitySweep('/timeline', '时间线');
+await clickabilitySweep('/archive', '归档');
+await clickabilitySweep('/tag', '标签');
 await clickabilitySweep('/post/e2e-normal', '正常文详情');
 await clickabilitySweep('/post/e2e-locked', '锁定文详情');
+
+// ── 站内链接完整性(2026-10-04 事故面:timeline 相对路径死链 /post<slug>
+// 只在语料规模 + timeline 模板出现,旧 sweep 每页只抽查前 12 条且不扫
+// timeline,全部漏掉)──
+console.log('== 站内链接完整性 ==');
+await assert('L1 主要页面全部同源链接零死链', async () => {
+  const entries = ['/', '/timeline', '/archive', '/tag', '/category', '/post/e2e-normal'];
+  const hrefs = new Set();
+  for (const p of entries) {
+    const res = await page.request.get(`${BASE}${p}`);
+    if (res.status() >= 400) throw new Error(`入口页 ${p} → ${res.status()}`);
+    const html = await res.text();
+    for (const m of html.matchAll(/href="(\/[^"#]*)"/g)) hrefs.add(m[1]);
+  }
+  if (hrefs.size < 10) throw new Error(`爬到的站内链接过少(${hrefs.size}),页面疑似没渲染内容`);
+  for (const href of hrefs) {
+    // 主题自有端点走 POST 语义/平台管理面,不在 GET 死链语义内
+    if (href.startsWith('/api/') || href === '/admin' || href.startsWith('/admin/')) continue;
+    const res = await page.request.get(`${BASE}${href}`);
+    if (res.status() >= 400) throw new Error(`死链 ${href} → ${res.status()}`);
+  }
+});
+await assert('L2 未知路径返回真 404 并渲染 404 页', async () => {
+  const res = await page.request.get(`${BASE}/e2e-no-such-page-404`);
+  if (res.status() !== 404) throw new Error(`未知路径返回 ${res.status()}, want 404`);
+  const html = await res.text();
+  if (!html.includes('此页面不存在')) throw new Error('404 响应缺少 404 页文案');
+});
+
+// ── 导航滚动交互(2026-10-04 事故面:BackToTop 捕获阶段吞 scroll 事件 +
+// headroom tolerance 0 → 上滑 nav 弹不出)──
+console.log('== 导航滚动交互 ==');
+await assert('N1 下滑 nav 收起,上滑 nav 弹出', async () => {
+  await gotoClean('/timeline');
+  // 种子页可能不足一屏:测试注入最小高度,让 scrollY 确定性到达阈值
+  // (headroom 只看 scrollY,与内容高度无关)。
+  await page.evaluate(() => {
+    document.documentElement.style.minHeight = '3000px';
+    document.body.style.minHeight = '3000px';
+  });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(400);
+  await page.evaluate(() => window.scrollTo(0, 1200));
+  await page.waitForTimeout(400);
+  const unpinned = await page.evaluate(
+    () => document.querySelector('#nav')?.classList.contains('headroom--unpinned') ?? false,
+  );
+  if (!unpinned) throw new Error('下滑 1200px 后 nav 未收起(headroom 未生效)');
+  await page.mouse.wheel(0, -400);
+  await page.waitForTimeout(500);
+  const pinned = await page.evaluate(() => {
+    const nav = document.querySelector('#nav');
+    return !nav.classList.contains('headroom--unpinned') || nav.getBoundingClientRect().top >= -1;
+  });
+  if (!pinned) throw new Error('上滑后 nav 未弹出');
+});
+
+// ── 主题按钮语义(2026-10-04 事故面:调色盘按钮逐字复制 sun/moon 图标,
+// 与明暗切换按钮无法区分;纯渲染错误不抛 pageerror,B sweep 拦不住)──
+console.log('== 主题/调色盘按钮语义 ==');
+await assert('P1 调色盘与明暗切换按钮图标可区分且面板可开', async () => {
+  await gotoClean('/');
+  const visibleIconPath = await page.evaluate(() => {
+    const icons = [
+      ...document.querySelectorAll('[aria-label="light icon"], [aria-label="dark icon"], [aria-label="auto icon"]'),
+    ];
+    const vis = icons.find((el) => el.getBoundingClientRect().width > 0);
+    return vis?.querySelector('path')?.getAttribute('d')?.slice(0, 60) ?? null;
+  });
+  const palettePath = await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('button')].find(
+      (b) => b.getAttribute('aria-label') === '切换调色盘',
+    );
+    return btn?.querySelector('path')?.getAttribute('d')?.slice(0, 60) ?? null;
+  });
+  if (!visibleIconPath) throw new Error('找不到可见的明暗切换图标');
+  if (!palettePath) throw new Error('找不到调色盘按钮图标');
+  if (visibleIconPath === palettePath) throw new Error('调色盘图标与明暗切换图标相同(语义不可区分)');
+  await page.locator('button[aria-label="切换调色盘"]').click({ timeout: 4000 });
+  await page.waitForSelector('text=跟随系统', { timeout: 4000 });
+});
 
 // ── 解锁交互(浏览器级行为) ──
 console.log('== 解锁交互 ==');
