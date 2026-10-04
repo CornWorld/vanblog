@@ -1,6 +1,6 @@
 ---
-// 404 — 上游 pages/404.tsx 逐式移植:无 Layout 壳,绝对定位居中 logo+文案+返回主页。
-// 服务端渲染以返回真实 404 状态码(爬虫/WAF 语义)。
+// 404 — 独立轻量页(不带 BaseLayout,真 404 状态码 + no-store;爬虫/WAF 语义)。
+// 视觉对齐主题卡片风格,支持暗色(prefers-color-scheme);零 JS、零外部字体。
 export const prerender = false;
 import { withBase } from '../lib/base';
 
@@ -14,16 +14,75 @@ Astro.response.headers.set('Cache-Control', 'no-store');
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>此页面不存在</title>
     <link rel="icon" href={withBase('/logo.svg')} />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f9;
+        --card: #ffffff;
+        --text: #374151;
+        --muted: #9ca3af;
+        --accent: #111827;
+        --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1a1b1f;
+          --card: #26282c;
+          --text: #d1d5db;
+          --muted: #6b7280;
+          --accent: #f3f4f6;
+          --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+        padding: 24px;
+      }
+      .card {
+        text-align: center;
+        background: var(--card);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+        padding: 56px 48px;
+        max-width: 420px;
+        width: 100%;
+        user-select: none;
+      }
+      .code {
+        font-size: 88px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        line-height: 1;
+        color: var(--accent);
+      }
+      .code span { color: var(--muted); }
+      .msg { margin-top: 16px; font-size: 15px; color: var(--muted); }
+      .home {
+        display: inline-block;
+        margin-top: 28px;
+        padding: 10px 28px;
+        border: 2px solid var(--accent);
+        border-radius: 6px;
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 15px;
+        transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+      }
+      .home:hover { background: var(--accent); color: var(--card); transform: translateY(-1px); }
+    </style>
   </head>
   <body>
-    <div class="flex items-center justify-center" style="position:absolute;top:0;left:0;bottom:0;right:0;">
-      <div class="flex flex-col items-center justify-center select-none" style="transform:translateY(-30%);">
-        <img alt="logo" src={withBase('/logo.svg')} width="200" height="200" />
-        <div class="mt-4 text-gray-600 font-base text-xl dark:text-dark">此页面不存在</div>
-        <a href={withBase('/')}>
-          <div class="mt-4 ua ua-link text-base text-gray-600 dark:text-dark">返回主页</div>
-        </a>
-      </div>
-    </div>
+    <main class="card">
+      <div class="code">4<span>0</span>4</div>
+      <p class="msg">此页面不存在,可能已被删除或从未发布。</p>
+      <a class="home" href={withBase('/')}>返回主页</a>
+    </main>
   </body>
 </html>
