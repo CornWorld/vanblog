@@ -55,7 +55,17 @@ export function resolveThemeName(themeJsonUrl) {
 export function sharedAstroConfig({ themeName, themeSrcDir, mainAppSrcDir, themePackPage, extraIntegrations = [] }) {
   return defineConfig({
     output: 'server',
-    base: `/themes/${themeName}/`,
+    // Page URLs are ROOT-relative (/timeline, /post/x) — the natural shape on
+    // a single-theme production host. Theme build assets stay theme-scoped via
+    // assetsPrefix (/themes/<name>/_astro/*), which Caddy serves from the
+    // immutable file_server tier; the theme host strips the /themes/<name>/
+    // prefix before dispatch so the SAME Astro routes serve both the root
+    // space and the legacy prefix space. Client code that must reach the
+    // theme's OWN SSR endpoints (/api/unlock) uses __VANBLOG_THEME_PREFIX__
+    // because bare /api/* is reverse-proxied to PocketBase by Caddy.
+    //
+    // import.meta.env.BASE_URL is therefore "/" and withBase() is a no-op for
+    // page links (it stays as the single choke point for /admin, /api/*).
     build: {
       assetsPrefix: `/themes/${themeName}/`,
     },
@@ -80,6 +90,12 @@ export function sharedAstroConfig({ themeName, themeSrcDir, mainAppSrcDir, theme
     },
     vite: {
       plugins: [tailwindcss()],
+      define: {
+        // Theme-scoped prefix for URLs that must reach THIS theme's own SSR
+        // endpoints through Caddy's /themes/<name>/* route (bare /api/* goes
+        // to PocketBase). Declared in themes/*/src/env.d.ts.
+        __VANBLOG_THEME_PREFIX__: JSON.stringify(`/themes/${themeName}`),
+      },
       // Dev-only: mirror the production Caddy topology by proxying same-origin
       // /api/* (search, visits, palette.css, pack endpoints) to PocketBase.
       // The theme's client code always fetches /api/* relative to its origin.
@@ -130,7 +146,9 @@ export function sharedAstroConfig({ themeName, themeSrcDir, mainAppSrcDir, theme
     },
     integrations: [
       mdx(),
-      themes({ themeSrcDir, mainAppSrcDir }),
+      // themeName: dev server strips the /themes/<name>/ mount prefix (prod
+      // equivalent lives in app/src/theme-host/core.mjs).
+      themes({ themeSrcDir, mainAppSrcDir, themeName }),
       packs({ themePage: themePackPage }),
       ...extraIntegrations,
     ],

@@ -139,6 +139,24 @@ export default function themesIntegration(options) {
           },
         });
       },
+      // Dev equivalent of the prod theme-host prefix strip
+      // (app/src/theme-host/core.mjs): the theme is also mounted at
+      // /themes/<name>/ (Caddy topology), while dev route matching is
+      // root-relative (Astro base "/"). Without this, prefix-space URLs 404
+      // in `pnpm dev` even though they work in the built deployment.
+      'astro:server:setup': ({ server, logger }) => {
+        const themeName = options.themeName;
+        if (!themeName) return;
+        const prefix = `/themes/${themeName}`;
+        server.middlewares.use((req, _res, next) => {
+          const url = req.url || '/';
+          if (url === prefix || url.startsWith(`${prefix}/`)) {
+            req.url = url.slice(prefix.length) || '/';
+            logger.info(`vanblog-themes: stripped mount prefix ${prefix} → ${req.url}`);
+          }
+          next();
+        });
+      },
       // HMR is handled by Astro's standard file watcher because both the
       // theme's `src/` and `src/base-overrides/` live inside the project
       // root, and the main repo's `app/src/` is reachable via the alias

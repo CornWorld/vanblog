@@ -11,6 +11,10 @@ declare module "vanblog:theme" {
   export const Page: AstroComponentFactory;
 }
 
+/** 本主题挂载前缀(/themes/<name>,shared-config vite.define 注入)。
+ *  仅用于必须命中主题自有 SSR 端点的 URL(裸 /api/* 在 caddy 归 pb)。 */
+declare const __VANBLOG_THEME_PREFIX__: string;
+
 
 declare namespace App {
   interface Locals {

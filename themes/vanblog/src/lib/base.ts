@@ -1,14 +1,13 @@
 /**
- * 站内路径统一加 Astro base 前缀。
+ * 站内路径守卫(Astro base="/",页面 URL 天然根相对)。
  *
- * 主题以 base=/themes/<name>/ 运行（dev 直访与生产 Caddy 拓扑一致：
- * 静态件与 fallback 都保留前缀转发）。原版裸根路径（/post/x、/page/2）
- * 在此拓扑下必须带前缀才是有效路由。
- *
- * 排除（平台根路径，不属于主题 base）：
- * - /admin/**（管理面板 SSR app，base="/"）
- * - /api/**（Go 层平台端点）
- * - 外链与非根相对路径原样返回。
+ * 页面链接是根路径(/post/x、/page/2);主题构建资产经 assetsPrefix 落在
+ * /themes/<name>/_astro/*(caddy immutable 层),/themes/<name>/* 的页面请求
+ * 由主题宿主剥前缀后路由到同一套根相对路由。withBase() 因此是恒等返回,
+ * 保留为唯一收口点,豁免平台根路径:
+ * - /admin/**(管理面板 SSR app)
+ * - /api/**(Go 层平台端点)
+ * 外链与非根相对路径原样返回。
  */
 export const withBase = (path: string): string => {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');

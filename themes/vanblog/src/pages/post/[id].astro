@@ -32,9 +32,9 @@ const site = await Astro.locals.getSite();
 
 const { id } = Astro.params;
 if (!id) return Astro.redirect('/404');
-// 密码解锁走 vendor UnLockCard → POST <base>/api/unlock(服务端渲染+消毒+
-// 下发 path 限定 cookie;base 前缀必带,裸 /api/* 会被 caddy 反代到 pb —
-// 见 seams/unlock.ts);本页不再接收表单 POST。
+// 密码解锁走 vendor UnLockCard → POST <主题前缀>/api/unlock(服务端渲染+
+// 消毒+下发 path 限定 cookie;裸 /api/* 会被 caddy 反代到 pb — 见
+// seams/unlock.ts);本页不再接收表单 POST。
 let data: Post | null = null;
 let html: string | null = null;
 // 密码锁语义:匿名读者拿到的行已被平台遮蔽(content/password 空,hasPassword
@@ -62,7 +62,11 @@ try {
         const content = normalizeMathDelimiters(raw.content || '');
         html = (await renderMarkdown(content)).code;
       } else {
-        const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+        // basePath = 本次请求的挂载前缀(根空间为空串;prefixed 空间为
+        // /themes/<name>),Go 层写进解锁 cookie 的 Path 以匹配页面 URL。
+        const reqPath = new URL(Astro.request.url).pathname;
+        const mount = reqPath.match(/^\/themes\/[^/]+/);
+        const basePath = mount ? mount[0] : '';
         const r = await fetch(`${pb.baseURL}/api/vanblog/posts/${raw.id}/unlock`, {
           method: 'POST',
           headers: {
@@ -185,7 +189,6 @@ const lp = getPostCardLayoutProps(site);
         updatedAt={new Date(data.updated || Date.now())}
         createdAt={new Date(data.created || Date.now())}
         catelog={categoryName}
-        contentHtml={locked ? '' : (safeHtml ?? '')}
         showToc={hasToc}
         tocItems={tocItems}
         type="article"
@@ -196,7 +199,11 @@ const lp = getPostCardLayoutProps(site);
         next={nextPost ?? undefined}
         enableComment={lp.enableComment}
         setContent={() => location.reload()}
-      />
+      >
+        {/* 正文走 slot:全文 HTML 不进 astro-island props 序列化(此前正文在
+            props 属性里转义重复一份,页面体积近乎翻倍)。锁态不注入。 */}
+        {!locked && safeHtml !== null && <div set:html={safeHtml} />}
+      </PostCard>
     </Fragment>
   ) : (
     <ErrorNotice code="404" title="文章不存在" message="该文章可能已被删除、未发布，或你没有访问权限。" />

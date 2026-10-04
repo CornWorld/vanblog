@@ -384,6 +384,19 @@ export function createThemeHost(options = {}) {
         // which returns its own 404 for /admin (legacy behaviour).
       }
 
+      // --- Theme-mount prefix normalization ---
+      // Page URLs are root-relative (Astro base is "/"), but the site is also
+      // reachable through the /themes/<name>/ mount space: Caddy's SSR route
+      // (vanblog-theme-<name>-ssr) proxies /themes/<name>/* here unstripped,
+      // and dev multi-theme setups address the active theme the same way.
+      // Astro route matching is root-relative, so normalize the prefix away
+      // (pages, theme API endpoints like /themes/<name>/api/unlock, public
+      // files) before dispatching to the active theme handler.
+      if (pathname.startsWith('/themes/')) {
+        const rest = pathname.slice('/themes/'.length).replace(/^[^/]+/, '');
+        req.url = (rest || '/') + url.slice(pathname.length);
+      }
+
       // --- All other requests → active theme handler ---
       const theme = await getActiveHandler();
       theme.refCount++;

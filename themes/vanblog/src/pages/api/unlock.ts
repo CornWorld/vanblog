@@ -20,7 +20,7 @@ const json = (data: unknown, status: number) =>
   });
 
 export const POST: APIRoute = async ({ locals, request, cookies }) => {
-  let body: { id?: string; password?: string };
+  let body: { id?: string; password?: string; basePath?: string };
   try {
     body = await request.json();
   } catch {
@@ -31,7 +31,10 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   if (!id || !password) return json({ message: '输入不能为空！' }, 400);
 
   const pb = locals.pb;
-  const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+  // basePath = 页面 URL 的主题挂载前缀(客户端按 location.pathname 计算,根
+  // 空间为空串)。Go 层校验后写进解锁 cookie 的 Path,保证刷新/分享时页面
+  // URL 一定带上 cookie(两个 URL 空间都正确)。
+  const basePath = typeof body.basePath === 'string' && body.basePath ? body.basePath : '';
   const r = await fetch(`${pb.baseURL}/api/vanblog/posts/${id}/unlock`, {
     method: 'POST',
     headers: {
@@ -50,11 +53,10 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   const { content } = await r.json();
 
   // 中继 Go 层 Set-Cookie(vb-unlock-<id> = HMAC 签名 token),浏览器刷新/
-  // 分享后凭 cookie 免密重看。cookie path 必须等于**页面 URL**(/post/<id>
-  // ——站点经 caddy 把文章页挂载在根路径;/themes/<name>/ 只是资产前缀,
-  // 不能进 cookie path,否则 path 永不匹配页面,解锁后刷新仍回到锁定态,
-  // 死循环)。id 可能是带前导斜杠的 slug 路径,归一之。
-  const cookiePath = `/post/${id.replace(/^\//, "")}`;
+  // 分享后凭 cookie 免密重看。cookie path 必须等于**页面 URL**(/post/<id>,
+  // 可带主题挂载前缀)——path 永不匹配页面会让解锁后刷新仍回到锁定态,
+  // 死循环。id 可能是带前导斜杠的 slug 路径,归一之。
+  const cookiePath = `${basePath}/post/${id.replace(/^\//, "")}`;
   for (const raw of r.headers.getSetCookie?.() ?? []) {
     const [pair] = raw.split(';');
     const eq = pair.indexOf('=');

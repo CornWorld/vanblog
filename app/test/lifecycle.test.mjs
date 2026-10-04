@@ -360,6 +360,30 @@ describe('theme lifecycle', () => {
     await host.handleRequest(fakeReq('/posts/hello'), res);
     assert.match(res.body, /\[BETA\]\/posts\/hello/);
   });
+
+  it('strips the /themes/<name>/ mount prefix before dispatch (pages, API, query)', async () => {
+    // Page URLs are root-relative (Astro base "/"); the /themes/<name>/ space
+    // is normalized away so both URL spaces hit the same routes.
+    const { themesDir, adminDistDir } = themeFixtureSet();
+    const host = createThemeHost({ themesDir, defaultThemeName: 'alpha', adminDistDir });
+    const cases = [
+      ['/themes/alpha/timeline', '[ALPHA]/timeline'],
+      ['/themes/alpha/api/unlock', '[ALPHA]/api/unlock'],
+      ['/themes/alpha', '[ALPHA]/'],
+      ['/themes/alpha/post/x?unlock=1', '[ALPHA]/post/x?unlock=1'],
+      // Unknown theme name under the mount prefix still resolves to the
+      // active theme (same single-active semantics as before the strip).
+      ['/themes/unknown/tag/y', '[ALPHA]/tag/y'],
+      // Non-prefixed requests pass through untouched.
+      ['/timeline', '[ALPHA]/timeline'],
+    ];
+    for (const [input, expected] of cases) {
+      const res = fakeRes();
+      await host.handleRequest(fakeReq(input), res);
+      const re = new RegExp(expected.replace(/[.*+?^${}()|[\]\\/?]/g, '\\$&'));
+      assert.match(res.body, re, `${input} → ${expected}`);
+    }
+  });
 });
 
 // ------------------------------------------------------------

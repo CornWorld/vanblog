@@ -32,7 +32,7 @@
 | 列表排序 | 服务端默认 `-top,-created` | SDK `sort: '-top,-created'` | 置顶优先 + 创建时间倒序,逐项一致 |
 | 发布可见性 | getStaticProps + ISR 时间窗重建 | SSR 缓存(`routeRules` SWR)+ Go 写钩子 `POST /api/revalidate` 主动失效 | 主动失效比 ISR 窗口更即时;e2e:`app/test/cache-e2e.test.mjs` |
 | `/?page=N` 缓存隔离 | 原版无此入口(兼容层自有) | Astro cache 键含 query(`x-astro-cache` 实测 `/` 与 `/?page=2` 各自 MISS/HIT) | 兼容入口不污染首页缓存 |
-| 站内链接 | 裸根路径(站点根=`/`) | `withBase()` 统一加 `/themes/<name>/`(站点根=主题前缀) | 语义等价:都是"站内路由根";平台 `/admin`、`/api/*` 除外 |
+| 站内链接 | 裸根路径(站点根=`/`) | 页面链接同为根路径:shared-config `base:'/'`,withBase() 恒等返回(仅豁免 `/admin`、`/api/*`);主题构建资产走 `assetsPrefix=/themes/<name>/`(caddy immutable 层),`/themes/<name>/*` 请求由主题宿主剥前缀归一到根相对路由(2026-10-04 起;此前 withBase 加前缀,链接与 dev 多主题共享前缀空间) | 语义等价:都是"站内路由根",且与上游 URL 形态一致;主题自有 SSR 端点(/api/unlock)用 `__VANBLOG_THEME_PREFIX__` 走前缀空间(裸 /api/* 在 caddy 归 pb) |
 | 数据获取 | SWR + legacy `/api/public/*` | SDK 串行取数(同 client 并发触发 auto-cancel) | 渲染输入同源(parity 垫片保证);串行是实现约束非行为差异 |
 | Markdown 渲染 | bytemd 客户端 | 平台 remark/rehype SSR + `lib/upstreamMarkdown.ts` 后处理对齐 DOM | 代码块/标题/TOC 行 DOM 同构;语法高亮保持平台 shiki 内联色(见下行) |
 | 语法高亮 | highlight.js(`hljs` 类,code-light/dark.css) | 平台管线 shiki 内联色 + `--shiki-dark` 暗色变量 | **有意分叉**:暗色即开即用;换行符/Token 粒度不同,文本内容一致 |

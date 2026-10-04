@@ -135,21 +135,22 @@ import packs from "../../app/integrations/packs/index.mjs";
 const themeName = "magazine"; // ← 必须与目录名一致
 
 export default defineConfig({
-  // ★ 关键：让所有资源 URL 自带 /themes/<name>/ 前缀
-  base: `/themes/${themeName}/`,
+  // ★ 关键：页面 URL 走根路径(base '/'),构建资产带 /themes/<name>/ 前缀
+  //   (Astro 5 的 base 不改 SSR 路由匹配,见 §3.4;前缀空间的剥除在 theme host)。
   build: {
-    assetsPrefix: `${themeName}/`, // Astro 会拼到 /themes/<name>/_astro/...
+    assetsPrefix: `/themes/${themeName}/`, // Astro 会拼到 /themes/<name>/_astro/...
   },
   output: "server",
   adapter: node({ mode: "standalone" }),
   integrations: [
-    themes({ themeSrcDir: "./src", mainAppSrcDir: "../../app/src" }),
+    themes({ themeSrcDir: "./src", mainAppSrcDir: "../../app/src", themeName }),
     packs({ themePage: "./src/layouts/PackPage.astro" }),
   ],
 });
 ```
 
-**vs 当前**：只多了 `base` + `assetsPrefix` 两行。其他（薄壳 pages、base-overrides、middleware.ts、live.config.ts）**完全不变**。
+**vs 当前**：只多了 `assetsPrefix` 一行（base 保持默认 `/`）。其他（薄壳 pages、
+base-overrides、middleware.ts、live.config.ts）**完全不变**。
 
 ### 3.4 静态资源路径变化
 
@@ -161,7 +162,15 @@ export default defineConfig({
 | Public 资源 | `/favicon.ico`               | `/themes/magazine/favicon.ico`               |
 | API         | `/api/posts`                 | `/api/posts`（**不变**）                     |
 
-主题作者**无需关心**这些——Astro `base` 配置会自动处理所有资源 URL 生成。
+主题作者**无需关心**这些——`assetsPrefix`（非 `base`）处理所有资产 URL：
+**Astro 5 的 `base` 只影响 `import.meta.env.BASE_URL`（链接生成），不改 SSR 路由
+匹配**——构建出的路由 pattern 本就是根相对的（`^/timeline/?$`）。因此本仓裁定
+（2026-10-04）：`base: '/'`，页面 URL 天然根相对；`assetsPrefix: '/themes/<name>/'`
+让哈希资产落在 caddy 的 immutable file_server 层；`/themes/<name>/*` 的页面/主题
+API 请求由 theme host 剥前缀后分发到同一套路由（`app/src/theme-host/core.mjs`；
+dev server 等价逻辑在 themes 集成的 `astro:server:setup`）。主题自有 SSR 端点
+（如 `/api/unlock`）在客户端经 `__VANBLOG_THEME_PREFIX__` 走前缀空间——裸
+`/api/*` 在 Caddy 全量反代 PocketBase，到不了 Astro。
 
 ---
 
@@ -885,27 +894,30 @@ const resolve = async (specifier) => {
 | API                                 | `/api/posts`                               | **永远不带前缀**（admin/api 禁区）           |
 | Pack 页面 URL                       | `/p/bookmarks`                             | 不带前缀（路由 pattern 决定）                |
 
-### 14.6 theme host 的 URL 处理契约（明确）
+### 14.6 theme host 的 URL 处理契约（2026-10-04 修订）
 
-theme host 接收到请求后：
+历史契约（base=/themes/<name>/ 时代）是「host 不重写 URL，Astro removeBase 自己
+剥前缀」。base 改为 '/' 后 Astro 无 base 可剥，前缀空间的归一移入 host——
+`app/src/theme-host/core.mjs` handleRequest 在分发前做一次剥除：
 
 ```ts
-// 1. 判断是否是 theme 静态资源
-if (
-  req.url.startsWith(`/themes/${name}/_astro/`) ||
-  req.url.startsWith(`/themes/${name}/static/`)
-) {
-  // 让 caddy file_server 处理，或 theme host 内部 sirv
-  return serveStatic(req, res, themesDir(name));
+// /themes/<name>/ 前缀空间(caddy SSR 路由透传 + dev 多主题挂载)归一到
+// 根相对路径再交给 theme handler;query 保留;根空间请求原样透传。
+if (pathname.startsWith('/themes/')) {
+  req.url = pathname.slice('/themes/'.length).replace(/^[^/]+/, '') + query;
 }
-
-// 2. 其他所有请求（HTML 页面、API、Pack）
-//    直接传给 theme handler，URL 不重写
-//    Astro handler 自己用 removeBase 兼容带/不带 base 前缀的 URL
-return theme.handler(req, res);
 ```
 
-**关键**：theme host **不重写 URL**，让 Astro 自己处理 base。用户看到的 URL 永远是 `/posts/123`（caddy fallback 路由到 theme host，theme host 透传给 handler）。
+| URL 空间 | 例 | 处理 |
+| --- | --- | --- |
+| 根空间（**规范形态**） | `/timeline`、`/post/x` | 直接命中 Astro 根相对路由 |
+| 前缀空间（兼容/dev 多主题） | `/themes/vanblog/timeline`、`/themes/vanblog/api/unlock` | host 剥 `/themes/<name>` → 同一路由 |
+| 主题构建资产 | `/themes/<name>/_astro/*` | caddy file_server immutable 层，不到 host |
+| 主题自有 SSR 端点 | `/api/unlock` | 客户端必须用 `__VANBLOG_THEME_PREFIX__` 走前缀空间（裸 `/api/*` 在 caddy 归 pb） |
+
+**规范 URL 是根空间**：站内链接、canonical、sitemap 全部根相对；前缀空间仅为
+资产隔离（assetsPrefix）与 dev 多主题挂载保留。回归测试：
+`app/test/lifecycle.test.mjs`「strips the /themes/<name>/ mount prefix」。
 
 ### 14.7 对方案 7/8 的影响
 
@@ -1033,3 +1045,25 @@ async function switchTheme(newName: string) {
 **天平倾斜**：方案 7（单进程 theme host）的 4 个主要担忧里，**3 个已解除**。剩下「单进程崩溃半径」是唯一明显劣势——但可以通过 `process.on('unhandledRejection')` + 健康探活 + 自动重启缓解（生产级 Node 服务标准操作）。
 
 **新判断**：方案 7 vs 方案 8 的选择倾向**回到均势**，甚至方案 7 略胜（代码量更少、内存更省、切换更快）。
+
+---
+
+## 16. 软导航（Astro ClientRouter / pjax）调研结论（2026-10-04，未启用）
+
+用户问「Astro 有没有 pjax 支持」——有：`astro:transitions` 的 `<ClientRouter />`。
+评估后**本轮不启用**，明暗图标/⌘ 闪烁已用更窄的根因修复解决（FOUC 脚本 +
+`data-theme-mode`/`platform-mac` CSS 驱动，见 vendor ThemeButton/KeyCard 偏离登记）。
+启用软导航前必须先解决三个真实 blocker：
+
+1. **Pack 前端契约缺失**：pack 前端脚本（如 live2d-companion 的 autoload.js）是
+   一次性 IIFE，DOM 挂在 body 上。软导航换 body 后 widget 消失且脚本不会重跑
+   （module 语义每个 URL 只执行一次）。需要 pack.json 约定 `softNav: re-init`
+   之类的生命周期声明 + 注入器包一层 `astro:after-swap` 重放。
+2. **页面级 module 脚本不重跑**：post 页的 mermaid 渲染脚本在 post→post 软导航
+   间不重新执行，需改成 `astro:after-swap` 重扫（幂等）。
+3. **客户端态同步**：FOUC 脚本需挂 `astro:after-swap` 重放（swap 会重置 html
+   的 dark/data-theme-mode/platform-mac）；headroom/ToastProvider 等 island 随
+   重水合自恢复，无需处理。
+
+三项都做完 + e2e 补软导航回归（现有套件全是整页导航，测不出这类回归）才值得开。
+估算：1-2 天含回归。
