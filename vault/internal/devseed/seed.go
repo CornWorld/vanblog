@@ -378,7 +378,7 @@ func ensureSite(app core.App) error {
 			rec.Set("siteDesc", gofakeit.HackerPhrase())
 		}
 		if rec.GetString("author") == "" {
-			rec.Set("author", gofakeit.Name())
+			rec.Set("author", "demo user")
 		}
 		if rec.GetString("authorLogo") == "" {
 			rec.Set("authorLogo", gravatar)
@@ -388,7 +388,7 @@ func ensureSite(app core.App) error {
 	rec = core.NewRecord(col)
 	rec.Set("siteName", gofakeit.AppName())
 	rec.Set("siteDesc", gofakeit.HackerPhrase())
-	rec.Set("author", gofakeit.Name())
+	rec.Set("author", "demo user")
 	rec.Set("authorLogo", gravatar)
 	return app.Save(rec)
 }

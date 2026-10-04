@@ -155,16 +155,9 @@ if (data?.category) {
   categoryName = cat?.name || '';
 }
 
-// 作者名(CopyRight 用;上游 props.author = 文章作者名字符串)
-let authorName = '';
-if (data?.author) {
-  const authorId = data.author;
-  const { data: u } = await safe(
-    () => pb.collection('users').getOne<{ name?: string }>(authorId),
-    'post-author',
-  );
-  authorName = u?.name || '';
-}
+// 作者名(CopyRight 用)。上游 getLayoutProps:author = siteInfo.author——
+// 站点级作者,非按文章反查 users(users 对匿名不可见,反查必空)。
+const authorName = site?.author || '';
 
 const tagNames = tagIds.map((tid) => tagMap[tid]).filter(Boolean);
 const lp = getPostCardLayoutProps(site);
