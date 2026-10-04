@@ -221,7 +221,7 @@
     { "local": "src/styles/vendor/github-markdown.css", "derivation": "mechanical",
       "upstream": [{ "path": "styles/github-markdown.css" }],
       "rewrites": ["semantic-var-mapping", "light-scope-html-not-dark"],
-      "patches": [{ "id": "dangling-var-fix", "why": "--color-text-primary 上游无定义为悬空引用,改 var(--text)" }],
+      "patches": [{ "id": "dangling-var-fix", "why": "--color-text-primary 上游无定义为悬空引用,改 var(--text)" }, { "id": "canvas-default-card-literal", "why": "机械映射 var(--bg)(页底)使卡片内 .markdown-body 与表格行涂页底色(#f1f5f9/#1d2025),上游为卡片同色不可见;改回上游 literal 与卡片类 bg-white/dark:bg-dark(rgb(38,40,44)) 同值" }],
       "notes": "prettylights 语法色、danger/attention、--color-neutral-muted 半透明保留 literal;mermaid 底色映射 var(--surface)。" },
     { "local": "src/styles/vendor/loader.css", "derivation": "mechanical",
       "upstream": [{ "path": "styles/loader.css" }],

@@ -35,7 +35,7 @@
   --color-fg-default: var(--text);
   --color-fg-muted: var(--text-muted);
   --color-fg-subtle: var(--text-muted);
-  --color-canvas-default: var(--bg);
+  --color-canvas-default: #26282c; /* upstream literal: 与卡片 dark:bg-dark(rgb(38,40,44)) 同值;别名 --bg(#1d2025)/--surface-dark(#1e293b) 均不等,机械映射页底曾在卡片内涂出异色矩形 */
   --color-canvas-subtle: var(--surface-soft);
   --color-border-default: var(--border);
   --color-border-muted: var(--border);
@@ -82,7 +82,7 @@ html:not(.dark) .markdown-body {
   --color-fg-default: var(--text);
   --color-fg-muted: var(--text-muted);
   --color-fg-subtle: var(--text-muted);
-  --color-canvas-default: var(--bg);
+  --color-canvas-default: #ffffff; /* upstream literal: 与卡片 bg-white 同值;不用 var(--surface) 以免调色盘覆写后与字面量卡片类脱节 */
   --color-canvas-subtle: var(--surface-soft);
   --color-border-default: var(--border);
   --color-border-muted: var(--border);
