@@ -54,6 +54,10 @@ cd $VANBLOG_BASE_PATH && docker compose down -v
   `VANBLOG_DEMO_REPO_BRANCH` 覆盖，整包地址用 `VANBLOG_DEMO_REPO_TARBALL`。
 - 镜像更新由 watchtower 轮询 ghcr 完成（demo 容器跟踪 **`prod-latest`**，
   release 工作流的滚动 tag）。
+  ⚠️ watchtower 以 `--label-enable vanblog` 只盯带
+  `com.centurylinklabs.watchtower.enable=true` label 的容器——**手动重建
+  容器必须原样带上该 label**（2026-10-04 v0.9.3 手动重建时漏掉，watchtower
+  从此 Scanned=0、自动更新静默断链，v0.9.4 起修复并实测 Scanned=1）。
 - ⚠️ 逻辑：定位容器（compose/裸 run 均可）→ `docker stop` → 清空宿主
   `/pb_data` 绑定目录 → `docker start` → 跑 `demo-setup.sh`（重建 demo
   管理员 + 白名单 + site/showcase + HN 语料文章 + 置顶欢迎文）
