@@ -234,19 +234,26 @@ func TestManagementServerIncludesStaticRoutes(t *testing.T) {
 	if srv == nil || len(srv.Listen) != 1 || srv.Listen[0] != ":8080" {
 		t.Fatalf("unexpected mgmt server: %+v", srv)
 	}
-	// api + _/ + 3 admin + len(themeNames)×2 static + fallback.
-	want := 2 + 3 + len(themeNames)*2 + 1
+	// api + _/ + 3 admin + len(themeNames)×2 static + pack-static + fallback.
+	want := 2 + 3 + len(themeNames)*2 + 1 + 1
 	if len(srv.Routes) != want {
-		t.Fatalf("expected %d routes (2 pb + static + fallback), got %d", want, len(srv.Routes))
+		t.Fatalf("expected %d routes (2 pb + static + pack-static + fallback), got %d", want, len(srv.Routes))
 	}
 	// The mirror repeats the public static routes WITHOUT @id (Caddy >= 2.10
 	// rejects duplicate IDs across servers), so locate the admin static route
 	// structurally: /_astro/* path match + terminal file_server handler.
 	found := false
+	packStatic := false
 	for i, r := range srv.Routes {
 		if len(r.Match) == 1 && len(r.Match[0].Path) == 1 && r.Match[0].Path[0] == "/_astro/*" &&
 			len(r.Handle) > 0 && r.Handle[len(r.Handle)-1].Handler == "file_server" {
 			found = true
+		}
+		// Pack 前端资产:dev 拓扑 :8080 是唯一 HTTP 面,缺它则 pack 样式/脚本
+		// 全站 404(2026-10-04 e2e L1 爬链回归)。
+		if len(r.Match) == 1 && len(r.Match[0].Path) == 1 && r.Match[0].Path[0] == "/pack-static/*" &&
+			len(r.Handle) == 1 && r.Handle[0].Handler == "reverse_proxy" {
+			packStatic = true
 		}
 		if r.ID != "" {
 			t.Errorf("mgmt mirror route %d must be anonymous (no @id), got %q", i, r.ID)
@@ -257,6 +264,9 @@ func TestManagementServerIncludesStaticRoutes(t *testing.T) {
 	}
 	if !found {
 		t.Error("srv_mgmt is missing the admin static (file_server) route")
+	}
+	if !packStatic {
+		t.Error("srv_mgmt is missing the /pack-static/* route (pack assets 404 on :8080)")
 	}
 }
 

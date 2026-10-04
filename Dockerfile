@@ -230,7 +230,12 @@ RUN apk add --no-cache npm git && npm install -g pnpm@latest-10
 # Pi coding agent — the "msys2 git-bash" equivalent: a minimal, zero-config
 # AI assistant pre-installed in the dev container. Default provider is
 # OpenCode Zen free models (no API key needed). See refs/agent-platform-selection.md.
-RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+# NPM_MIRROR 与头部文档化入口一致:registry.npmjs.org 直连抖动时用
+# --build-arg NPM_MIRROR=https://registry.npmmirror.com 兜底(2026-10-04
+# 实测连续 ECONNRESET)。
+ARG NPM_MIRROR
+RUN if [ -n "$NPM_MIRROR" ]; then npm config set registry "$NPM_MIRROR"; fi \
+  && npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
 # Keep dev workspace layout identical to the source workspace so Astro can
 # resolve app/integrations, root packs/, themes/, and the workspace SDK consistently.
@@ -278,7 +283,8 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 # Development image with bundled Artalk capability.
 FROM prod-artalk AS dev-artalk
-RUN apk add --no-cache npm git && npm install -g pnpm@latest-10
+ARG NPM_MIRROR
+RUN apk add --no-cache npm git && if [ -n "$NPM_MIRROR" ]; then npm config set registry "$NPM_MIRROR"; fi && npm install -g pnpm@latest-10
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 # Manifests first (see dev stage note): install only reruns on lockfile change.
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc /workspace/

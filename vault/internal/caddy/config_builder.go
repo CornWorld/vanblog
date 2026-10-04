@@ -480,6 +480,17 @@ func buildManagementServerRoutes(opts BuildOpts) *caddyadmin.Server {
 		r.ID = ""
 		routes = append(routes, r)
 	}
+	// Pack 前端资产与静态路由同理镜像(去 ID):dev 拓扑里 :8080 是唯一发布
+	// 的 HTTP 面,pack 的 <link>/<script> 注入 URL 全走 /pack-static/*——
+	// 缺这条时 dev 全站 pack 样式/脚本 404(2026-10-04 e2e L1 爬链发现;
+	// pack.go 的活目录直出对 pb 直连本就 200,缺口只在路由表)。
+	routes = append(routes, caddyadmin.Route{
+		Match: []caddyadmin.MatchRule{{Path: []string{"/pack-static/*"}}},
+		Handle: []caddyadmin.Handler{{
+			Handler:   "reverse_proxy",
+			Upstreams: []caddyadmin.Upstream{{Dial: pbAPIHost}},
+		}},
+	})
 	routes = append(routes, caddyadmin.Route{
 		// Catch-all fallback to Astro.
 		Handle: []caddyadmin.Handler{{

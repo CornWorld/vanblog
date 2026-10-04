@@ -173,16 +173,20 @@ func TestBuildBootstrapConfigServers(t *testing.T) {
 		t.Errorf("srv_http redirect Location mismatch: %v", loc)
 	}
 
-	// srv_mgmt (:8080) proxies /api/* and /_/* to pb, fallback to Astro.
+	// srv_mgmt (:8080) proxies /api/* and /_/* to pb, pack-static to pb,
+	// fallback to Astro.
 	mgmt := servers["srv_mgmt"].Routes
-	if len(mgmt) != 3 {
-		t.Fatalf("srv_mgmt should have 3 routes, got %d", len(mgmt))
+	if len(mgmt) != 4 {
+		t.Fatalf("srv_mgmt should have 4 routes, got %d", len(mgmt))
 	}
 	if mgmt[0].Handle[0].Upstreams[0].Dial != "127.0.0.1:8090" {
 		t.Errorf("srv_mgmt[0] should dial pb, got %s", mgmt[0].Handle[0].Upstreams[0].Dial)
 	}
-	if mgmt[2].Handle[0].Upstreams[0].Dial != "127.0.0.1:4321" {
-		t.Errorf("srv_mgmt fallback should dial Astro, got %s", mgmt[2].Handle[0].Upstreams[0].Dial)
+	if mgmt[2].Handle[0].Upstreams[0].Dial != "127.0.0.1:8090" {
+		t.Errorf("srv_mgmt[2] (pack-static) should dial pb, got %s", mgmt[2].Handle[0].Upstreams[0].Dial)
+	}
+	if mgmt[3].Handle[0].Upstreams[0].Dial != "127.0.0.1:4321" {
+		t.Errorf("srv_mgmt fallback should dial Astro, got %s", mgmt[3].Handle[0].Upstreams[0].Dial)
 	}
 }
 
