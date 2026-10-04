@@ -41,9 +41,20 @@ cd $VANBLOG_BASE_PATH && docker compose down -v
 
 > ⚠️ `down -v` 会删全部数据（含评论、上传、证书缓存）。Demo 站允许，**生产环境切勿如此操作**。
 
+## 自动重置（防 demo 账号被滥用）
+
+线上 demo（sg，裸 `docker run` + watchtower 自动更镜像）装有 **systemd timer 每日 04:30 自动重置**：
+
+- 单元：`/etc/systemd/system/vanblog-demo-reset.{service,timer}`，`User=corn`
+- 脚本：`/opt/vanblog/scripts/ops/demo-reset.sh`（与本仓 `scripts/ops/` 同源，改动后需重新 scp）
+- 逻辑：定位容器（compose/裸 run 均可）→ `docker stop` → 清空宿主 `/pb_data` 绑定目录 → `docker start` → 跑 `demo-setup.sh`（重建 demo 管理员 + 白名单 + 种子文章）
+- 手动触发：`sudo systemctl start vanblog-demo-reset.service`
+
+`demo-setup.sh` 本身也兼容两种部署形态：优先从 compose（服务名 `vanblog`）解析容器，无 compose 项目时用裸容器名（`VANBLOG_DEMO_CONTAINER`，默认 `vanblog`）；依赖仅 `curl`/`python3`/`docker`（不依赖 jq）。
+
 ## 维护约定
 
-- **账号**：公开 `demo`/`demo1234`。若被改，重置时一并恢复（demo-setup.sh 只在无管理员时创建，重置后即重建）。
+- **账号**：公开 `demo`/`demo1234`。被改也不要紧——每日定时重置会恢复；等不及就手动触发上面的 service。
 - **主题/内容**：可自由折腾，反正会重置。别在 demo 上配真实 S3/邮箱。
 - **证书**：Let's Encrypt 按域名签发，`allowedDomains` 改了要同步 `vanblog.corn.im`。
 - **评论**：如需展示评论，使用 `prod-artalk` 镜像并在 `/setup` 向导中启用 Artalk 后重启（见 [配置参考](../reference/configuration.md)）。
