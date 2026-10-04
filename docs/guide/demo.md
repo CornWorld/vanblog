@@ -44,12 +44,19 @@ cd $VANBLOG_BASE_PATH && docker compose down -v
 
 ## 自动重置（防 demo 账号被滥用）
 
-线上 demo（sg，裸 `docker run` + watchtower 自动更镜像）装有 **systemd timer 每日 04:30 自动重置**：
+线上 demo（裸 `docker run` + watchtower 自动更镜像）装有 **systemd timer 每小时自动重置**：
 
-- 单元：`/etc/systemd/system/vanblog-demo-reset.{service,timer}`，`User=corn`
-- 脚本：`/opt/vanblog/scripts/ops/demo-reset.sh`（与本仓 `scripts/ops/` 同源，改动后需重新 scp）
-- ⚠️ demo-setup 现依赖仓库 `bench/` 目录（fetch-corpus/seed/corpus.ids.json）——部署机上需与 `scripts/` 一起同步，或以 `VANBLOG_DEMO_BENCH_DIR` 指定
-- 逻辑：定位容器（compose/裸 run 均可）→ `docker stop` → 清空宿主 `/pb_data` 绑定目录 → `docker start` → 跑 `demo-setup.sh`（重建 demo 管理员 + 白名单 + site/showcase + HN 语料文章）
+- 单元：`/etc/systemd/system/vanblog-demo-reset.{service,timer}`，`User=corn`，`OnCalendar=hourly`
+- 脚本：`/opt/vanblog/scripts/ops/demo-reset.sh`
+- **自更新**（2026-10-05 起）：每次重置前先拉取仓库 `main-go` 分支 tarball，
+  用最新 `scripts/` + `bench/` 覆盖宿主副本再继续执行——重置逻辑与种子数据
+  （HN 评论、全量 tag）永远跟仓库走，宿主副本不会老化。分支可用
+  `VANBLOG_DEMO_REPO_BRANCH` 覆盖，整包地址用 `VANBLOG_DEMO_REPO_TARBALL`。
+- 镜像更新由 watchtower 轮询 ghcr 完成（demo 跟踪 `prod-edge` tag；release
+  工作流发的是 `prod-latest`/`vX.Y.Z-prod`，edge 由镜像同步机制跟随 latest）。
+- ⚠️ 逻辑：定位容器（compose/裸 run 均可）→ `docker stop` → 清空宿主
+  `/pb_data` 绑定目录 → `docker start` → 跑 `demo-setup.sh`（重建 demo
+  管理员 + 白名单 + site/showcase + HN 语料文章，正文含评论区块）
 - 手动触发：`sudo systemctl start vanblog-demo-reset.service`
 
 `demo-setup.sh` 本身也兼容两种部署形态：优先从 compose（服务名 `vanblog`）解析容器，无 compose 项目时用裸容器名（`VANBLOG_DEMO_CONTAINER`，默认 `vanblog`）；依赖仅 `curl`/`python3`/`docker`（语料抓取在容器内进行，宿主无需 node、不依赖 jq）。

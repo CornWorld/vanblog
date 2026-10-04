@@ -17,6 +17,34 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../lib/common.sh"
 
+# ── 自更新(修「宿主 scp 死副本」坑,2026-10-05)──────────────────────
+# 每次重置前先从仓库分支拉最新 scripts/ + bench/ 覆盖本地副本,再 exec
+# 新副本继续执行——重置逻辑与种子数据永远跟仓库走,不随宿主副本老化。
+# 跳过条件:--no-selfupdate 参数,或 curl/tar 不可用(回退本地副本)。
+SELFUPDATE_SKIP=0
+for arg in "$@"; do
+  case "$arg" in --no-selfupdate) SELFUPDATE_SKIP=1 ;; esac
+done
+if [ "$SELFUPDATE_SKIP" != 1 ] && command -v curl >/dev/null 2>&1 && command -v tar >/dev/null 2>&1; then
+  DEMO_HOME="${VANBLOG_DEMO_HOME:-/opt/vanblog}"
+  BRANCH="${VANBLOG_DEMO_REPO_BRANCH:-main-go}"
+  TARBALL="${VANBLOG_DEMO_REPO_TARBALL:-https://github.com/CornWorld/vanblog/archive/refs/heads/${BRANCH}.tar.gz}"
+  info "自更新 scripts/bench(分支 ${BRANCH})…"
+  TMP=$(mktemp -d)
+  if curl -sL --max-time 120 "$TARBALL" | tar xz -C "$TMP" --strip-components=1 2>/dev/null \
+     && [ -f "$TMP/scripts/ops/demo-reset.sh" ] && [ -f "$TMP/bench/seed.mjs" ]; then
+    mkdir -p "$DEMO_HOME"
+    rm -rf "$DEMO_HOME/scripts" "$DEMO_HOME/bench"
+    cp -a "$TMP/scripts" "$TMP/bench" "$DEMO_HOME/"
+    rm -rf "$TMP"
+    ok "自更新完成,切到新副本继续"
+    exec bash "$DEMO_HOME/scripts/ops/demo-reset.sh" --no-selfupdate "$@"
+  else
+    warn "自更新失败(网络/仓库?),回退本地副本继续"
+    rm -rf "$TMP"
+  fi
+fi
+
 VANBLOG_BASE_PATH="${VANBLOG_BASE_PATH:-/var/vanblog}"
 
 command -v docker >/dev/null 2>&1 || { err "缺少依赖: docker"; exit 1; }
