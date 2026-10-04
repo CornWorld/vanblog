@@ -116,6 +116,33 @@ vex node /tmp/bench/seed.mjs "$PB_URL" "$SUPER_TOKEN" "$TOKEN" "$SEED_COUNT" /tm
 vex rm -rf /tmp/bench
 ok "seed 完成(1 篇 showcase + $SEED_COUNT 篇 HN/arXiv 语料)"
 
+# ── 4. 清零引用 tag(showcase 的 gofakeit 标签只有名字没有文章,tag 页
+#    「0 文章」即由此来;devseed 每次重建都会再造一批,放 setup 里跟随
+#    每次重置自动生效)──────────────────────────────────────────
+info "清理零引用 tag…"
+python3 - "$PB_URL" "$SUPER_TOKEN" << 'PYEOF' || warn "零引用 tag 清理失败(不影响就绪)"
+import json, sys, urllib.request
+pb, token = sys.argv[1], sys.argv[2]
+def get(u):
+    return json.load(urllib.request.urlopen(u))
+def delete(u):
+    req = urllib.request.Request(u, method='DELETE', headers={'Authorization': 'Bearer ' + token})
+    return urllib.request.urlopen(req).status
+tags = get(pb + '/api/collections/tags/records?perPage=200')['items']
+posts = get(pb + '/api/collections/posts/records?perPage=200&fields=id,tags')['items']
+used = {t for p in posts for t in (p.get('tags') or [])}
+removed = 0
+for t in tags:
+    if t['id'] not in used:
+        try:
+            delete(pb + '/api/collections/tags/records/' + t['id'])
+            removed += 1
+        except Exception:
+            pass
+print(f'  removed {removed} empty tags')
+PYEOF
+ok "零引用 tag 清理完成"
+
 echo ""
 echo "════════════════════════════════════════════"
 ok "Demo 站就绪:"
