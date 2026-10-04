@@ -17,6 +17,7 @@ import CommentArtalk from '../vendor/CommentArtalk';
 import { renderMarkdown } from '@vanblog/base/lib/markdown/renderer';
 import { getAuthorCardProps } from '../lib/viewModel';
 import { sanitizeHtml } from '../lib/sanitizeHtml';
+import { withBase } from '../lib/base';
 
 const pb = Astro.locals.pb;
 const site = await Astro.locals.getSite();
@@ -24,7 +25,7 @@ const links = site?.links ?? [];
 const siteName = site?.siteName || 'Vanblog';
 const siteDesc = site?.siteDesc;
 const baseUrl = site?.baseUrl || '';
-const logo = site?.authorLogo || (baseUrl ? `${baseUrl}/logo.svg` : '');
+const logo = site?.authorLogo || (baseUrl ? `${baseUrl}${withBase('/logo.svg')}` : '');
 const authorCard = await getAuthorCardProps(pb, site);
 
 // 原版 link.tsx requireContent：申领要求 + 本站信息，一并 Markdown 渲染
