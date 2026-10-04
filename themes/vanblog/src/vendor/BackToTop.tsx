@@ -1,7 +1,11 @@
 /* UPSTREAM: packages/website/components/BackToTop/index.tsx@4b488500be8100b19772ec00d8315f343a6ac21e
  * UPSTREAM: packages/website/styles/back-to-top.module.css@4b488500be8100b19772ec00d8315f343a6ac21e
  * SEAM: utils/scroll 复用本目录 vendor/scroll.ts;getScrollTop/scrollToTop 内联
- * (单调用点)。throttle 500ms 捕获阶段监听原样。上游 fix → 对本文件 apply patch。
+ * (单调用点)。上游 fix → 对本文件 apply patch。
+ * 偏离(2026-10-04):监听从「document 捕获 + stopPropagation/preventDefault」
+ * 改为 window 普通 scroll 监听、dep []。原写法在捕获阶段吞掉事件,headroom
+ * (window 冒泡监听)收不到 scroll,导航栏上滑不再弹出;preventDefault 对
+ * scroll 事件无效。每 500ms 也足够显示/隐藏按钮。
  */
 import throttle from "lodash/throttle";
 import { useEffect, useState } from "react";
@@ -12,21 +16,13 @@ export default function BackToTop() {
   const [display, setDisplay] = useState(false);
 
   useEffect(() => {
-    const onScroll = throttle((event: Event) => {
-      event.stopPropagation();
-      event.preventDefault();
-
-      const scrollTop =
-        window.pageYOffset ||
-        document.documentElement.scrollTop ||
-        document.body.scrollTop ||
-        0;
-      setDisplay(scrollTop > 300);
+    const onScroll = throttle(() => {
+      setDisplay(window.pageYOffset > 300);
     }, 500);
 
-    document.addEventListener("scroll", onScroll, true);
-    return () => document.removeEventListener("scroll", onScroll, true);
-  }, [display]);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
     <>
