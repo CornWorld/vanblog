@@ -4,6 +4,8 @@
  * 与 vendor ThemeButton 的交互:applyPalette 派发 darkmodechange,seams/theme 监听
  * 该事件同步内部 realTheme(见 seams/theme.ts 头注);用户点 ThemeButton 三态切换时
  * 经 switchThemeMode 撤销显式 palette 锁。两个 UI 最后点击者生效。
+ * 偏离(2026-10-04):按钮图标从 sun/moon 双 SVG(逐字复制 ThemeButton,与明暗
+ * 切换按钮无法区分)改为单一调色盘图标;不再持有 dark state。
  */
 import { useEffect, useRef, useState } from "react";
 import {
@@ -18,25 +20,17 @@ export default function PalettePicker(props: { sitePalette: string }) {
   const [open, setOpen] = useState(false);
   const [palettes, setPalettes] = useState<PaletteMeta[]>([]);
   const [userPref, setUserPref] = useState<string | null>(null);
-  const [dark, setDark] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setDark(document.documentElement.classList.contains("dark"));
     setUserPref(getPalette());
-    const onDark = (e: Event) => {
-      const detail = (e as CustomEvent<{ dark?: boolean }>).detail;
-      setDark(detail?.dark ?? document.documentElement.classList.contains("dark"));
-    };
     const onDocClick = (e: MouseEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
-    document.documentElement.addEventListener("darkmodechange", onDark);
     document.addEventListener("click", onDocClick);
     return () => {
-      document.documentElement.removeEventListener("darkmodechange", onDark);
       document.removeEventListener("click", onDocClick);
     };
   }, []);
@@ -68,24 +62,14 @@ export default function PalettePicker(props: { sitePalette: string }) {
         }}
       >
         <svg
-          viewBox="0 0 1024 1024"
+          viewBox="0 0 24 24"
           width="20"
           height="20"
           fill="currentColor"
           aria-hidden="true"
-          style={{ display: dark ? "none" : "block" }}
         >
-          <path d="M952 552h-80a40 40 0 0 1 0-80h80a40 40 0 0 1 0 80zM801.88 280.08a41 41 0 0 1-57.96-57.96l57.96-58a41.04 41.04 0 0 1 58 58l-58 57.96zM512 752a240 240 0 1 1 0-480 240 240 0 0 1 0 480zm0-560a40 40 0 0 1-40-40V72a40 40 0 0 1 80 0v80a40 40 0 0 1-40 40zm-289.88 88.08-58-57.96a41.04 41.04 0 0 1 58-58l57.96 58a41 41 0 0 1-57.96 57.96zM192 512a40 40 0 0 1-40 40H72a40 40 0 0 1 0-80h80a40 40 0 0 1 40 40zm30.12 231.92a41 41 0 0 1 57.96 57.96l-57.96 58a41.04 41.04 0 0 1-58-58l58-57.96zM512 832a40 40 0 0 1 40 40v80a40 40 0 0 1-80 0v-80a40 40 0 0 1 40-40zm289.88-88.08 58 57.96a41.04 41.04 0 0 1-58 58l-57.96-58a41 41 0 0 1 57.96-57.96z"></path>
-        </svg>
-        <svg
-          viewBox="0 0 1024 1024"
-          width="20"
-          height="20"
-          fill="currentColor"
-          aria-hidden="true"
-          style={{ display: dark ? "block" : "none" }}
-        >
-          <path d="M524.8 938.667h-4.267a439.893 439.893 0 0 1-313.173-134.4 446.293 446.293 0 0 1-11.093-597.334A432.213 432.213 0 0 1 366.933 90.027a42.667 42.667 0 0 1 45.227 9.386 42.667 42.667 0 0 1 10.24 42.667 358.4 358.4 0 0 0 82.773 375.893 361.387 361.387 0 0 0 376.747 82.774 42.667 42.667 0 0 1 54.187 55.04 433.493 433.493 0 0 1-99.84 154.88 438.613 438.613 0 0 1-311.467 128z"></path>
+          {/* Material Icons「palette」:与旁边明暗切换的 sun/moon 语义可区分 */}
+          <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"></path>
         </svg>
       </button>
       {open && (

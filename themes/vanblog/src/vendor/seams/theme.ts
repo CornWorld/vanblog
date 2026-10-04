@@ -17,7 +17,7 @@
  * 上游 fix → 对本文件 apply patch。
  */
 import { useSyncExternalStore } from "react";
-import { clearPalette } from "@vanblog/sdk/browser";
+import { clearPalette, paletteCssUrl } from "@vanblog/sdk/browser";
 
 /** 计划契约类型:三态用户偏好。 */
 export type ThemeMode = "light" | "dark" | "auto";
@@ -75,6 +75,11 @@ export const applyTheme = (theme: RealTheme, source: string, disableLog = false)
       console.log(`[Apply Theme][${source}] ${theme}`);
     }
   }
+  // CSS 图标状态(html[data-theme-mode])与 dark 类同源更新。
+  document.documentElement.setAttribute(
+    "data-theme-mode",
+    theme.includes("auto") ? "auto" : (theme as ThemeMode)
+  );
   // 平台联动:palette/评论组件监听此事件(与 sdk applyPalette 一致)
   document.documentElement.dispatchEvent(
     new CustomEvent("darkmodechange", { detail: { dark: theme.includes("dark") } })
@@ -138,10 +143,20 @@ export function setThemeMode(m: ThemeMode): void {
  * 用户主动切换(ThemeButton 循环)入口:先撤销显式 palette 锁(SDK clearPalette,
  * 色彩回落站点默认 palette),再应用三态。初始化路径不要用本函数 — 会误清
  * 用户的调色盘偏好;两个 UI 的优先级约定见文件头「palette 共存约定」。
+ * sitePalette(站点默认 palette,由 NavBar 注入)非空时同步把
+ * link[data-vanblog-palette] 换回站点默认配色——否则会话内配色停留在旧
+ * palette 的 css 上,与切换后的明暗类错配,直到下一次整页导航才恢复。
  */
-export function switchThemeMode(m: ThemeMode): void {
+export function switchThemeMode(m: ThemeMode, sitePalette?: string | null): void {
   clearPalette();
   setThemeMode(m);
+  if (sitePalette) {
+    const link = document.querySelector<HTMLLinkElement>("link[data-vanblog-palette]");
+    if (link) {
+      const base = paletteCssUrl(sitePalette, undefined);
+      link.href = `${base}${base.includes("?") ? "&" : "?"}v=${Date.now()}`;
+    }
+  }
 }
 
 /** 计划契约:React hook,返回 [三态模式, setter](上游 ThemeContext 替身)。 */

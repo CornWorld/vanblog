@@ -145,8 +145,14 @@ export function applyPalette(
   const { sitePalette, palettes = [] } = opts;
   const isSystem = name === SYSTEM_PALETTE || name === "default";
   // system/default = no persisted preference: site palette + OS light/dark.
-  if (isSystem) clearPalette();
-  else setPalette(name);
+  if (isSystem) {
+    clearPalette();
+    // 陈旧三态键一并清除:palette=system 之后 FOUC 应落到 auto/OS 分支,
+    // 而不是被上一次 ThemeButton 留下的 theme 键拉回旧明暗。
+    try { localStorage.removeItem("theme"); } catch {}
+  } else {
+    setPalette(name);
+  }
   const dark = isSystem
     ? systemPrefersDark()
     : paletteIsDark(name, buildPaletteTypeMap(palettes));
@@ -154,6 +160,8 @@ export function applyPalette(
     const doc = typeof document !== "undefined" ? document : null;
     if (!doc) return;
     doc.documentElement.classList.toggle("dark", dark);
+    // palette 锁同时决定明暗 → 同步 CSS 图标状态(sdk 与 vendored 三态共写)。
+    doc.documentElement.setAttribute("data-theme-mode", dark ? "dark" : "light");
     doc.documentElement.dispatchEvent(
       new CustomEvent("darkmodechange", { detail: { dark } })
     );
@@ -177,8 +185,16 @@ export function applyPalette(
  *  1. Resolves the effective palette (localStorage preference → site default).
  *  2. Adds `dark` to `<html>` before paint:
  *     - explicit palette → its `type` decides light/dark;
- *     - no preference (or `system`/`default`) → follow OS `prefers-color-scheme`.
- *  3. Swaps `link[data-vanblog-palette]` to the effective palette.
+ *     - no palette lock → three-state `theme` key (`light`/`dark`/`auto`;
+ *       `auto` = 18:00-08:00 night rule OR OS `prefers-color-scheme`, same
+ *       formula as the vendored ThemeButton seam's getAutoTheme);
+ *     - nothing at all → OS `prefers-color-scheme`.
+ *  3. Mirrors the effective mode to `<html data-theme-mode="light|dark|auto">`
+ *     so CSS shows the right ThemeButton icon before hydration (kills the
+ *     per-navigation icon flash).
+ *  4. Tags Mac platforms (`html.platform-mac`) so SSR-rendered key hints
+ *     (⌘/Ctrl) resolve before paint.
+ *  5. Swaps `link[data-vanblog-palette]` to the effective palette.
  * Fallbacks: matchMedia unavailable → light; unknown palette → light;
  * no site palette → skip palette.css (built-in default), still follow system.
  * Injected by BaseLayout via `<script is:inline set:html={...} />`.
@@ -206,8 +222,32 @@ export function buildThemeInitScript(
   var pal = localStorage.getItem(PK);
   var hasUserPal = pal && pal !== 'default' && pal !== SYSMODE;
   var name = hasUserPal ? pal : sitePal;
-  var dark = hasUserPal ? (types[pal] === 'dark') : isSystemDark();
-  if (dark) document.documentElement.classList.add('dark');
+  var root = document.documentElement;
+  function isSystemDark() {
+    try { return typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches; }
+    catch (e) { return false; }
+  }
+  function isNight() { var h = new Date().getHours(); return h > 18 || h < 8; }
+  var mode;
+  var dark;
+  if (hasUserPal) {
+    // palette 锁 = 最后一次显式选择,同时决定配色与明暗(VSCode 语义)。
+    mode = types[pal] === 'dark' ? 'dark' : 'light';
+    dark = types[pal] === 'dark';
+  } else {
+    // 无 palette 锁 → ThemeButton 三态(theme 键;auto = 18-8 夜间规则或 OS,
+    // 与 vendored seams getAutoTheme 同式)。
+    var t = localStorage.getItem('theme');
+    if (t === 'dark') { mode = 'dark'; dark = true; }
+    else if (t === 'light') { mode = 'light'; dark = false; }
+    else { mode = 'auto'; dark = isNight() || isSystemDark(); }
+  }
+  if (dark) root.classList.add('dark');
+  // CSS 依据:ThemeButton 图标在 React 水合前就显示正确的一枚(切页不闪)。
+  root.setAttribute('data-theme-mode', mode);
+  try {
+    if (/Mac|iPhone|iPad|iPod/.test(navigator.userAgent)) root.classList.add('platform-mac');
+  } catch (e) {}
   if (name) {
     var link = document.querySelector('link[data-vanblog-palette]');
     if (link) {

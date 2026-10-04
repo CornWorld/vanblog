@@ -38,6 +38,7 @@ export default function NavChrome(props: NavChromeProps) {
     <>
       <NavBar
         {...navProps}
+        sitePalette={sitePalette}
         menus={menus}
         showAdminButton={showAdminButton}
         showFriends={showFriends}

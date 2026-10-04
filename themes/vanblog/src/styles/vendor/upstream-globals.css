@@ -175,6 +175,29 @@ a {
   transform: translateY(-56px);
 }
 
+/* ── ThemeButton 图标与 KeyCard 按键提示:首帧前由 FOUC 脚本
+   (sdk buildThemeInitScript)写 html[data-theme-mode] / html.platform-mac,
+   CSS 决定显示哪一枚 → SSR/水合/整页导航全程无闪烁。 ── */
+.tb-icon {
+  display: none;
+}
+html[data-theme-mode="light"] .tb-icon-light {
+  display: block;
+}
+html[data-theme-mode="dark"] .tb-icon-dark {
+  display: block;
+}
+html[data-theme-mode="auto"] .tb-icon-auto {
+  display: block;
+}
+.key-hint-mac,
+html.platform-mac .key-hint-other {
+  display: none;
+}
+html.platform-mac .key-hint-mac {
+  display: inline;
+}
+
 /* ── react-tiny-popover 箭头(SocialIcon 二维码弹层)── */
 .popover-arrow {
   opacity: 1 !important;

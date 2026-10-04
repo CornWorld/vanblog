@@ -133,6 +133,13 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
 
+    <!-- Palette CSS 必须在 FOUC 脚本之前:初始化脚本要在首帧前把 href 换成
+         用户存储的 palette(link 在脚本后解析时 querySelector 为 null,换色
+         竞态失败,整页导航后用户调色盘会静默回落站点默认配色)。 -->
+    {effectivePalette && (
+      <link rel="stylesheet" href={paletteCssUrl(effectivePalette, site?.updated)} data-vanblog-palette />
+    )}
+
     <!-- Prevent FOUC: apply effective palette (light/dark from palette type) + user preference before paint -->
     <script
       is:inline
@@ -151,11 +158,6 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     <meta name="description" content={desc} />
     {keywords && <meta name="keywords" content={keywords} />}
     {canonicalURL && <link rel="canonical" href={canonicalURL} />}
-
-    <!-- Palette CSS (zero-build theme switch; see docs/agent-theme-architecture.md §4) -->
-    {effectivePalette && (
-      <link rel="stylesheet" href={paletteCssUrl(effectivePalette, site?.updated)} data-vanblog-palette />
-    )}
 
     {packFrontend.contributions.filter((item) => item.scope === 'public').flatMap((item) => item.styles).map((href) => (
       <link rel="stylesheet" href={href} data-vanblog-pack-style />
@@ -204,9 +206,15 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
     {site?.customCss && <style is:inline set:html={site.customCss} />}
     {site?.customScript && <script is:inline set:html={site.customScript} />}
   </head>
-  <!-- 壳层 = 上游 Layout/index.tsx + LayoutBody/index.tsx 逐式(类名 upstream literal):
-       body 裸;内容与 Footer 同包一个 mx-auto lg:px-6 md:py-4 py-2 px-2 md:px-4
-       text-gray-700 容器;LayoutBody 双列 flex,vanblog-sider 无侧栏时仅去 w-52。 -->
+  <!-- 页面骨架说明(供上游 diff 对照):
+       上游 Next 版由 components/Layout/index.tsx + LayoutBody/index.tsx 两层
+       React 组件渲染出整个页面外壳;本主题不 vendor 这两个组件,而是把它们
+       渲染结果里的每条 class 原样抄进下面这组静态 Astro 标记(见
+       upstream.manifest.json「components/LayoutBody/index.tsx」条目):
+       - <body> 不带任何 class;
+       - 主内容与 Footer 同包一个容器:`mx-auto lg:px-6 md:py-4 py-2 px-2 md:px-4 text-gray-700`;
+       - LayoutBody 的双列 flex 折成 `flex mx-auto justify-center`;
+       - vanblog-sider 在无侧栏页面仅去掉 `w-52`(列宽),其余保留。 -->
   <body>
     <NavChrome
       client:load
@@ -223,7 +231,7 @@ const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
       defaultTheme="auto"
       subMenuOffset={site?.displayOptions?.subMenuOffset || 0}
       openArticleLinksInNewWindow={site?.displayOptions?.openArticleLinksInNewWindow === true}
-      sitePalette={site?.palette || ''}
+      sitePalette={effectivePalette || ''}
     />
     <ToastProviderIsland client:load />
     {bannerUrl && <img src={bannerUrl} alt="" class="mx-auto mt-2 max-w-4xl px-4" loading="eager" />}

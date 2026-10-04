@@ -46,6 +46,8 @@ export default function NavBar(props: {
   defaultTheme: "dark" | "auto" | "light";
   subMenuOffset: number;
   openArticleLinksInNewWindow: boolean;
+  /** 站点默认 palette;透传给 ThemeButton(切三态后恢复默认配色) */
+  sitePalette?: string;
   /** 平台调色盘插入位(上游无;渲染在 ThemeButton 之后) */
   palettePicker?: ReactNode;
 }) {
@@ -62,7 +64,13 @@ export default function NavBar(props: {
   useEffect(() => {
     const el = document.querySelector("#nav");
     if (el && !headroom) {
-      const headroom = new Headroom(el as HTMLElement);
+      // 偏离上游默认参数(2026-10-04):tolerance 0/offset 0 时触摸板 ±1px
+      // 抖动即翻转 pin/unpin,nav 高频闪动、上滑难以停住;offset 72 让首屏
+      // 内不收起。down 8 抑制误收,up 4 保留快速弹出。
+      const headroom = new Headroom(el as HTMLElement, {
+        tolerance: { up: 4, down: 8 },
+        offset: 72,
+      });
       headroom.init();
       setHeadroom(headroom);
     }
@@ -182,7 +190,7 @@ export default function NavBar(props: {
                   <KeyCard type="search"></KeyCard>
                 </div>
               </div>
-              <ThemeButton defaultTheme={props.defaultTheme} />
+              <ThemeButton defaultTheme={props.defaultTheme} sitePalette={props.sitePalette} />
               {props.palettePicker}
               {props.showRSS == "true" && (
                 <RssButton showAdminButton={props.showAdminButton == "true"} />

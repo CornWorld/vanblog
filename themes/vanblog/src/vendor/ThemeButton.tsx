@@ -4,46 +4,35 @@
  * 与上游差异:计时器/持久化并入 seam(上游 core 内联的 setTheme/clearTimer/setTimer),
  * light→dark→auto 切换循环、auto 文案、图标、hasInit 初始化均原样。
  * 上游 fix → 对本文件 apply patch。
+ * 偏离(2026-10-04,修「切页图标闪 / palette 与三态错配」):
+ *  1) 三枚图标常驻 DOM,可见性由 html[data-theme-mode] 的 CSS 规则驱动
+ *     (FOUC 脚本在首帧前写好该属性)→ 删掉 showChild 水合闸与 SSR 占位,
+ *     图标在整页导航间不再闪烁;React state 只驱动点击循环逻辑。
+ *  2) 初始化遇 palette 锁(getPalette() 非空)时不再 setThemeMode 覆盖
+ *     html 明暗——palette 是最后一次显式选择,锁生效期间只同步 store。
+ *  3) handleSwitch 经 switchThemeMode(m, sitePalette) 把 palette.css 换回
+ *     站点默认配色,避免会话内配色与明暗类错配。
  */
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
+import { getPalette } from "@vanblog/sdk/browser";
 import { initTheme, setThemeMode, switchThemeMode, useRealTheme } from "./seams/theme";
 
-export default function ThemeButton(props: { defaultTheme: "auto" | "dark" | "light" }) {
-  const [showChild, setShowChild] = useState(false);
-
-  // Wait until after client-side hydration to show
-  useEffect(() => {
-    setShowChild(true);
-  }, []);
-
-  if (!showChild) {
-    // You can show some kind of placeholder UI here
-    return <div className="flex items-center mr-4 ml-4 sm:ml-2 lg:ml-6">
-      <div className="dark:text-dark fill-gray-600">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width={20}
-          height={20}
-          viewBox="0 0 1024 1024"
-          aria-label="auto icon"
-        >
-          <path d="M512 992C246.92 992 32 777.08 32 512S246.92 32 512 32s480 214.92 480 480-214.92 480-480 480zm0-840c-198.78 0-360 161.22-360 360 0 198.84 161.22 360 360 360s360-161.16 360-360c0-198.78-161.22-360-360-360zm0 660V212c165.72 0 300 134.34 300 300 0 165.72-134.28 300-300 300z"></path>
-        </svg>
-      </div>
-    </div>
-  }
-
-  return <Core {...props} />;
-}
-
-/** 上游 core.tsx:setTheme/clearTimer/setTimer 并入 seams/theme.ts,其余原样。 */
-function Core(props: { defaultTheme: "auto" | "dark" | "light" }) {
+export default function ThemeButton(props: {
+  defaultTheme: "auto" | "dark" | "light";
+  /** 站点默认 palette;切三态撤销 palette 锁后用它恢复配色 css(见头注 #3)。 */
+  sitePalette?: string;
+}) {
   const { current } = useRef({ hasInit: false });
   const theme = useRealTheme();
 
   useLayoutEffect(() => {
     if (!current.hasInit) {
       current.hasInit = true;
+      if (getPalette()) {
+        // palette 锁生效中:html 明暗由 FOUC 脚本按 palette type 决定,
+        // store 已按 html.dark 初始化,这里不动 class(见头注 #2)。
+        return;
+      }
       if (!localStorage.getItem("theme")) {
         // 第一次用默认的
         setThemeMode(props.defaultTheme);
@@ -56,11 +45,11 @@ function Core(props: { defaultTheme: "auto" | "dark" | "light" }) {
 
   const handleSwitch = () => {
     if (theme == "light") {
-      switchThemeMode("dark");
+      switchThemeMode("dark", props.sitePalette);
     } else if (theme == "dark") {
-      switchThemeMode("auto");
+      switchThemeMode("auto", props.sitePalette);
     } else {
-      switchThemeMode("light");
+      switchThemeMode("light", props.sitePalette);
     }
   };
   return (
@@ -68,14 +57,7 @@ function Core(props: { defaultTheme: "auto" | "dark" | "light" }) {
       className="flex items-center cursor-pointer hover:scale-125 transform transition-all mr-4 ml-4 sm:ml-2 lg:ml-6   "
       onClick={handleSwitch}
     >
-      <div
-        style={{
-          display: theme == "light" ? "block" : "none",
-          height: 20,
-        }}
-        className="dark:text-dark "
-        title="亮色模式"
-      >
+      <div className="tb-icon tb-icon-light dark:text-dark " style={{ height: 20 }} title="亮色模式">
         <svg
           className="fill-gray-600"
           xmlns="http://www.w3.org/2000/svg"
@@ -89,11 +71,8 @@ function Core(props: { defaultTheme: "auto" | "dark" | "light" }) {
         </svg>
       </div>
       <div
-        className="dark:text-dark fill-gray-600"
-        style={{
-          display: theme == "dark" ? "block" : "none",
-          height: 20,
-        }}
+        className="tb-icon tb-icon-dark dark:text-dark fill-gray-600"
+        style={{ height: 20 }}
         title="暗色模式"
       >
         <svg
@@ -108,16 +87,9 @@ function Core(props: { defaultTheme: "auto" | "dark" | "light" }) {
         </svg>
       </div>
       <div
-        className="dark:text-dark fill-gray-600"
-        style={{
-          display: theme.includes("auto") ? "block" : "none",
-          height: 20,
-        }}
-        title={
-          theme.includes("light")
-            ? "自动模式-亮色"
-            : "自动模式-暗色"
-        }
+        className="tb-icon tb-icon-auto dark:text-dark fill-gray-600"
+        style={{ height: 20 }}
+        title="自动模式"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
