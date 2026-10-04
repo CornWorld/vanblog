@@ -18,6 +18,11 @@
 //                                        一致的确定语料。corpus.jsonl 本身不入库
 //                                        （.gitignore），需要时 replay 重建。
 //
+// 评论（2026-10-04）:HN 行额外携带 comments[]（顶层前 6 条,markdown 文本）。
+// 只有 items 端点（--replay）返回评论树;search 端点（默认/--pin）没有,
+// 因此 demo-setup 的 replay 语料带评论,基准语料不带（1000 篇逐条抓评论
+// 会打死 API）。demo 展示用 replay,压测用默认,互不影响。
+//
 // 复现流程见 bench/README.md。
 
 import { setTimeout as sleep } from "node:timers/promises";
@@ -68,7 +73,28 @@ async function fetchHNPage(page) {
     }));
 }
 
-// 单 ID 抓取（--replay 用）：items 端点返回全文，字段名与 search 略有差异
+// 单 ID 抓取（--replay 用）：items 端点返回全文 + 评论树,字段名与 search 略有差异。
+// 评论取顶层前 COMMENTS_LIMIT 条(有正文、非已删),转 markdown 后随行输出
+// (comments 字段);seed/topup 负责渲染进正文 —— demo 展示「帖子下面的讨论」。
+const COMMENTS_LIMIT = 6;
+// 质量下限:items 端点按时间序返回,前几条可能是「已答复/占位」类短评,
+// 按长度过滤作代理;标题用「摘选」不称「热门」——本端点无评论分数,不排序。
+const COMMENTS_MIN_LEN = 40;
+const COMMENTS_HEADING = "HN 评论摘选";
+
+function hnCommentsToMarkdown(children, depth = 0) {
+  if (!Array.isArray(children) || depth > 0) return [];
+  const out = [];
+  for (const c of children) {
+    if (out.length >= COMMENTS_LIMIT) break;
+    if (!c || c.author === undefined || !c.text || c.deleted) continue;
+    const text = hnTextToMarkdown(c.text);
+    if (text.length < COMMENTS_MIN_LEN) continue;
+    out.push({ author: c.author, text });
+  }
+  return out;
+}
+
 async function fetchHNById(id) {
   const url = `https://hn.algolia.com/api/v1/items/${id}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
@@ -80,6 +106,7 @@ async function fetchHNById(id) {
     id: h.id ? String(h.id) : id,
     title: h.title,
     content: hnTextToMarkdown(text),
+    comments: hnCommentsToMarkdown(h.children),
     author: h.author || "unknown",
     // items 端点给毫秒精度（.000Z）；search 端点给秒精度。归一到秒，
     // 保证 --replay 输出与 --pin 逐字节一致。

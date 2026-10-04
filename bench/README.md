@@ -37,10 +37,22 @@
 
 ## 流偏好
 
-1. **corpus**: `fetch-corpus.mjs` 从 HN / arXiv 抓真实文本 → `corpus.jsonl`（真正的文章，非 dummy）
-2. **seed**: `seed.mjs` 将语料灌入 vanblog（分类/标签/文章）
+1. **corpus**: `fetch-corpus.mjs` 从 HN / arXiv 抓真实文本 → `corpus.jsonl`（真正的文章，非 dummy）。`--replay`（items 端点）的 HN 行额外带 `comments[]`（顶层前 6 条评论，markdown 文本）；`--pin`/默认（search 端点）不带——demo 用 replay 拿评论，压测用默认省 API 配额
+2. **seed**: `seed.mjs` 将语料灌入 vanblog（分类/标签/文章）。tag 全量分配（每篇 `TAG_POOL[(i*7+3)%15]` + `TAG_POOL[(i*11+5)%15]`，前 15 篇覆盖全部 tag，不留空 tag）；HN 评论渲染为正文尾部「HN 热门评论」引用块（posts.content 5000 上限内，正文让位）
 3. **matrix**: `run-bench.sh` 循环内存限制 × 文章数 × (重复)，每轮起 server + vegeta 压测
 4. **summarize**: `summarize.py` 汇总 + 出 CSV/图
+
+### 已有 demo 站的非破坏补充（`--update`）
+
+demo 站已灌过语料、不想 reset 时：
+
+```bash
+node bench/seed.mjs <pb> <super> <admin> <count> corpus.jsonl --update        # 直接执行
+node bench/seed.mjs <pb> <super> <admin> <count> corpus.jsonl --update --dry  # 只看计划
+```
+
+按 `pathname`（slug-<i>）定位：命中则 PATCH 正文（带评论区块）+ tag + category，
+未命中则新建；showcase 等非语料文不动。幂等——正文由语料确定性重建。
 
 ## 使用
 

@@ -3,8 +3,11 @@
 // 输入: corpus.jsonl（fetch-corpus.mjs 的输出）
 // 动作: 建 categories → 建 tags → 建文章（author 关联管理员）
 //
-// 用法: node seed.mjs <pb_url> <superuser_token> <admin_token> <count> <corpus>
+// 用法: node seed.mjs <pb_url> <superuser_token> <admin_token> <count> <corpus> [--update] [--dry]
 //   count=0 表示清空（删全部文章）
+//   --update: upsert(按 pathname slug-<i> 定位)——demo 站已有内容时的非破坏
+//             补充:改写正文(含 HN 评论区块)、补全 tag 分配;不删不重建。
+//   --dry:   与 --update 连用,只打印将做的变更,不写。
 //
 // 权限说明:
 //   - categories/tags 创建需要 SUPERUSER token（普通 admin 只有 posts 的创建权）
@@ -95,6 +98,64 @@ const CATEGORIES = [
 
 const TAG_POOL = ["hn", "arxiv", "performance", "kubernetes", "go", "memory", "gc", "linux", "docker", "api", "database", "networking", "ai", "security", "compiler"];
 
+// 评论区块渲染(语料 comments[] → markdown;放正文,平台无内建评论存储,
+// Artalk 是外部服务不适合 demo seed)。返回空串表示无评论。
+// 原文 url footer 恒在最后;正文 + 评论合计压进 posts.content 上限(5000)。
+const CONTENT_LIMIT = 5000;
+const COMMENTS_HEADING = "HN 热门评论";
+
+function renderComments(comments, budget) {
+  if (!Array.isArray(comments) || comments.length === 0 || budget <= 200) return "";
+  const blocks = [];
+  let used = COMMENTS_HEADING.length + 20;
+  for (const c of comments) {
+    if (!c || !c.text) continue;
+    // 引用块 + @作者(链到 HN 用户页);单条过长截断,保证多条都能进。
+    const text = c.text.length > 700 ? `${c.text.slice(0, 699)}…` : c.text;
+    const block = `> **[@${c.author}](https://news.ycombinator.com/user?id=${encodeURIComponent(c.author)})**: ${text}\n\n`;
+    if (used + block.length > budget) break;
+    blocks.push(block);
+    used += block.length;
+  }
+  if (blocks.length === 0) return "";
+  return `---\n\n**${COMMENTS_HEADING}**\n\n${blocks.join("")}`;
+}
+
+function buildContent(art) {
+  const footer = art.url ? `\n\n---\n\n> 原文: [${art.url}](${art.url})` : "";
+  const commentsBudget = 1600;
+  const comments = renderComments(art.comments, commentsBudget);
+  const bodyBudget = CONTENT_LIMIT - footer.length - comments.length;
+  const body = art.content.length > bodyBudget
+    ? `${art.content.slice(0, Math.max(0, bodyBudget - 1))}…`
+    : art.content;
+  return body + comments + footer;
+}
+
+// pathname 形态与 seed 逻辑唯一对应(slug-<i>),--update 按它定位已入库文章。
+function slugify(title, i) {
+  const slug = String(title)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "post";
+  return `${slug}-${i}`;
+}
+
+// tag 全量分配(2026-10-04):此前每篇只挂 [source, performance?, linux?],
+// TAG_POOL 其余 12 个 tag 建了记录却永远没有文章 → 线上 tag 页大片
+// 「0 文章」。7/11 与 15 互质,前 15 篇即覆盖全部 TAG_POOL。
+function pickTags(art, i, tagIds) {
+  const pool = TAG_POOL;
+  const idxA = (i * 7 + 3) % pool.length;
+  const idxB = (i * 11 + 5) % pool.length;
+  return [...new Set([
+    tagIds[art.source],
+    tagIds[pool[idxA]],
+    tagIds[pool[idxB]],
+  ])].filter(Boolean);
+}
+
 async function seed() {
   // --- admin user id (author 字段必须指向真实记录) ---
   const me = await api("/api/collections/users/records?perPage=1");
@@ -148,37 +209,44 @@ async function seed() {
           : art.title.startsWith("Show HN")
             ? 3
             : i % 2;
-    const tags = [tagIds[art.source], ...(i % 3 === 0 ? [tagIds.performance] : []), ...(i % 5 === 0 ? [tagIds.linux] : [])].filter(Boolean);
-
-    // 语料 url 写进正文:读者可溯源(HN 外链/讨论页、arXiv abs)。
-    // posts.content 上限 5000 字符,超长语料截断(截断标记后仍保留 footer)
-    const footer = art.url ? `\n\n---\n\n> 原文: [${art.url}](${art.url})` : "";
-    const budget = 5000 - footer.length;
-    const body = art.content.length > budget ? `${art.content.slice(0, budget - 1)}…` : art.content;
-    const content = body + footer;
-    // slug 化标题做 pathname(曾为 bench-${i}-${ts},demo 下 URL 不可读)
-    const slug = art.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "post";
+    const tags = pickTags(art, i, tagIds);
+    const content = buildContent(art);
+    const pathname = slugify(art.title, i);
 
     const payload = {
       title: art.title.slice(0, 200),
       content,
       status: "published",
-      pathname: `${slug}-${i}`,
+      pathname,
       author: adminId,
       category: catIds[catIdx],
       tags,
     };
 
-
-    let r = await api("/api/collections/posts/records", "POST", payload);
-    if (r.status >= 400) {
-      // validation hook may reject category/tags 关联 —— 降级为最小 payload 重试
-      const minimal = { title: payload.title, content: payload.content, status: "published", pathname: payload.pathname, author: adminId };
-      r = await api("/api/collections/posts/records", "POST", minimal);
+    let r;
+    if (UPDATE) {
+      // --update:按 pathname 定位(upsert)。demo 站已有内容时的非破坏
+      // 补充路径:改写正文(带评论区块)/补 tag,不重建站点。
+      const f = await api(`/api/collections/posts/records?filter=${encodeURIComponent(`pathname="${pathname}"`)}`);
+      const existing = f.json.items?.[0];
+      r = existing
+        ? await api(`/api/collections/posts/records/${existing.id}`, "PATCH", { content, tags, category: catIds[catIdx] })
+        : await api("/api/collections/posts/records", "POST", payload);
+      if (existing && r.status >= 400) {
+        // 关联字段被规则拒绝时退化为纯正文更新(评论区块仍在)
+        r = await api(`/api/collections/posts/records/${existing.id}`, "PATCH", { content });
+      }
+      if (DRY) {
+        console.log(`[dry] ${existing ? "patch" : "create"} ${pathname} (${content.length} chars, tags=${tags.length})`);
+        continue;
+      }
+    } else {
+      r = await api("/api/collections/posts/records", "POST", payload);
+      if (r.status >= 400) {
+        // validation hook may reject category/tags 关联 —— 降级为最小 payload 重试
+        const minimal = { title: payload.title, content: payload.content, status: "published", pathname: payload.pathname, author: adminId };
+        r = await api("/api/collections/posts/records", "POST", minimal);
+      }
     }
 
     if (r.status === 200) {
@@ -202,10 +270,16 @@ async function seed() {
 // main
 // ---------------------------------------------------------------------------
 
+// --update:upsert 语义(按 pathname 定位,demo 站非破坏补充);
+// --dry:与 --update 连用,只打印将做的变更。注意 --update 幂等:正文由
+// 语料确定性重建(带评论区块),重复跑产出一致,只有内容真变了才 PATCH。
+const UPDATE = process.argv.includes("--update");
+const DRY = process.argv.includes("--dry");
+
 if (COUNT === 0) {
   console.log("wiping...");
   await wipe();
 } else {
-  console.log(`seeding ${COUNT} posts → ${PB}`);
+  console.log(`seeding ${COUNT} posts → ${PB}${UPDATE ? " (update mode)" : ""}${DRY ? " (dry run)" : ""}`);
   await seed();
 }
