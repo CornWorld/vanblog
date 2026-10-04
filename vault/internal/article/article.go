@@ -85,7 +85,7 @@ func New(app core.App) *Manager {
 // Each handler runs in a goroutine so the request isn't blocked on Astro's
 // response.
 func (m *Manager) handlePostsCacheInvalidation(app core.App) {
-	invalidate := func() { go revalidateAstroCache(app, []string{"posts", "feed"}) }
+	invalidate := func() { goRevalidate(app, []string{"posts", "feed"}) }
 	app.OnRecordAfterCreateSuccess("posts").BindFunc(func(e *core.RecordEvent) error {
 		invalidate()
 		return e.Next()
@@ -355,7 +355,7 @@ func (m *Manager) handleRestoreEndpoint(e *core.RequestEvent) error {
 	}
 
 	// Mirror handlePostsCacheInvalidation: invalidate Astro cache async.
-	go revalidateAstroCache(m.app, []string{"posts", "feed"})
+	goRevalidate(m.app, []string{"posts", "feed"})
 	return e.JSON(http.StatusOK, map[string]any{"ok": true, "id": id})
 }
 
@@ -398,7 +398,7 @@ func (m *Manager) handlePurgeEndpoint(e *core.RequestEvent) error {
 		}
 		return e.JSON(http.StatusInternalServerError, err.Error())
 	}
-	go revalidateAstroCache(m.app, []string{"posts", "feed"})
+	goRevalidate(m.app, []string{"posts", "feed"})
 
 	return e.JSON(http.StatusOK, map[string]any{"ok": true, "id": id})
 }

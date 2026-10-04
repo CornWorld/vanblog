@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"slices"
 	"strings"
 	"sync"
@@ -68,7 +69,7 @@ func revalidateAstroCache(app core.App, tags []string) {
 			// This runs on a goroutine per post edit / restore / purge. A panic
 			// would crash the whole process (Go has no global panic hook) and
 			// take the entire site down over a cache invalidation — never allow it.
-			slog.Error("[article] revalidate: recovered from panic", "panic", r)
+			slog.Error("[article] revalidate: recovered from panic", "panic", r, "stack", string(debug.Stack()))
 		}
 	}()
 	astroURL := astroBaseURL()
@@ -94,6 +95,37 @@ func revalidateAstroCache(app core.App, tags []string) {
 // are identical to the record-hook callers.
 func RevalidateCache(app core.App, tags []string) {
 	revalidateAstroCache(app, tags)
+}
+
+// revalidateWG tracks in-flight revalidateAstroCache goroutines so
+// short-lived utility processes (`vanblog seed`) can drain them before
+// exit — an in-flight audits save racing process teardown panics on
+// already-closed handles (observed once as a recovered nil deref).
+var revalidateWG sync.WaitGroup
+
+// goRevalidate launches revalidateAstroCache tracked by revalidateWG.
+// Replaces raw `go revalidateAstroCache(...)` at every call site.
+func goRevalidate(app core.App, tags []string) {
+	revalidateWG.Add(1)
+	go func() {
+		defer revalidateWG.Done()
+		revalidateAstroCache(app, tags)
+	}()
+}
+
+// WaitForRevalidations drains outstanding invalidations, bounded by timeout.
+// Called by utility commands before exit; serve never needs it.
+func WaitForRevalidations(timeout time.Duration) {
+	done := make(chan struct{})
+	go func() {
+		revalidateWG.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(timeout):
+		slog.Warn("[article] revalidate drain timed out", "timeout", timeout)
+	}
 }
 
 // revalidateRetryInterval is the replay cadence for the durable backlog.

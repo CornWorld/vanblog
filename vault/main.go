@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/core"
@@ -475,6 +476,10 @@ func main() {
 				os.Exit(1)
 			}
 			fmt.Println("seed: done")
+			// Drain async cache-invalidation goroutines: posts writes above
+			// each spawned one, and a save racing process teardown panics on
+			// closed handles (recovered once as a nil deref in the wild).
+			article.WaitForRevalidations(10 * time.Second)
 		},
 	}
 	seedCmd.Flags().Int("count", 3, "number of random posts to seed (0 = site config + showcase post only)")

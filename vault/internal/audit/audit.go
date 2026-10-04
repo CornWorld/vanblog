@@ -283,7 +283,9 @@ func writeRow(app core.App, actor, action, target string, detail any, ip, ua, re
 	rec.Set("action", action)
 	rec.Set("target", target)
 	rec.Set("result", result)
-	rec.Set("detail", detailStr)
+	if detailStr != "" {
+		rec.Set("detail", detailStr)
+	}
 	rec.Set("ip", ip)
 	rec.Set("userAgent", ua)
 	if err := app.Save(rec); err != nil {

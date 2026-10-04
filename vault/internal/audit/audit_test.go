@@ -327,10 +327,11 @@ func TestAuthLoginAudited(t *testing.T) {
 	if rows[0].GetString("target") != "admin@example.com" {
 		t.Fatalf("auth.login target = %q, want email", rows[0].GetString("target"))
 	}
-	// JS recordAudit 走 pb JSONField,传 "" 落库为 JSON 空串编码 `""`;
-	// Go 同一 Set 路径,两种空形态都算 parity。
-	if d := rows[0].GetString("detail"); d != "" && d != `""` {
-		t.Fatalf("auth.login detail = %q, want empty (JS parity)", d)
+	// detail 为空时不 Set(留 NULL)——zod 校验桥(AuditDetailSchema 只收
+	// object|null)会把 detail:"" 整行拒掉:serve 里 auth.login 行曾因此
+	// 全部静默丢失(2026-10-04 sg demo 复现)。GetString 对 NULL 报 "null"。
+	if d := rows[0].GetString("detail"); d != "null" {
+		t.Fatalf("auth.login detail = %q, want NULL", d)
 	}
 }
 
