@@ -361,10 +361,16 @@ await assert('L1 主要页面全部同源链接零死链', async () => {
   }
 });
 await assert('L2 未知路径返回真 404 并渲染 404 页', async () => {
-  const res = await page.request.get(`${BASE}/e2e-no-such-page-404`);
-  if (res.status() !== 404) throw new Error(`未知路径返回 ${res.status()}, want 404`);
-  const html = await res.text();
-  if (!html.includes('此页面不存在')) throw new Error('404 响应缺少 404 页文案');
+  // 两层未知面都要盖:根路径未知页,与 /post/* 下未知 slug——后者曾 302 弹
+  // /admin/(page.request.get 跟随重定向后拿到 200,只测根路径必漏)。
+  for (const p of ['/e2e-no-such-page-404', '/post/e2e-no-such-post-404']) {
+    const res = await page.request.get(`${BASE}${p}`);
+    if (res.status() !== 404) throw new Error(`未知路径 ${p} 返回 ${res.status}, want 404`);
+    const html = await res.text();
+    if (!html.includes('此页面不存在') && !html.includes('文章不存在')) {
+      throw new Error(`未知路径 ${p} 响应缺少 404 页文案`);
+    }
+  }
 });
 
 // ── 导航滚动交互(2026-10-04 事故面:BackToTop 捕获阶段吞 scroll 事件 +

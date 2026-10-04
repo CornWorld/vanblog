@@ -90,15 +90,12 @@ try {
   }
 } catch {
   // 双解析(getOne → pathname)都未命中,或命中但被 ViewRule 拦截。
-  if (isAuthenticated(pb)) {
-    // Not found OR blocked by ViewRule even when authenticated.
-    Astro.response.status = 404;
-  } else {
-    // Anonymous visitor hitting a private/draft post → 平台管理后台(其自带
-    // 认证);返回后以 admin 身份重访即可见。注意 /login 页面在主题中不存在,
-    // 旧的重定向会落 404 死头(2026-09-11 parity 验证发现)。
-    return Astro.redirect('/admin/');
-  }
+  // 一律渲染 404 页(匿名/登录同语义):对匿名访客,「不存在」与「无权限」
+  // 在 PB 规则下不可区分(列表规则只放行 published),错误弹 /admin/ 会把
+  // 读者甩到管理登录页(2026-10-05 线上实测,死链/手误 slug 全中招);
+  // 404 文案已覆盖「被删除/未发布/无权限」三种可能,作者自行走 nav 的
+  // 管理入口即可。
+  Astro.response.status = 404;
 }
 // Sanitize the rendered HTML before injecting it into the page.
 // DOM 对齐层:消毒后按上游 bytemd 插件形态重排代码块/标题
