@@ -62,7 +62,8 @@ async function fetchHNPage(page) {
       // items 端点的毫秒格式,replay 输出会静默偏离 pin 输出
       created: (h.created_at || "").replace(/\.\d+Z$/, "Z"),
       points: h.points || 0,
-      url: h.url || "",
+      // 外链缺失(ask_hn 自帖)时回落到 HN 讨论页——每行都带可追溯的原文 url
+      url: h.url || `https://news.ycombinator.com/item?id=${h.objectID}`,
       source: "hn",
     }));
 }
@@ -84,7 +85,7 @@ async function fetchHNById(id) {
     // 保证 --replay 输出与 --pin 逐字节一致。
     created: (h.created_at || "").replace(/\.\d+Z$/, "Z"),
     points: h.points || 0,
-    url: h.url || "",
+    url: h.url || `https://news.ycombinator.com/item?id=${h.id}`,
     source: "hn",
   };
 }

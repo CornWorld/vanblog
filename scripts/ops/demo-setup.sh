@@ -87,9 +87,34 @@ pbc -f -X PATCH "$PB_URL/api/collections/site/records/$SITE_ID" \
 ok "allowedDomains 已设置"
 
 # ── 3. 灌示例文章 ──────────────────────────────────────
-info "灌入 $SEED_COUNT 篇示例文章…"
-vexu vanblog seed --count "$SEED_COUNT" --dir=/pb_data || { err "seed 失败"; exit 1; }
-ok "seed 完成"
+# 3a. site 配置(gravatar 作者头像/作者名)+ showcase 功能文;count=0 不灌随机文章
+info "初始化 site 配置与 showcase 文章…"
+vexu vanblog seed --count 0 --dir=/pb_data || { err "seed 失败"; exit 1; }
+ok "site/showcase 就绪"
+
+# 3b. 真实语料文章:Hacker News / arXiv(复用 bench 工具链;语料按仓库内
+#     corpus.ids.json 钉定 ID,--replay 确定性重建)。脚本用容器自带 node
+#     执行,宿主无需 node;直连容器内管理端口。
+BENCH_DIR="${VANBLOG_DEMO_BENCH_DIR:-$SCRIPT_DIR/../../bench}"
+[ -f "$BENCH_DIR/seed.mjs" ] || { err "未找到 bench 工具链: $BENCH_DIR/seed.mjs
+  (部署机上需与 scripts/ 一起同步仓库 bench/ 目录,或设 VANBLOG_DEMO_BENCH_DIR)"; exit 1; }
+
+info "抓取语料(fetch-corpus --replay)…"
+docker cp "$BENCH_DIR" "$VANBLOG_CONTAINER:/tmp/bench" >/dev/null || { err "bench 脚本拷入容器失败"; exit 1; }
+vex sh -c 'node /tmp/bench/fetch-corpus.mjs --replay > /tmp/bench/corpus.jsonl' \
+  || { err "语料抓取失败(容器需可访问外网)"; exit 1; }
+
+info "登录 superuser(categories/tags 创建权限)…"
+SUPER_TOKEN=$(pbc -f -X POST "$PB_URL/api/collections/_superusers/auth-with-password" \
+  -H 'Content-Type: application/json' \
+  -d "{\"identity\":\"$DEMO_EMAIL\",\"password\":\"$DEMO_PASSWORD\"}" | jget 'd.get("token") or ""')
+[ -n "$SUPER_TOKEN" ] && [ "$SUPER_TOKEN" != "null" ] || { err "superuser 登录失败(bootstrap 应与 admin 同凭据)"; exit 1; }
+
+info "灌入 $SEED_COUNT 篇真实文章…"
+vex node /tmp/bench/seed.mjs "$PB_URL" "$SUPER_TOKEN" "$TOKEN" "$SEED_COUNT" /tmp/bench/corpus.jsonl \
+  || { err "语料灌入失败"; exit 1; }
+vex rm -rf /tmp/bench
+ok "seed 完成(1 篇 showcase + $SEED_COUNT 篇 HN/arXiv 语料)"
 
 echo ""
 echo "════════════════════════════════════════════"

@@ -24,7 +24,8 @@
    - 等待容器就绪
    - 创建 demo 管理员（`demo` / `demo1234`，密码 ≥8 位）
    - 把 `site.allowedDomains` 设为 `["vanblog.corn.im"]`（**关键**：setup 后空白名单 = TLS 拒绝签发，HTTPS 会 403）
-   - 用 `vanblog seed --count 20` 灌入 20 篇示例文章
+   - `vanblog seed --count 0` 建站点配置(gravatar 作者头像、作者名)+ 1 篇 showcase 功能文,不灌随机文章
+   - 复用 `bench/` 工具链灌 20 篇**真实文章**(Hacker News / arXiv 语料,按仓库 `bench/corpus.ids.json` 钉定 ID 确定性抓取,正文尾部附原文链接;宿主无需 node——脚本经 `docker cp` 进容器用镜像自带 node 跑)
 
 4. 验证：前台 `https://vanblog.corn.im/`、后台 `https://vanblog.corn.im/admin/`。
 
@@ -47,10 +48,11 @@ cd $VANBLOG_BASE_PATH && docker compose down -v
 
 - 单元：`/etc/systemd/system/vanblog-demo-reset.{service,timer}`，`User=corn`
 - 脚本：`/opt/vanblog/scripts/ops/demo-reset.sh`（与本仓 `scripts/ops/` 同源，改动后需重新 scp）
-- 逻辑：定位容器（compose/裸 run 均可）→ `docker stop` → 清空宿主 `/pb_data` 绑定目录 → `docker start` → 跑 `demo-setup.sh`（重建 demo 管理员 + 白名单 + 种子文章）
+- ⚠️ demo-setup 现依赖仓库 `bench/` 目录（fetch-corpus/seed/corpus.ids.json）——部署机上需与 `scripts/` 一起同步，或以 `VANBLOG_DEMO_BENCH_DIR` 指定
+- 逻辑：定位容器（compose/裸 run 均可）→ `docker stop` → 清空宿主 `/pb_data` 绑定目录 → `docker start` → 跑 `demo-setup.sh`（重建 demo 管理员 + 白名单 + site/showcase + HN 语料文章）
 - 手动触发：`sudo systemctl start vanblog-demo-reset.service`
 
-`demo-setup.sh` 本身也兼容两种部署形态：优先从 compose（服务名 `vanblog`）解析容器，无 compose 项目时用裸容器名（`VANBLOG_DEMO_CONTAINER`，默认 `vanblog`）；依赖仅 `curl`/`python3`/`docker`（不依赖 jq）。
+`demo-setup.sh` 本身也兼容两种部署形态：优先从 compose（服务名 `vanblog`）解析容器，无 compose 项目时用裸容器名（`VANBLOG_DEMO_CONTAINER`，默认 `vanblog`）；依赖仅 `curl`/`python3`/`docker`（语料抓取在容器内进行，宿主无需 node、不依赖 jq）。
 
 ## 维护约定
 

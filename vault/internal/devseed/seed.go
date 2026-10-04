@@ -2,8 +2,11 @@
 //
 // Usage:
 //
-//	go run . seed          # seed 50 posts
-//	go run . seed --count 200
+//	go run . seed                 # seed 3 posts (flag default)
+//	go run . seed --count 200     # seed 200 random posts
+//	go run . seed --count 0       # site config + showcase post only (no random
+//	                              # posts — pair with a real-content seeder,
+//	                              # e.g. bench/seed.mjs HN/arXiv corpus)
 package devseed
 
 import (
@@ -19,7 +22,8 @@ import (
 )
 
 func Seed(app core.App, postCount int) error {
-	if postCount <= 0 {
+	// postCount < 0 → default; 0 → site config + author + showcase post only.
+	if postCount < 0 {
 		postCount = 50
 	}
 

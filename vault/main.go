@@ -477,7 +477,7 @@ func main() {
 			fmt.Println("seed: done")
 		},
 	}
-	seedCmd.Flags().Int("count", 3, "number of posts to seed")
+	seedCmd.Flags().Int("count", 3, "number of random posts to seed (0 = site config + showcase post only)")
 	app.RootCmd.AddCommand(seedCmd)
 
 	// Pre-migration backup: before apis.Serve runs RunAllMigrations (which

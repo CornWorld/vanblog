@@ -136,6 +136,7 @@ async function seed() {
   if (corpus.length === 0) throw new Error("corpus is empty");
 
   let created = 0;
+
   for (let i = 0; i < COUNT; i++) {
     const art = corpus[i % corpus.length];
     // arXiv → 论文笔记/技术；HN → 按标题分流
@@ -149,15 +150,29 @@ async function seed() {
             : i % 2;
     const tags = [tagIds[art.source], ...(i % 3 === 0 ? [tagIds.performance] : []), ...(i % 5 === 0 ? [tagIds.linux] : [])].filter(Boolean);
 
+    // 语料 url 写进正文:读者可溯源(HN 外链/讨论页、arXiv abs)。
+    // posts.content 上限 5000 字符,超长语料截断(截断标记后仍保留 footer)
+    const footer = art.url ? `\n\n---\n\n> 原文: [${art.url}](${art.url})` : "";
+    const budget = 5000 - footer.length;
+    const body = art.content.length > budget ? `${art.content.slice(0, budget - 1)}…` : art.content;
+    const content = body + footer;
+    // slug 化标题做 pathname(曾为 bench-${i}-${ts},demo 下 URL 不可读)
+    const slug = art.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "post";
+
     const payload = {
       title: art.title.slice(0, 200),
-      content: art.content,
+      content,
       status: "published",
-      pathname: `bench-${i}-${Date.now().toString(36)}`,
+      pathname: `${slug}-${i}`,
       author: adminId,
       category: catIds[catIdx],
       tags,
     };
+
 
     let r = await api("/api/collections/posts/records", "POST", payload);
     if (r.status >= 400) {
@@ -165,6 +180,7 @@ async function seed() {
       const minimal = { title: payload.title, content: payload.content, status: "published", pathname: payload.pathname, author: adminId };
       r = await api("/api/collections/posts/records", "POST", minimal);
     }
+
     if (r.status === 200) {
       created++;
     } else {
