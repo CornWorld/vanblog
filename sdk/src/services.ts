@@ -319,7 +319,7 @@ export function createVanblogServices(pb: PocketBase): VanblogServices {
       listPublished: (page, perPage, opts) => {
         let filter = 'status = "published" && deleted = false';
         if (opts?.category) filter += ` && category = "${opts.category}"`;
-        if (opts?.tag) filter += ` && tags ?= "${opts.tag}"`;
+        if (opts?.tag) filter += ` && tags:each ?= "${opts.tag}"`;
         return pb.collection("posts").getList<PostExpand>(page, perPage, {
           filter,
           sort: opts?.sort || "-created",

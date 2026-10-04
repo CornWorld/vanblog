@@ -158,8 +158,14 @@ function pickTags(art, i, tagIds) {
 
 async function seed() {
   // --- admin user id (author 字段必须指向真实记录) ---
+  // users 列表规则可能收紧到匿名/他人不可见(公开 demo 即如此),此时用
+  // admin token 自身 auth-refresh 拿自己的记录。
   const me = await api("/api/collections/users/records?perPage=1");
-  const adminId = me.json.items?.[0]?.id;
+  let adminId = me.json.items?.[0]?.id;
+  if (!adminId) {
+    const refresh = await api("/api/collections/users/auth-refresh", "POST");
+    adminId = refresh.json?.record?.id;
+  }
   if (!adminId) throw new Error("no admin user found — run setup first");
   console.log(`admin: ${adminId}`);
 
@@ -177,14 +183,17 @@ async function seed() {
   console.log(`categories: ${catIds.length}`);
 
   // --- tags ---
+  // find-first-then-create:tags.name 无唯一约束,POST 在前会每次重跑都
+  // 复制一批同名记录(线上 demo 实测);先查后建才是幂等。
   const tagIds = {};
   for (const t of TAG_POOL) {
-    let r = await apiS("/api/collections/tags/records", "POST", { name: t, slug: t });
-    if (r.status >= 400) {
-      const f = await apiS(`/api/collections/tags/records?filter=${encodeURIComponent(`name="${t}"`)}`);
-      r = { status: 200, json: { id: f.json.items?.[0]?.id } };
+    const f = await apiS(`/api/collections/tags/records?filter=${encodeURIComponent(`name="${t}"`)}`);
+    let id = f.json.items?.[0]?.id;
+    if (!id) {
+      const r = await apiS("/api/collections/tags/records", "POST", { name: t, slug: t });
+      id = r.json.id;
     }
-    tagIds[t] = r.json.id;
+    tagIds[t] = id;
   }
   console.log(`tags: ${Object.keys(tagIds).length}`);
 
