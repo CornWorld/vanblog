@@ -52,12 +52,36 @@ cd $VANBLOG_BASE_PATH && docker compose down -v
   用最新 `scripts/` + `bench/` 覆盖宿主副本再继续执行——重置逻辑与种子数据
   （HN 评论、全量 tag）永远跟仓库走，宿主副本不会老化。分支可用
   `VANBLOG_DEMO_REPO_BRANCH` 覆盖，整包地址用 `VANBLOG_DEMO_REPO_TARBALL`。
-- 镜像更新由 watchtower 轮询 ghcr 完成（demo 跟踪 `prod-edge` tag；release
-  工作流发的是 `prod-latest`/`vX.Y.Z-prod`，edge 由镜像同步机制跟随 latest）。
+- 镜像更新由 watchtower 轮询 ghcr 完成（demo 容器跟踪 **`prod-latest`**，
+  release 工作流的滚动 tag）。
 - ⚠️ 逻辑：定位容器（compose/裸 run 均可）→ `docker stop` → 清空宿主
   `/pb_data` 绑定目录 → `docker start` → 跑 `demo-setup.sh`（重建 demo
-  管理员 + 白名单 + site/showcase + HN 语料文章，正文含评论区块）
+  管理员 + 白名单 + site/showcase + HN 语料文章 + 置顶欢迎文）
 - 手动触发：`sudo systemctl start vanblog-demo-reset.service`
+
+## 演示模式加固（VANBLOG_DEMO=1）
+
+demo 容器带 `VANBLOG_DEMO=1` 环境变量，Go 层注册守卫（`vault/internal/demo`），
+公开 demo 账号（role=admin）以下能力一律 **403**：
+
+| 封禁面 | 原因 |
+| --- | --- |
+| `/api/vanblog/agent/*` | agent 终端 = 容器内 shell 执行面 |
+| `/api/vanblog/mcp/*` | 宿主文件系统读写 |
+| `/api/vanblog/backups*` | 全量下载 / 恢复覆盖 |
+| `/api/vanblog/migrate/*` | 数据全量替换 |
+| `/api/vanblog/routing/apply`、`/routing/rules` | caddy 路由接管 |
+| `/api/vanblog/system/restart`、`/themes/reload` | 服务生命周期 |
+
+内容面（文章/页面/主题设置/调色盘/锁文/置顶）保持开放——随便折腾是 demo 的意义。
+
+**superuser 隔离**：bootstrap 使 superuser 与 admin 同凭据，等于把 pb superuser
+UI（`/_/`）交给全世界。demo-setup 每次重置用随机密码轮换 superuser，新密码落
+宿主 `/opt/vanblog/SUPER_PASSWORD`（600，`VANBLOG_DEMO_SUPER_PASSWORD` 可覆盖）。
+公开凭据只对应 users 集合的 admin。
+
+**试玩说明**：置顶文章《👋 公开演示站 · 随便玩》(pathname `welcome-demo`)
+写明后台地址与凭据，随每次重置自动重建。
 
 `demo-setup.sh` 本身也兼容两种部署形态：优先从 compose（服务名 `vanblog`）解析容器，无 compose 项目时用裸容器名（`VANBLOG_DEMO_CONTAINER`，默认 `vanblog`）；依赖仅 `curl`/`python3`/`docker`（语料抓取在容器内进行，宿主无需 node、不依赖 jq）。
 

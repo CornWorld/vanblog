@@ -72,11 +72,27 @@ else
   info "已存在管理员，跳过创建"
 fi
 
+# ── 1b. 轮换 superuser 密码(公开凭据 ≠ superuser)──────────────────
+# bootstrap 使 superuser 与 admin 同邮箱同密码;公开 demo 等于把 pb superuser
+# UI(/_/)发给全世界。每次 setup 用随机密码轮换,新密码落宿主
+# $VANBLOG_DEMO_HOME/SUPER_PASSWORD(600),pb_data 清空后仍可追溯。
+info "轮换 superuser 密码…"
+SUPER_EMAIL="$DEMO_EMAIL"
+SUPER_PASS="${VANBLOG_DEMO_SUPER_PASSWORD:-$(openssl rand -hex 16 2>/dev/null || head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')}"
+vex vanblog superuser upsert "$SUPER_EMAIL" "$SUPER_PASS" --dir=/pb_data >/dev/null \
+  || { err "superuser 轮换失败"; exit 1; }
+DEMO_HOME="${VANBLOG_DEMO_HOME:-/opt/vanblog}"
+printf '%s' "$SUPER_PASS" > "$DEMO_HOME/SUPER_PASSWORD"
+chmod 600 "$DEMO_HOME/SUPER_PASSWORD" 2>/dev/null
+ok "superuser 密码已轮换(已存 $DEMO_HOME/SUPER_PASSWORD)"
+
 # ── 2. 设置 allowedDomains（关键：setup 后空白名单 = TLS 拒绝）──
 info "设置 site.allowedDomains = [$DOMAIN]…"
-TOKEN=$(pbc -f -X POST "$PB_URL/api/collections/users/auth-with-password" \
+LOGIN_JSON=$(pbc -f -X POST "$PB_URL/api/collections/users/auth-with-password" \
   -H 'Content-Type: application/json' \
-  -d "{\"identity\":\"$DEMO_EMAIL\",\"password\":\"$DEMO_PASSWORD\"}" | jget 'd.get("token") or ""')
+  -d "{\"identity\":\"$DEMO_EMAIL\",\"password\":\"$DEMO_PASSWORD\"}")
+TOKEN=$(echo "$LOGIN_JSON" | jget 'd.get("token") or ""')
+ADMIN_ID=$(echo "$LOGIN_JSON" | jget 'd.get("record",{}).get("id") or ""')
 [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ] || { err "登录失败（账号/密码被改?）"; exit 1; }
 SITE_ID=$(pbc -f "$PB_URL/api/collections/site/records?perPage=1" \
   -H "Authorization: Bearer $TOKEN" | jget '(d.get("items") or [{}])[0].get("id") or ""')
@@ -104,11 +120,11 @@ docker cp "$BENCH_DIR" "$VANBLOG_CONTAINER:/tmp/bench" >/dev/null || { err "benc
 vex sh -c 'node /tmp/bench/fetch-corpus.mjs --replay > /tmp/bench/corpus.jsonl' \
   || { err "语料抓取失败(容器需可访问外网)"; exit 1; }
 
-info "登录 superuser(categories/tags 创建权限)…"
+info "登录 superuser(categories/tags 创建权限;已轮换密码)…"
 SUPER_TOKEN=$(pbc -f -X POST "$PB_URL/api/collections/_superusers/auth-with-password" \
   -H 'Content-Type: application/json' \
-  -d "{\"identity\":\"$DEMO_EMAIL\",\"password\":\"$DEMO_PASSWORD\"}" | jget 'd.get("token") or ""')
-[ -n "$SUPER_TOKEN" ] && [ "$SUPER_TOKEN" != "null" ] || { err "superuser 登录失败(bootstrap 应与 admin 同凭据)"; exit 1; }
+  -d "{\"identity\":\"$SUPER_EMAIL\",\"password\":\"$SUPER_PASS\"}" | jget 'd.get("token") or ""')
+[ -n "$SUPER_TOKEN" ] && [ "$SUPER_TOKEN" != "null" ] || { err "superuser 登录失败(轮换密码不一致?)"; exit 1; }
 
 info "灌入 $SEED_COUNT 篇真实文章…"
 vex node /tmp/bench/seed.mjs "$PB_URL" "$SUPER_TOKEN" "$TOKEN" "$SEED_COUNT" /tmp/bench/corpus.jsonl \
@@ -142,6 +158,60 @@ for t in tags:
 print(f'  removed {removed} empty tags')
 PYEOF
 ok "零引用 tag 清理完成"
+
+# ── 5. 置顶欢迎文(公开演示的试玩说明,含后台凭据)──────────────────
+# 写成文章而非 login 页硬编码:自部署实例零改动,演示实例随每次重置自动重建。
+info "创建置顶欢迎文…"
+python3 - "$PB_URL" "$TOKEN" "$ADMIN_ID" << 'PYEOF' || warn "欢迎文创建失败(不影响就绪)"
+import json, sys, urllib.request
+pb, token, admin = sys.argv[1], sys.argv[2], sys.argv[3]
+def call(u, method='GET', body=None):
+    data = json.dumps(body).encode() if body is not None else None
+    r = urllib.request.Request(u, data=data, method=method)
+    r.add_header('Authorization', 'Bearer ' + token)
+    r.add_header('Content-Type', 'application/json')
+    return json.load(urllib.request.urlopen(r))
+pathname = 'welcome-demo'
+content = """## 👋 欢迎来到 VanBlog 公开演示站
+
+随便折腾!这是全功能演示实例,**每小时整点自动重置**,改坏了别担心。
+
+### 后台试玩
+
+- 后台地址: [/admin/](/admin/)
+- 账号: `demo`
+- 密码: `demo1234`
+
+### 可以玩的
+
+写文章、页面、主题设置、调色盘、密码锁文、置顶、分类标签、评论配置……
+
+### 演示模式已封禁
+
+终端(agent)、MCP 文件读写、备份、迁移导入、路由接管、服务重启——这些
+能力对公开账号一律 403,superuser 密码也已随机化。
+
+### 注意
+
+- 别放真实数据、真实邮箱(每小时清空)
+- 改动会在下次整点恢复默认
+"""
+body = {
+    'title': '👋 公开演示站 · 随便玩',
+    'content': content,
+    'status': 'published',
+    'pathname': pathname,
+    'top': 1000,
+    'author': admin,
+}
+found = call(f"{pb}/api/collections/posts/records?filter=(pathname='{pathname}')")['items']
+if found:
+    call(f"{pb}/api/collections/posts/records/{found[0]['id']}", 'PATCH', body)
+else:
+    call(f"{pb}/api/collections/posts/records", 'POST', body)
+print('  welcome post ready')
+PYEOF
+ok "置顶欢迎文就绪"
 
 echo ""
 echo "════════════════════════════════════════════"

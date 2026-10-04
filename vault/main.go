@@ -26,6 +26,7 @@ import (
 	"github.com/cornworld/vanblog/internal/bootstrap"
 	"github.com/cornworld/vanblog/internal/caddy"
 	"github.com/cornworld/vanblog/internal/commentssso"
+	"github.com/cornworld/vanblog/internal/demo"
 	"github.com/cornworld/vanblog/internal/devseed"
 	"github.com/cornworld/vanblog/internal/feed"
 	"github.com/cornworld/vanblog/internal/mcp"
@@ -442,6 +443,10 @@ func main() {
 	// no cross-manager dependency.
 	// jsvm.MustRegister ran at the top of main() (before the managers
 	// below), so every OnServe bind here can rely on JS hooks being loaded.
+	// 演示模式守卫最先注册(VANBLOG_DEMO=1 时封禁 agent/mcp/backups/
+	// migrate/routing 接管/restart/themes-reload,公开 demo 账号可玩内容
+	// 但碰不到 shell 与基础设施面)。
+	demo.New(app)
 	// audit first among managers: untagged Request hooks observe every
 	// collection (incl. Pack tables) after the write lands via e.Next().
 	_ = audit.New(app)
