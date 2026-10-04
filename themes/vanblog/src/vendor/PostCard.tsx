@@ -7,6 +7,7 @@
  * 其余逻辑逐字。上游 fix → 对本文件 apply patch。
  */
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import AlertCard from "./AlertCard";
 import CopyRight from "./CopyRight";
 import Reward from "./Reward";
@@ -60,8 +61,12 @@ export default function (props: {
   showExpirationReminder: boolean;
   showEditButton: boolean;
   /** SEAM: 服务端渲染管线产物 — type=article 全文 / overview 摘要 / 加密卡提示,
-   * 已消毒 HTML(对应上游 raw content + 客户端 Markdown/bytemd 渲染) */
-  contentHtml: string;
+   * 已消毒 HTML(对应上游 raw content + 客户端 Markdown/bytemd 渲染)。
+   * 文章页正文改走 children slot(见渲染处注释),本 prop 保留为 overview /
+   * 加密提示 / 无 slot 调用方的回退。 */
+  contentHtml?: string;
+  /** SEAM: Astro 默认 slot 注入的正文 HTML(文章页;不进 island props 序列化) */
+  children?: ReactNode;
   /** SEAM: overview 加密卡提示 HTML(上游由 calContent 内联字符串渲染) */
   encryptedHtml?: string;
   /** SEAM: overview 摘要 HTML(上游按 <!-- more --> 客户端切分) */
@@ -98,10 +103,10 @@ export default function (props: {
   // SEAM: 摘要/加密提示切分已在服务端完成(remark/rehype 同构渲染),直接取
   // 渲染产物;lock 解锁后 setContent 下发的也是服务端消毒 HTML。
   const calContent = lock
-    ? props.contentHtml
+    ? (props.contentHtml ?? "")
     : props.type == "overview"
-      ? (props.private ? props.encryptedHtml ?? props.contentHtml : props.excerptHtml ?? props.contentHtml)
-      : props.contentHtml;
+      ? (props.private ? props.encryptedHtml ?? props.contentHtml ?? "" : props.excerptHtml ?? props.contentHtml ?? "")
+      : (props.contentHtml ?? "");
 
   const showToc = !lock && props.type == "article" && props.showToc;
 
@@ -149,10 +154,14 @@ export default function (props: {
             <>
               {showToc && props.tocItems && <TocMobile items={props.tocItems} />}
               <div className="markdown-body">
-                <div
-                  className="markdown-body"
-                  dangerouslySetInnerHTML={{ __html: calContent }}
-                />
+                <div className="markdown-body">
+                  {/* 正文优先走 Astro 命名 slot(文章页注入):全文 HTML 不进
+                      astro-island props 序列化(整篇会出现两份,页面体积翻倍);
+                      overview/加密卡等小 HTML 仍走 contentHtml prop。 */}
+                  {props.children ?? (
+                    <div dangerouslySetInnerHTML={{ __html: calContent }} />
+                  )}
+                </div>
               </div>
             </>
           )}
