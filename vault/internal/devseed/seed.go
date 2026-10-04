@@ -54,6 +54,12 @@ func Seed(app core.App, postCount int) error {
 		return fmt.Errorf("site: %w", err)
 	}
 
+	// ── Author: link every seeded post to the first user (the demo admin) ──
+	authorID, err := ensureDemoAuthor(app)
+	if err != nil {
+		return fmt.Errorf("author: %w", err)
+	}
+
 	// ── Posts (via gofakeit) ──
 	catList := catNames
 	tagList := tagNames
@@ -66,13 +72,13 @@ func Seed(app core.App, postCount int) error {
 		for range nTags {
 			postTags = append(postTags, tagList[rand.Intn(len(tagList))])
 		}
-		if _, err := ensurePost(app, title, content, catIDs[cat], lookups(tagIDs, dedup(postTags))); err != nil {
+		if _, err := ensurePost(app, title, content, catIDs[cat], lookups(tagIDs, dedup(postTags)), authorID); err != nil {
 			return fmt.Errorf("post %q: %w", title, err)
 		}
 	}
 
 	// ── Feature showcase: hard-coded post exercising all rendering features ──
-	showcaseTitle := "📐 Feature Showcase — Markdown 全功能测试"
+	showcaseTitle := "Feature Showcase — Markdown 全功能测试"
 	showcaseContent := trim(`
 ## 代码高亮
 
@@ -222,7 +228,7 @@ Astro 6 支持 Hybrid 渲染模式，逐页控制 SSG/SSR。
 	if len(catList) > 1 {
 		scat = catList[1]
 	}
-	if _, err := ensurePost(app, showcaseTitle, showcaseContent, catIDs[scat], stagIDs); err != nil {
+	if _, err := ensurePost(app, showcaseTitle, showcaseContent, catIDs[scat], stagIDs, authorID); err != nil {
 		return fmt.Errorf("showcase post: %w", err)
 	}
 
@@ -303,7 +309,7 @@ func ensureTag(app core.App, name string) (string, error) {
 	return rec.Id, nil
 }
 
-func ensurePost(app core.App, title, content, categoryID string, tagIDs []string) (string, error) {
+func ensurePost(app core.App, title, content, categoryID string, tagIDs []string, authorID string) (string, error) {
 	col, err := app.FindCollectionByNameOrId("posts")
 	if err != nil {
 		return "", err
@@ -322,6 +328,9 @@ func ensurePost(app core.App, title, content, categoryID string, tagIDs []string
 	rec.Set("status", "published")
 	rec.Set("category", categoryID)
 	rec.Set("tags", tagIDs)
+	if authorID != "" {
+		rec.Set("author", authorID)
+	}
 	rec.Set("created", now)
 	rec.Set("updated", now)
 	rec.Set("deleted", false)
@@ -332,11 +341,30 @@ func ensurePost(app core.App, title, content, categoryID string, tagIDs []string
 	return rec.Id, nil
 }
 
+// ensureDemoAuthor links seeded posts to the first user record (the demo
+// admin created by setup) and makes sure it carries a display name for the
+// post footer ("本文作者"). Returns "" when no user exists yet — posts then
+// stay authorless, same as before.
+func ensureDemoAuthor(app core.App) (string, error) {
+	rec, err := app.FindFirstRecordByFilter("users", "id != ''")
+	if err != nil {
+		return "", nil //nolint:nilerr // no users yet — leave posts authorless
+	}
+	if rec.GetString("name") == "" {
+		rec.Set("name", "demo user")
+		if err := app.Save(rec); err != nil {
+			return "", err
+		}
+	}
+	return rec.Id, nil
+}
+
 func ensureSite(app core.App) error {
 	col, err := app.FindCollectionByNameOrId("site")
 	if err != nil {
 		return err
 	}
+	const gravatar = "https://www.gravatar.com/avatar/d9030e2f604d1af684a10e3025b20855"
 	rec, err := site.Get(app)
 	if err == nil {
 		if rec.GetString("siteName") == "" {
@@ -348,12 +376,16 @@ func ensureSite(app core.App) error {
 		if rec.GetString("author") == "" {
 			rec.Set("author", gofakeit.Name())
 		}
+		if rec.GetString("authorLogo") == "" {
+			rec.Set("authorLogo", gravatar)
+		}
 		return app.Save(rec)
 	}
 	rec = core.NewRecord(col)
 	rec.Set("siteName", gofakeit.AppName())
 	rec.Set("siteDesc", gofakeit.HackerPhrase())
 	rec.Set("author", gofakeit.Name())
+	rec.Set("authorLogo", gravatar)
 	return app.Save(rec)
 }
 
