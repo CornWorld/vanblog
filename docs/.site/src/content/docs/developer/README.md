@@ -1,0 +1,21 @@
+---
+title: 开发者文档
+---
+
+# 开发者文档
+
+面向开发者 / 贡献者。使用文档见 [../README.md](../README.md)。
+
+| 文档                                                                    | 读者      | 内容                                         |
+| ----------------------------------------------------------------------- | --------- | -------------------------------------------- |
+| [theme-implementer-guide.md](theme-implementer-guide.md)               | 主题作者  | 概念模型 + L0/L1/L2 契约、组件覆盖、必备文件 |
+| [sdk-design.md](sdk-design.md)                                         | SDK 用户  | SDK 架构与 API 设计(内部模块)                |
+| [agent-design.md](agent-design.md)                                     | 维护者    | 内置 agent(pi)架构                          |
+| [architecture-layering.md](../internal/architecture-layering.md)       | 维护者    | 整体分层原则                                 |
+| [vendor-islands-design.md](vendor-islands-design.md)                   | 主题作者 / 维护者 | 内置主题对齐上游原版的 vendor-as-islands 决策、seam 契约、上游同步协议 |
+| [pocketbase-extension-contract.md](../internal/pocketbase-extension-contract.md) | 维护者    | PocketBase 扩展边界                          |
+| [agent-memory.md](agent-memory.md)                                     | 维护者    | agent 跨会话记忆机制 + 消融实验结论         |
+
+## 贡献
+
+见根目录 [CONTRIBUTING.md](../../CONTRIBUTING.md)：本地开发、构建/测试命令、提交规范、文档纪律（含 doc-standard）。

@@ -88,6 +88,19 @@ export default [
       },
     },
   },
+  // docs/.site — Starlight 站点构建脚本跑在 Node(rehype 插件/构建期 IO)。
+  {
+    files: ["docs/.site/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        process: "readonly",
+        console: "readonly",
+        Buffer: "readonly",
+        URL: "readonly",
+        __dirname: "readonly",
+      },
+    },
+  },
   // Astro template expressions ({cond && <div/>}) are idiomatic, not
   // unused expressions.
   {

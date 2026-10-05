@@ -11,3 +11,4 @@ sdk/dist
 app/.astro
 .astro
 .DS_Store
+docs/.site

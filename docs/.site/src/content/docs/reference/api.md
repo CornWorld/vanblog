@@ -1,0 +1,50 @@
+---
+title: API
+---
+
+# API — 事实 (SSOT)
+
+> 面向开发者。SDK 架构见 [sdk-design.md](../developer/sdk-design.md)（内部）。
+
+## 路由划分
+
+| 前缀 | 归属 | 说明 |
+|---|---|---|
+| `/api/vanblog/*` | 自定义 Go 路由 | 业务 API（文章、主题、迁移、TLS 状态、Pack 等） |
+| `/api/collections/*` | pb 原生 CRUD | PocketBase Record API（列表/详情/创建/更新/删除，受集合权限规则约束） |
+| `/api/files/*` | pb 原生 | 上传文件访问（支持 `?thumb=` 缩略图） |
+| `/_/` | pb Admin UI | PocketBase 管理界面 |
+
+## 常用端点
+
+| 方法/路径 | 用途 |
+|---|---|
+| `GET /api/vanblog/setup/status` | 判断是否首次启动（引导 setup） |
+| `GET /api/vanblog/tls/status` | TLS 状态（HTTP_ONLY 下降级 `onDemandTLS: false`） |
+| `POST /api/vanblog/migrate/import` | 数据导入（ZIP，限 100MB，事务） |
+| `POST /api/vanblog/themes/reload` | 手动重扫主题 |
+| `GET /api/vanblog/packs/frontend` | Pack 前端运行时清单（匿名；nav + 注入 URL，10s 缓存） |
+| `GET /pack-static/*` | Pack 前端资产（活目录直出，ETag 重验；Caddy 系统路由反代 PB） |
+| `GET/PUT /api/vanblog/theme-settings/<name>` | 主题设置读（匿名，默认值合并）/写（admin-only，schema 校验） |
+| `GET/POST /api/vanblog/posts/...` | 文章（含回收站 `posts/trash`、恢复 `posts/{id}/restore`、密码解锁 `posts/{id}/unlock`）。密码锁语义：匿名 API 读 `posts` 时锁定文章的 `content`/`password` 被遮蔽（`hasPassword` 保留），`categories` 的 `password` 同样遮蔽；解锁凭密码或 HMAC 签名 cookie，正文仅经 `posts/{id}/unlock` 返回。RSS/搜索不含锁定文章 |
+| `POST /api/vanblog/mcp/*` | MCP（admin-only，agent 扩展；仅 dev 容器注册，prod 无） |
+| `POST /api/vanblog/agent/validate` | schema 写入前预检（admin-only，仅 dev 容器） |
+| `GET /api/vanblog/agent/terminal` | WebSocket 终端桥：admin「AI 终端」页 → 引擎 TUI（admin-only，仅 dev 容器） |
+
+## 鉴权
+
+- 前台只读接口走 pb 公开权限。
+- 管理/写操作需 pb 用户鉴权（`users` 集合）。协作者权限见后台「用户管理」。
+- 所有外部请求经 Caddy 路由层（pb 只绑 127.0.0.1）。
+
+## SDK
+
+官方 SDK（TypeScript）位于 `sdk/`，用法：
+
+```ts
+import { createVanblogClient } from "@vanblog/sdk";
+const client = createVanblogClient({ url: process.env.PB_URL });
+await client.pb.collection("users").authWithPassword(email, password);
+```
+
+> 详细 API 形状见 `sdk/src/` 的公开签名（内部模块，尽量稳定，非对外 semver 契约）。

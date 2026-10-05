@@ -16,6 +16,7 @@ SDK：`createVanblogClient({ url: process.env.PB_URL })`，登录 `pb.collection
 
 ```bash
 pnpm --filter vanblog-app build      # admin SSR app
+pnpm --filter vanblog-docs-site build # 文档站(docs/.site/,内容镜像自 docs/,产物 docs/.site/dist)
 cd themes/<name> && pnpm dev         # 主题 HMR
 cd themes/<name> && pnpm build       # 主题构建验证
 cd themes/<name> && pnpm check       # astro check 类型

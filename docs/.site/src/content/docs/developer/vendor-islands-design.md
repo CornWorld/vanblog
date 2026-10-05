@@ -1,0 +1,149 @@
+---
+title: 内置主题对齐上游原版的决策:Vendor-as-Islands
+---
+
+# 内置主题对齐上游原版的决策:Vendor-as-Islands
+
+> 读者:主题作者、维护者。回答一个问题:**原版 mereithhh/vanblog 的 Next.js 前台(fork)与本仓库 Astro 重写的关系怎么处理**。
+> 相关:[theme-implementer-guide](theme-implementer-guide.md)(L0/L1/L2 契约)、[architecture-layering](../internal/architecture-layering.md)。
+
+## 决策
+
+**把原版交互组件按文件原样 vendor 进内置主题(`themes/vanblog/src/vendor/`),以 React islands 运行;原版 Next.js 整站不进生产。**
+
+- 上游 React 组件逐文件复制,行为级 1:1。血缘与偏离的**单一事实源是 [`themes/vanblog/src/vendor/upstream.manifest.json`](../../themes/vanblog/src/vendor/upstream.manifest.json)**(52 本地件 × 上游 107 文件全覆盖,机器校验);vendor 文件头 `UPSTREAM:` 行是 manifest 的冗余视图(`scripts/dev/vendor-sync.mjs sync-headers` 再生成)。上游 fix 按「上游跟踪治理」一节的策略处置,不再默认盲 apply。
+- 不手搓复刻交互,也不整站迁移 Next.js。
+
+## 兼容层原则(2026-09-07 裁定)
+
+**努力对齐行为;实现完全允许不一样——只要保证可解释、可与原版 compare。**
+
+- **行为**指用户可见面:URL 形态、渲染结果、交互响应、时序可见性(如发布即可见)。
+- **实现**指框架机制与内部结构:Astro/React、渲染时机、取数路径、组件拆分。
+- 每处实现偏离必须**可解释**:manifest 条目(`rewrites`/`patches`/`contract`)+ vendor 文件头 `SEAM` 注释叙述,或下方对照表登记;不允许无记录的静默分叉。
+- 每处行为等价必须**可 compare**:用验证基线一节的手段(同源数据垫片、URL 探活、截图)可重复检验,不靠"看起来像"。
+
+### 实现偏离对照表
+
+| 行为(对齐目标) | 原版实现 | 本主题实现 | 等价性说明 |
+| --- | --- | --- | --- |
+| 路由形态 | `/post/[id]`(id 或 permalink 双解析)、`/category`+`/category/[name]`、`/tag`+`/tag/[name]`、`/page/[p]` | 同形态迁移;`/posts/[id]` 留 301 兼容桩(admin 面板可能拼旧复数形态);Astro params 不自动解码,补 `decodeURIComponent` 对齐 Next | URL 逐形态一致;非法 name/slug → 404 同原版 |
+| 顶栏站点名 | `getLayoutProps`:siteLogo 为空时强制回落 siteName | BaseLayout 同语义守卫 | 配置了 siteLogo 模式但未传图时两站都显示站名,不留空白 |
+| 正文内嵌元素 | sanitize 放行 script/iframe/object/center | **iframe 放行**(B 站/YouTube 嵌入全走 iframe,srcdoc/on*/js-scheme 已防);script/object/embed 仍剥离 | 有意安全分叉:嵌入场景 iframe 全覆盖;script 执行面无正当内容需求(站点级注入走 customScript) |
+| 微信二维码 | SocialIcon 点击弹 Popover(dark 用 wechat-dark 变体) | vendor `SocialIcon.tsx` 逐字(dark 态走 html.dark 桥) | 与原版同一 React 组件,逐行为一致 |
+| 过期提醒范围 | 仅 PostCard 内 AlertCard(type=article/about) | PostCard island 原样(移除首页/分页卡误挂载) | 修正范围漂移,与原版一致 |
+| 分页 URL | `page/[p].tsx` 路由,无 query 分页 | `pages/page/[p].astro` + `/?page=N` 兼容入口 | 第 1 页=`/`,N≥2=`/page/N` 形态一致;非法页 rewrite 404 同原版 |
+| 列表排序 | 服务端默认 `-top,-created` | SDK `sort: '-top,-created'` | 置顶优先 + 创建时间倒序,逐项一致 |
+| 发布可见性 | getStaticProps + ISR 时间窗重建 | SSR 缓存(`routeRules` SWR)+ Go 写钩子 `POST /api/revalidate` 主动失效 | 主动失效比 ISR 窗口更即时;e2e:`app/test/cache-e2e.test.mjs` |
+| `/?page=N` 缓存隔离 | 原版无此入口(兼容层自有) | Astro cache 键含 query(`x-astro-cache` 实测 `/` 与 `/?page=2` 各自 MISS/HIT) | 兼容入口不污染首页缓存 |
+| 站内链接 | 裸根路径(站点根=`/`) | 页面链接同为根路径:shared-config `base:'/'`,withBase() 恒等返回(仅豁免 `/admin`、`/api/*`);主题构建资产走 `assetsPrefix=/themes/<name>/`(caddy immutable 层),`/themes/<name>/*` 请求由主题宿主剥前缀归一到根相对路由(2026-10-04 起;此前 withBase 加前缀,链接与 dev 多主题共享前缀空间) | 语义等价:都是"站内路由根",且与上游 URL 形态一致;主题自有 SSR 端点(/api/unlock)用 `__VANBLOG_THEME_PREFIX__` 走前缀空间(裸 /api/* 在 caddy 归 pb) |
+| 数据获取 | SWR + legacy `/api/public/*` | SDK 串行取数(同 client 并发触发 auto-cancel) | 渲染输入同源(parity 垫片保证);串行是实现约束非行为差异 |
+| Markdown 渲染 | bytemd 客户端 | 平台 remark/rehype SSR + `lib/upstreamMarkdown.ts` 后处理对齐 DOM | 代码块/标题/TOC 行 DOM 同构;语法高亮保持平台 shiki 内联色(见下行) |
+| 语法高亮 | highlight.js(`hljs` 类,code-light/dark.css) | 平台管线 shiki 内联色 + `--shiki-dark` 暗色变量 | **有意分叉**:暗色即开即用;换行符/Token 粒度不同,文本内容一致 |
+| CSS 层 | globals.css 手写工具类 + var/tip-card/scrollbar 诸文件 + 代码块包裹内边距 | `vendor/upstream-globals.css` 全量补齐 + var/tip-card/scrollbar 三文件 vendor;页面底色对齐上游像素(slate-100/#1d2025);`text-dark-r` 等暗色 token 已删(见下行机制行) | DOM diff 之外以计算样式探针逐项核验(nav 0.15s 过渡、headroom transform、ua::before 0.3s、代码块 22px 16px 16px、pre-wrap) |
+| 静态展示件 | React | 已全量 vendor(2026-09-07 二批:PostCard 系/AuthorCard 系/Footer/TimeLineItem/LinkCard/PageNav/ImageBox 等) | 换框架不换行为;删除早期 Astro 手写版 |
+| 暗色类机制 | 上游 v3.3.5 会对 @layer components 手写类生成 `dark:` 变体(color+fill 成对、hover/group-hover 全套;`text-dark`=灰158 与 `bg-dark`=#26282c 同名不同值) | @theme 单 token 无法表达 → 已删错误 token;`upstream-globals.css` 手写 27 条变体规则 + 无条件类,**逐字从上游构建产物移植**(dev styleSheets 抓取) | 修正暗色文字被涂成 #26282c(背景同色隐形)与 `a` 全局染 accent 蓝两个根因;计算样式探针实测 nav/标题/副标题/页脚=rgb(158,158,158) 与上游逐位一致 |
+| 调色盘切换失效 | —(上游无调色盘) | SDK `runWithTransition` 裸调 `document.startViewTransition` 抛 Illegal invocation,回调(切 dark 类+换 palette.css link)从未执行 → `vt.call(doc, fn)` | 选盘 → link 换 `name=midnight-dark` + CSS 变量实际生效 + 清除回落,浏览器闭环验证 |
+| 评论数角标 | SubTitle 内 `span.waline-comment-count[data-path]` 初始 0,WaLine commentCount 客户端填充(仅文章页;首页保持静态 0) | 同 DOM;CommentArtalk 挂载时按 Artalk `/api/v2/stats` 填充 `data-path` | **修正此前误登记**:上游确有评论数角标;enableComment 由 commentsProvider 映射 |
+| Tailwind v3→v4 迁移面 | 上游组件按 v3.3.5 语义书写(类名/默认值/选择器) | 按[官方升级手册](https://tailwindcss.com/docs/upgrade-guide)全量审计(4 scout 并行分片 + 构建产物实测):flex-grow/shrink 族→grow/shrink、rounded-sm→rounded-xs(保 v3 0.125rem)、hr/divide 补显式亮色(v4 默认色 currentColor)、button cursor 全局兜底 pointer(官方推荐写法)、custom-container 显式边色;实测 v4.3.2 对 flex-grow/shrink 旧名仍出等值别名,改名属前瞻 | 删除孤儿 ArticleList.astro/TimeLineItem.astro;app/src/pages/admin/** 为锁定区,v4 边框默认色变化在其中保留原样(登记) |
+| 代码块 wrapper 结构 | React DOM 创建 `pre > div.code-block-wrapper`(div 入 pre,React 不经 HTML 解析故可行) | wrapper 外移:`div.code-block-wrapper > (div.header-right + pre > code)`;`upstreamCodeBlocks` 单遍整块替换,仅命中 wrapper 类 pre,mermaid 纯块原样放行;`upstream-globals.css` 选择器随之去 pre 前缀 | SSR 解析安全是硬约束:div 入 pre 被解析器强制闭合,旧两遍式还给 mermaid 补孤儿 `</div>`(全页净多 2 个),撕裂 flex 壳层(侧栏逃逸、1884px 横向溢出)。视觉面(22px 16px 16px 内边距/横向滚动/语言角标/复制钮)逐项保留 |
+| 代码块暗色 | hljs 类切换(code-dark.css) | shiki inline `color` + `--shiki-dark/--shiki-dark-bg` 成对输出,`html.dark pre[data-language]` 激活变量切换 | 修正"暗色即开即用"误登记:激活规则此前缺失,暗色下代码=深底 rgb(30,41,59) 配 #24292e 深字不可读;现暗色文字/底色随 --shiki-dark 逐 token 切换 |
+| markdown 交互绑定 | bytemd viewerEffect 逐渲染绑定(复制钮/标题点击) | BaseLayout 单个 document 级委托脚本(复制 ✓ 反馈、`.markdown-heading[data-id]` 改 hash),post 页局部绑定收编删除 | 上游概览亦走 Viewer → 首页/分页/关于复制与标题跳转本就生效;委托在 island 水合前后均命中,行为面等价且全页一致 |
+| markdown 交互选择器 | bytemd viewerEffect 挂在 Viewer 根(全站每个 Viewer 生效) | `.post-viewer` 死引用修正为 PostCard 内容根 `.markdown-body`:homeMermaid(首页/分页 mermaid 渲染)、ImageZoom 默认选择器同步;zoom 岛自 post 页提升至 BaseLayout 全页挂载(上游概览图本就可放大) | 09-07 PostCard vendor 化后 `.post-viewer` 无组件渲染,首页 mermaid 退化为源码块、全站 markdown 图片 zoom 失效;现行为面恢复与上游一致 |
+| 容器标题/行内代码类 | 容器插件产 `<p class="custom-container-title {type}">` 与 `<code class="code-inline">`;div 另带 `type="用户标题"` 属性 | `upstreamDom` 后处理补齐标题类型类与 code-inline;type 属性(用户文案,平台管线未保留,无 CSS/JS 消费)与 katex 的 math-inline/math-display 包裹(无 CSS 依赖)不补(登记) | 修复容器标题图标(::before 依赖类型类)与配色缺失;行内代码 DOM 与上游同构 |
+| 锁定卡加密提示 | 列表 API 保留锁定文并置 `content:undefined, private:true`(server `getByOption` 公开路径);PostCard 对 private overview 卡客户端合成提示文案「该文章已加密，点击 \`阅读全文\` 并输入密码后方可查看。」经 Markdown 渲染 | 同一字面串经平台 remark/rehype 管线 SSR 预渲染为 `encryptedHtml`(`lib/home.ts`),锁定卡(`hasPassword`)经 props 下发渲染,DOM 同构 | 提示卡文案与渲染对齐(2026-09-15 复核,对照上游 PostCard `calContent` 与 server `article.provider.getByOption`);修正 09-11 误登记「上游为裸卡」——上游 UI 层本就产提示文本。**有意偏离**:private(非密码)文上游列表保留 teaser 卡,本仓 ListRule 收敛 `private=false` 整卡缺席,已注册为 A 面安全定义(`docs/security-invariants.md` 匿名可读面清单),非本表待办 |
+| 解锁成功后内容下发 | `UnLockCard.setContent(html)` 收 AJAX 解锁的整篇 HTML,`setLock(false)` 客户端切换正文 | PostCard 无本地正文 state,`setContent` 接通为 `location.reload()`:Go 签发 path 限定解锁 cookie → 重载后 SSR 凭 cookie 渲染全文 | 行为面等价:解锁后同 URL 即见全文;cookie 免密重看/分享语义反而覆盖上游;依赖 unlock 端点 id/pathname 双解析(vault 8ca484ed)与 cookie 转发修正(theme 018ee6c2) |
+| 锁定文详情水合 | 上游客户端整体水合,锁定态→解锁切换在客户端完成 | SSR 锁定态占位 + island 水合;e2e-browser「B(锁定文详情)可见 button/a 全部可点击」在 dev-verify 8083/8084 两次运行中同断言失败:点击后 React #425(server/client markup 不匹配) | 未解决,登记在案:SSR 面 journey 31/0 全绿(渲染输出正确),失败仅在客户端水合;同镜像 CI browser 12/12 过,指向 dev 容器内时序/环境因子(待查:HMR 探针或 theme host 注入顺序) |
+
+## 背景(2026-09 量化)
+
+用户定性:「现在的前端只是 vanblog style,大部分交互/细节和原版都对不上」。逐文件盘点结论:
+
+- 原版 `packages/website`:14 页(全 getStaticProps+ISR)、40 组件目录 51 文件(组件 3367 行 + 样式 3099 行)、32 条行为级交互(暗色三态轮询、TOC scrollspy+hash、⌘K 搜索 modal、AJAX 解锁、图片画廊等)。
+- 重写初期主题:14 routes、21 组件、3591 行、**零 island**——交互全部手搓原生 script,搜索双形态、解锁整页刷新、图片无画廊等行为漂移由此而来。
+- 上游仓库为 AI-maintained(自声明):爆发-沉寂提交模式(如 2026-09-03 单日 30 个 `fix:` 后归静默),带 vitest+Playwright 测试。
+
+## 否决的备选
+
+| 方案 | 否决理由 |
+| --- | --- |
+| 整站跑原版 Next.js 前台 | AI-maintained 无人类维护承诺;第二个 Node 运行时;锁死 Waline;让位 pack/L0 生态;双前台路由/构建体系冲突 |
+| 保留手搓 Astro 组件逐个补交互 | 32 条交互逐个补永远追不上上游 fix;每条都要人肉对照上游行为;上游改一处我们盲一处 |
+| 平行维护两个前台 | 同「整站跑原版」,且用户永远只看一个 |
+
+## 刻意分叉点(seam)
+
+其余代码原样。seam 签名是硬契约,实现在 `themes/vanblog/src/vendor/seams/`:
+
+| Seam | 原版 | 本主题 | 契约 |
+| --- | --- | --- | --- |
+| 数据层 | SWR + getStaticProps + legacy `/api/public/*` | props 进 + SDK 回调出;Go 端 `/api/vanblog/search` | `search.ts`:`searchArticles(q, limit?)` → `SearchHit{id,title,summary,category?,createdAt}` |
+| 评论 | `Waline/core.tsx` | `CommentArtalk.tsx` | 平台评论是 Artalk;props `{server, path}`,dark 联动监听保留 |
+| Markdown | bytemd Viewer 客户端渲染 | 平台 remark/rehype 构建期渲染 HTML | viewerEffect(TOC/复制/mermaid)原样挂载;bytemd 不搬(SSR 管线同构) |
+
+`unlock.ts`:`unlockPost(id, password)` → `POST /api/unlock` → 200 `{html}`(平台管线渲染+消毒)/ 401 `{message}`。
+
+## 附带决策
+
+- **ThemeContext 砍掉**:多 island 无共享 context;主题态走 `html.dark` + localStorage(原版 `applyTheme` 本就操作这两个),`seams/theme.ts` 提供 `useThemeMode()` 替身。
+- **静态展示件二批全量 vendor(2026-09-07)**:PostCard(index/title/bottom+AlertCard/TopPinIcon/CopyRight/Reward/UnLockCard/CommentArtalk)、AuthorCard(SocialCard/SocialIcon/ImageBox/getIcon)、Footer(RunningTime/SiteViewer)、TimeLineItem、LinkCard、PageNav、404。早期 Astro 手写版(ArticleCard/PostViewer/ExpirationNotice/CopyRight/Reward/TopPin/Comments/PostLock)已删——原「静态件保持 Astro」决议废止,比对成本优先。
+- **壳层对齐上游 Layout/LayoutBody**:body 裸、内容+Footer 同包 `mx-auto lg:px-6 md:py-4 py-2 px-2 md:px-4 text-gray-700` 容器;类名 upstream literal(不走语义变量)。
+- **依赖 pin `react@^18.3`**:上游 18.2 系,勿升 19。
+- **CSS 语义变量**:vendor CSS 里的硬编码色改 `var(--text|--bg|--surface|--border|--accent|--text-muted)`;无语义对应保留原值并注 `/* upstream literal */`。
+- **props 类型内联各 vendor 文件**(与上游一致),不建共享 types。
+## 验证基线(parity shim)
+
+垫片不进生产镜像。复现:一端跑 `node scripts/dev/public-api-shim.mjs`(:3000),另一端在上游目录 `pnpm dev`(:3001),按下方三件套执行;已知有意偏差以 manifest `patches[]` 与本表为准。
+
+**可 compare 三件套**(按兼容层原则可重复执行):
+1. **同源数据**:垫片使两站读同一份 PB 数据,渲染差异只可能来自前端。
+2. **URL 探活**:`Accept: text/html` 逐 URL 探状态(curl 默认 `*/*` 会吃到 dev fallback 假 200,必须带真实浏览器头);首页全部内链闭环探活。
+3. **全页截图**:关键页(首页/文章/时间轴/搜索/分页)两站对比,交互(暗色、⌘K、TOC、解锁)走真实浏览器点击流。
+
+## 上游跟踪治理(manifest,2026-09-14 裁定)
+
+结构化事实(血缘/偏离类别/策略/缺席理由)入 [`upstream.manifest.json`](../../themes/vanblog/src/vendor/upstream.manifest.json),机器可校验;叙述(为什么、等价性论证)留文件头 `SEAM:` 与本表(行为轴)。两轴互链,不互替。
+
+### 词汇(derivation 封闭枚举)与派生策略
+
+| derivation | 语义 | 条目 | 同步策略(派生,不落盘) |
+| --- | --- | --- | --- |
+| `verbatim` | 逐字拷贝(可带登记 patch) | 11 | `direct` 盲 apply;有 patch → `manual` |
+| `mechanical` | 拷贝 + 登记过的确定性改写(`rewrites`) | 23 | `replay`:patch 后按规则重放 |
+| `merged` | 多上游文件合并 | 10 | `replay`:逐源 patch |
+| `contract` | 数据/边界契约化,`contract` 指向 `seams/*.ts` 类型签名 | 5 | `manual`:上游变动=契约信号 |
+| `fork` | 行为分叉,上游文件=行为规格 | 2 | `manual`:跑 parity 三件套 |
+| `platform` | 平台自有,无上游 | 1 | `none` |
+| (skipped) | 上游有、本仓无,缺席台账 + 理由 | 44 | 信号:复核理由是否仍成立 |
+
+「pin 符号不 pin 行号」:血缘记 `path@sha` + 符号名;行内偏离点用 `SEAM(<rewrite-id>)` 锚点(前瞻,`check` 校验引用)。
+
+### 工具(零依赖,`scripts/dev/vendor-sync.mjs`)
+
+```bash
+node scripts/dev/vendor-sync.mjs check                      # 台账↔磁盘↔头注释一致 + 上游覆盖率 + 规则引用;提交前必跑
+node scripts/dev/vendor-sync.mjs affected 4b488500..<ref>   # 上游区间 → direct/replay/manual/none/skipped-hit/untriaged 分组
+node scripts/dev/vendor-sync.mjs sync-headers               # 再生成全部文件头 UPSTREAM 视图
+node scripts/dev/vendor-sync.mjs metrics [--json]           # 审计指标(下表可复算)
+```
+
+上游爆发日(批量 `fix:`)流程:`git -C refs/mereithhh-original fetch` → `affected <pinned>..<HEAD>` → direct 盲 apply;replay patch+按 `rewrites` 重放;manual 读信号、不盲 apply、跑下方 parity 三件套;skipped-hit 复核缺席理由;UNTRIAGED(上游新文件)先补台账再动手。影响面判断沿用 L0/L1/L2:vendor 属主题内 L2(上游行为即规格);seam 与 `base-overrides` 锁定路径不受 vendor 更新影响。上游改数据面字段:同步改 Go 端 `SearchResult`/页面 props,不改 seam 签名。
+
+### 审计指标(2026-09-14 基线,`metrics` 可复算)
+
+| 指标 | 基线值 | 读法 |
+| --- | --- | --- |
+| 上游覆盖占比(可 vendor 面) | 文件 68.5%(63/92);LOC 81.1% | components/utils/styles/api/types 被收录比例;LOC 高于文件数 = 大文件优先收录 |
+| 上游覆盖占比(整个前台) | 文件 58.9%;LOC 63.7% | 含 pages/public;pages 由 Astro 原生重写,稀释是有意的 |
+| 保真度(本地 LOC 按 derivation) | mechanical 50.1% / merged 27.6% / verbatim 12.3% / contract 6.2% / fork 1.7% / platform 2.1% | 与上游的代码贴近度分布;改写占比高 = 重放成本,受 `rewrites` 登记约束 |
+| 偏离密度 | 72 标记,均值 1.38/条目;top:PostCardTitle 6、PostCard 5、seams/theme 5 | 同步风险热点,即 affected 里 replay/manual 大户 |
+| 同步策略分布 | direct 9 / replay 29 / manual 12 / none 2 | 盲 apply 面仅 9 件 |
+| 漂移敞口 | 0(上游 HEAD = pinned `4b48850`) | 上游未评估提交数;非零即跑 `affected` |
+
+## 重评触发
+
+满足以下之一再议「生产 vendored Next」:连续 3–6 个月出现人类(非 AI 批量)提交且方向与本仓库兼容;或 pack 生态需求超出 islands 模型能力。
+
+## 文件清单
+
+权威账 = `upstream.manifest.json`(52 本地件 + 44 skipped,`check` 机器校验),历史快照不再手工维护。2026-09-05 首批 21 文件;计划外新增:`NavChrome.tsx`(跨岛 isOpen 状态)、`PalettePicker.tsx`(平台调色盘 React 化)。已删手搓件:`Nav.astro`、`Toc.astro`、`TocMobile.astro`、`BackToTop.astro`(被 vendor 岛替换)。Go 端:`SearchResult` 增 `createdAt`(vendor ArticleList 日期列)。已知有意偏差:manifest `patches[]` 登记(如 RunningTime since 守卫),叙述性偏差(折叠 ± 文案等)在各文件头 `SEAM:`。

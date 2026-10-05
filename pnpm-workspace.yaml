@@ -3,6 +3,7 @@ packages:
   - "app"
   - "lab"
   - "themes/*"
+  - "docs/.site"
 
 onlyBuiltDependencies:
   - esbuild
