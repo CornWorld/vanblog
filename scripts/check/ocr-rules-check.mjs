@@ -20,7 +20,7 @@ const REPRESENTATIVES = [
   "themes/vanblog/src/pages/api/unlock.ts",
   "app/src/loaders/posts.ts",
   "scripts/dev/public-api-shim.mjs",
-  "vault/pb_hooks/system.pb.js",
+  "vault/pb_hooks/examples.pb.js",
 ];
 
 const MARKER = "Source: Project (.opencodereview/rule.json)";

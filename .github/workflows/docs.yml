@@ -1,0 +1,31 @@
+name: Docs Site Build
+
+# 文档站构建检查(不部署)。
+# 托管在 Cloudflare Pages(不在 GitHub Pages)——CF 侧配置见 docs/.site/README.md,
+# CI 只保证 docs/ 与 docs/.site/ 的改动不弄坏构建。
+on:
+  push:
+    branches: [main-go]
+    paths:
+      - 'docs/**'
+      - 'docs/.site/**'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'docs/.site/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter vanblog-docs-site build

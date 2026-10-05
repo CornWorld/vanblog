@@ -1,0 +1,29 @@
+name: Shellcheck
+
+on:
+  push:
+    paths:
+      - 'scripts/**/*.sh'
+      - 'vanblog.sh'
+      - 'entrypoint*.sh'
+      - 'docker/**/*.sh'
+      - '.github/workflows/shellcheck.yml'
+  pull_request:
+    paths:
+      - 'scripts/**/*.sh'
+      - 'vanblog.sh'
+      - 'entrypoint*.sh'
+      - 'docker/**/*.sh'
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    container: koalaman/shellcheck:stable
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck all scripts
+        run: |
+          # -S warning: 只报 warning 及以上(style 提示噪音太大)
+          find scripts docker -name '*.sh' -print0 \
+            | xargs -0 shellcheck -S warning
+          shellcheck -S warning vanblog.sh entrypoint*.sh

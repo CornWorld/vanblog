@@ -1,0 +1,36 @@
+name: Demo Reset
+
+# demo 站(vanblog.corn.im)定时重置的 GHA 触发形态。
+# 执行仍在 demo 宿主(sg)上:GHA 通过 SSH 调宿主上的 demo-reset.sh
+# (脚本自带从仓库拉最新 scripts/bench 的自更新)。
+#
+# ⚠️ 启用 cron 前需要:
+#   1. 仓库 Settings → Secrets → Actions 添加 DEMO_SSH_KEY(能登录 demo 宿主的私钥)
+#   2. 仓库变量 DEMO_SSH_HOST(如 user@sg-host)
+#   3. 把下方 cron 注释解开。宿主侧原有 systemd timer 停用,避免双跑。
+# 在此之前可用 workflow_dispatch 手动触发(同样需要上述 secret)。
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH demo host and reset
+        env:
+          DEMO_SSH_KEY: ${{ secrets.DEMO_SSH_KEY }}
+          DEMO_SSH_HOST: ${{ vars.DEMO_SSH_HOST }}
+        run: |
+          [ -n "$DEMO_SSH_KEY" ] && [ -n "$DEMO_SSH_HOST" ] \
+            || { echo "缺少 DEMO_SSH_KEY secret 或 DEMO_SSH_HOST variable,见 workflow 注释"; exit 1; }
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEMO_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh -o StrictHostKeyChecking=accept-new "$DEMO_SSH_HOST" \
+            'bash /opt/vanblog/scripts/ops/demo-reset.sh'
+# 启用定时(每周一 04:00 UTC)时解开:
+#   schedule:
+#     - cron: '0 4 * * 1'

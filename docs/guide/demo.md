@@ -1,3 +1,7 @@
+---
+title: Demo 站
+---
+
 # Demo 站部署与维护
 
 > 线上 demo：**[https://vanblog.corn.im](https://vanblog.corn.im)** · 后台 <https://vanblog.corn.im/admin/> 账号 `demo` / `demo1234`
@@ -52,6 +56,9 @@ cd $VANBLOG_BASE_PATH && docker compose down -v
   用最新 `scripts/` + `bench/` 覆盖宿主副本再继续执行——重置逻辑与种子数据
   （HN 评论、全量 tag）永远跟仓库走，宿主副本不会老化。分支可用
   `VANBLOG_DEMO_REPO_BRANCH` 覆盖，整包地址用 `VANBLOG_DEMO_REPO_TARBALL`。
+- **GHA 触发形态（可选）**：`.github/workflows/demo-reset.yml` 支持从 CI 经 SSH
+  调宿主脚本（需仓库 secret `DEMO_SSH_KEY` + variable `DEMO_SSH_HOST`；启用定时
+  前先停用本机 systemd timer，避免双跑）。
 - 镜像更新由 watchtower 轮询 ghcr 完成（demo 容器跟踪 **`prod-latest`**，
   release 工作流的滚动 tag）。
   ⚠️ watchtower 以 `--label-enable vanblog` 只盯带

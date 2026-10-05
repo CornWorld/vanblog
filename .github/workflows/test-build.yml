@@ -79,8 +79,8 @@ jobs:
       - name: Cache e2e (builds base theme, real HTTP on :4399)
         run: pnpm --filter vanblog-app test:e2e:cache
 
-      - name: ESLint (app, sdk, themes)
-        run: npx eslint app/src sdk/src themes/base/src themes/vanblog/src
+      - name: ESLint (app, sdk, themes, docs-site)
+        run: npx eslint app/src sdk/src themes/base/src themes/vanblog/src docs/.site/rehype-md-links.mjs docs/.site/src/content.config.ts
 
       - name: Astro check (app + both themes)
         run: pnpm -r check
