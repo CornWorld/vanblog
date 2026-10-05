@@ -1,7 +1,7 @@
 # 内置主题对齐上游原版的决策:Vendor-as-Islands
 
 > 读者:主题作者、维护者。回答一个问题:**原版 mereithhh/vanblog 的 Next.js 前台(fork)与本仓库 Astro 重写的关系怎么处理**。
-> 相关:[theme-implementer-guide](../theme-implementer-guide.md)(L0/L1/L2 契约)、[architecture-layering](architecture-layering.md)。
+> 相关:[theme-implementer-guide](theme-implementer-guide.md)(L0/L1/L2 契约)、[architecture-layering](../internal/architecture-layering.md)。
 
 ## 决策
 

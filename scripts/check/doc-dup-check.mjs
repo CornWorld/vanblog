@@ -36,7 +36,7 @@ const WHITELIST_SUBSTRINGS = [
 // ---------- I/O ----------
 function walk(dir, out = []) {
   for (const entry of readdirSync(dir)) {
-    if (entry === "node_modules" || entry.startsWith(".git")) continue;
+    if (entry === "node_modules" || entry.startsWith(".")) continue; // 点目录(docs/.site 等)非文档内容
     const p = join(dir, entry);
     const s = statSync(p);
     if (s.isDirectory()) walk(p, out);
@@ -108,6 +108,9 @@ function isWhitelisted(sentence) {
 const docs = [];
 for (const file of files) {
   const raw = readFileSync(file, "utf8");
+  // 豁免 superseded 历史正文(doc-standard §2:标记后不改写,与取代者的重叠是预期)
+  const head = raw.slice(0, 600);
+  if (head.includes("**status: superseded**")) continue;
   const sents = splitSentences(raw)
     .map((s) => ({ text: s, hidden: isWhitelisted(s) }))
     .filter((s) => s.text.length > 0);

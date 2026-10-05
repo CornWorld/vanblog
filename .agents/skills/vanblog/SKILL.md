@@ -12,12 +12,11 @@ Use this skill when the user asks about:
 
 **This file is orchestration only.** For domain knowledge, always read `docs/` live:
 
-- `docs/theme-concepts.md` — Theme system architecture, L0/L1/L2 contracts, overrides
-- `docs/theme-implementer-guide.md` — How to build a theme, contract levels
-- `docs/theme-host-design.md` — Theme host internals, loading mechanism
+- `docs/developer/theme-implementer-guide.md` — Theme system architecture + concept model, L0/L1/L2 contracts, overrides
+- `docs/internal/theme-host-design.md` — Theme host internals, loading mechanism
 - `docs/reference/deployment.md` — Deploying VanBlog (facts)
-- `docs/sdk-design.md` — VanBlog SDK architecture
-- `docs/architecture-layering.md` — Overall project layering
+- `docs/developer/sdk-design.md` — Vanblog SDK architecture
+- `docs/internal/architecture-layering.md` — Overall project layering
 
 For environment, source `. /etc/vanblog/agent.env` for `PB_URL`, `ASTRO_URL`, `VANBLOG_EMAIL`.
 
@@ -90,7 +89,7 @@ Rules:
 
 ## Theme Development Workflow
 
-1. **Read** `docs/theme-concepts.md` and `docs/theme-implementer-guide.md`
+1. **Read** `docs/developer/theme-implementer-guide.md` (concept model + L0/L1/L2)
 2. Understand the L0/L1/L2 contract levels
 3. **Do not touch** restricted override paths: `themes/*/src/base-overrides/{pages/admin,pages/api,lib,loaders}/`
 4. Build validation: `cd themes/<name> && pnpm build`
@@ -98,7 +97,7 @@ Rules:
 
 ## Version Upgrade / Downgrade
 
-1. **Read** `docs/theme-host-design.md` — understand theme loading mechanism
+1. **Read** `docs/internal/theme-host-design.md` — understand theme loading mechanism
 2. Check theme override compatibility:
    ```bash
    for theme in themes/*/; do

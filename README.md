@@ -84,7 +84,7 @@ docker compose up -d
 
 - 发布：`ghcr.io/cornworld/vanblog:{prod,dev}-latest`（中国镜像：`registry.cn-beijing.aliyuncs.com/cornworld/vanblog`）
 - `prod`：开箱即用（编译后二进制 + SSR 静态资源）；`dev`：含 Go/Node 运行时 + 源码 + MCP/Skill，适合二次开发
-- 变更记录见 [CHANGELOG](CHANGELOG.md) 与 [GitHub Releases](https://github.com/CornWorld/vanblog/releases)
+- 变更记录见 [GitHub Releases](https://github.com/CornWorld/vanblog/releases)（每版完整）；[CHANGELOG](CHANGELOG.md) 仅保留 2026-08 前的早期记录
 
 ## 从原版 / 其他 fork 迁移
 

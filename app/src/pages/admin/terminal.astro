@@ -80,7 +80,7 @@ const isDev = process.env.VANBLOG_MODE === 'dev';
     theme: {
       name: '主题结构建议',
       prompt:
-        '帮我看看当前站点的主题结构,并给出定制建议。阅读 docs/theme-concepts.md 和 docs/theme-implementer-guide.md 后回答。',
+        '帮我看看当前站点的主题结构,并给出定制建议。阅读 docs/developer/theme-implementer-guide.md 的概念模型与 L0/L1/L2 契约后回答。',
     },
     pack: {
       name: '开发一个 Pack',
@@ -89,7 +89,7 @@ const isDev = process.env.VANBLOG_MODE === 'dev';
     upgrade: {
       name: '升级步骤',
       prompt:
-        '帮我检查当前 VanBlog 版本,并制定升级到最新版的步骤。阅读 docs/theme-host-design.md 了解主题加载机制后回答。',
+        '帮我检查当前 VanBlog 版本,并制定升级到最新版的步骤。阅读 docs/internal/theme-host-design.md 了解主题加载机制后回答。',
     },
     debug: {
       name: '排查问题',

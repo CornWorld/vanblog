@@ -59,7 +59,7 @@
 
 - 容器内**任何长驻服务不得以 root 运行**：entrypoint 以 root 启动仅限「修复卷属主 + `su-exec` 降权重执行」一段（`docker/entrypoint.prod.sh`）；新增服务必须挂在降权之后的启动序列里。
 - Caddy 的 `:80/:443` 特权端口绑定依赖镜像内的文件能力 `setcap cap_net_bind_service=+ep`（`Dockerfile` prod 阶段）；修改 Caddy 安装方式时必须保留该能力，且不得改为要求 `--privileged` / `--cap-add`。
-- 扩展代码（Pack hooks/schema/migrations、Theme entry.mjs、用户 `.pb.js`）的信任级别 = 拥有服务器文件系统/CLI 权限的管理员；**不存在 HTTP 上传扩展的入口**。新增任何「安装扩展」的端点/UI 必须先回答完整性校验（签名/checksum）与来源可信问题（见 `docs/theme-host-design.md` §10.2 #8）。
+- 扩展代码（Pack hooks/schema/migrations、Theme entry.mjs、用户 `.pb.js`）的信任级别 = 拥有服务器文件系统/CLI 权限的管理员；**不存在 HTTP 上传扩展的入口**。新增任何「安装扩展」的端点/UI 必须先回答完整性校验（签名/checksum）与来源可信问题（见 `docs/internal/theme-host-design.md` §10.2 #8）。
 
 ## 7. 变更流程
 

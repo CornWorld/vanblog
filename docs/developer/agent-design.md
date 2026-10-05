@@ -1,6 +1,6 @@
 # 内置 Agent 设计:pi 编码代理 + Zen free 模型 + 需求方嵌入入口
 
-> **依据**:完整选型调研见 [`refs/agent-platform-selection.md`](../refs/agent-platform-selection.md)(调研/竞品对比,不进 docs);本文是**决策落地 + 现状实现**,供 agent 动手前读。
+> **依据**:完整选型调研见 [`refs/agent-platform-selection.md`](../../refs/agent-platform-selection.md)(调研/竞品对比,不进 docs);本文是**决策落地 + 现状实现**,供 agent 动手前读。
 >
 > **核心原则**:
 >

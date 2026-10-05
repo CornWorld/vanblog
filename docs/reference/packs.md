@@ -1,3 +1,7 @@
+---
+title: Pack 参考
+---
+
 # Pack — 事实 (SSOT)
 
 > Pack = 可插拔的扩展单元（主题、前端贡献、自声明集合）。使用文档见 [guide/packs.md](../guide/packs.md)。

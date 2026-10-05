@@ -1,6 +1,6 @@
 # VanBlog 与评论系统
 
-本文档回答「VanBlog 的评论系统到底是什么、如何集成、边界在哪」这三个核心问题，是评论系统的**架构与集成总览**。具体部署操作（内置 sidecar / compose 多容器）见 [`comments-artalk.md`](./comments-artalk.md)。
+本文档回答「VanBlog 的评论系统到底是什么、如何集成、边界在哪」这三个核心问题，是评论系统的**架构与集成总览**。具体部署操作（内置 sidecar / compose 多容器）见 [`comments-artalk.md`](../guide/comments-artalk.md)。
 
 ---
 
@@ -117,7 +117,7 @@ themes/vanblog/src/components/Comments.astro
 - 配置：`{ server: string, site?: string }`
 - `server` 是同源地址 `https://<域名>/comments`
 - 渲染：同源加载 Artalk 前端资源 + `Artalk.init`
-- 部署：内置 sidecar 或 compose 多容器，见 [`comments-artalk.md`](./comments-artalk.md)
+- 部署：内置 sidecar 或 compose 多容器，见 [`comments-artalk.md`](../guide/comments-artalk.md)
 
 ### 3.3 `external` —— 任意第三方评论系统兜底
 
@@ -173,5 +173,5 @@ SQLite 数据（/data/artalk 或独立卷）
 | 通用 proxy strip 能力        | `vault/internal/caddy/translator.go`                              |
 | 评论前端渲染组件             | `themes/vanblog/src/components/Comments.astro`                    |
 | admin 站点配置面板           | `app/src/pages/admin/site.astro`                                  |
-| 部署操作手册                 | `docs/comments-artalk.md`                                         |
+| 部署操作手册                 | `docs/guide/comments-artalk.md`                                     |
 | 存量 provider 迁移           | `vault/pb_migrations/1783500000_shrink_comments_provider_enum.go` |

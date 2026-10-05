@@ -1,6 +1,10 @@
+---
+title: API
+---
+
 # API — 事实 (SSOT)
 
-> 面向开发者。SDK 架构见 [sdk-design.md](../sdk-design.md)（内部）。
+> 面向开发者。SDK 架构见 [sdk-design.md](../developer/sdk-design.md)（内部）。
 
 ## 路由划分
 
@@ -43,4 +47,4 @@ const client = createVanblogClient({ url: process.env.PB_URL });
 await client.pb.collection("users").authWithPassword(email, password);
 ```
 
-> 详细 API 契约见 `sdk/src/` 的公开签名（L0 契约，破坏需 major 版本）。
+> 详细 API 形状见 `sdk/src/` 的公开签名（内部模块，尽量稳定，非对外 semver 契约）。

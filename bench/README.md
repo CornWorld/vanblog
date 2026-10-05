@@ -117,7 +117,7 @@ python3 summarize.py results/20260828-XXXXXXX --csv out.csv --plot out.png
 | 2g   | 500    | 1000 | **63.8%** | 45.1ms | 273ms  | no      |
 
 （原始数据文件不入库；历史版本可从 git 历史取回，数字沉淀见下表与
-`docs/lessons-learned.md` §3.3。）
+`docs/internal/lessons-learned.md` §3.3。）
 
 ### 结论
 

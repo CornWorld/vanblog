@@ -40,7 +40,7 @@ test(migration): 补导入回环测试
 
 **这是本项目与其他项目最不同的地方，请务必遵守。**
 
-- 文档分四层：`docs/reference/`（事实 SSOT）、`docs/guide/`（按 level 使用）、`docs/faq.md`（症状→ref）、README（门面）。
+- 文档分五处：`docs/reference/`（事实 SSOT）、`docs/guide/`（按 level 使用）、`docs/faq.md`（症状→ref）、README（门面）；贡献者文档在 `docs/developer/`，内部设计笔记在 `docs/internal/`（不进用户导航）。
 - **事实只写一次**：端口/路径/变量/默认值/命令在 `reference/` 定义，使用文档引用（`ref`）而不是复制。
 - 动手写文档前读 [docs/quality/doc-standard.md](docs/quality/doc-standard.md)。
 - 文档变更后跑：`node scripts/check/doc-dup-check.mjs`，要求 **S0 冲突 = 0**。

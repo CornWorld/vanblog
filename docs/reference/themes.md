@@ -1,6 +1,10 @@
+---
+title: 主题参考
+---
+
 # 主题 — 事实 (SSOT)
 
-> 主题作者手册见 [theme-implementer-guide.md](../theme-implementer-guide.md)（950+ 行契约文档）。
+> 主题作者手册见 [theme-implementer-guide.md](../developer/theme-implementer-guide.md)（950+ 行契约文档）。
 
 ## 三层模型
 

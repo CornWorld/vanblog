@@ -1,6 +1,6 @@
 // PB JS 迁移骨架:建 pack 自己的 collection(DDL),启动时执行,幂等。
 // ⚠️ findCollectionByNameOrId 找不到时抛异常不返回 null —— 存在性判断必须
-// try/catch(见 docs/pocketbase-extension-contract.md 事实 5)。
+// try/catch(见 docs/internal/pocketbase-extension-contract.md 事实 5)。
 migrate(
   (app) => {
     try {

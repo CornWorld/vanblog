@@ -25,8 +25,8 @@ import { pathToFileURL } from 'node:url';
 // HTTP callers already gate through listAvailableThemes()).
 const themeNamePattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
-// THEME_COMPAT_VERSION is the host-side theme contract major (docs/
-// theme-host-design.md §10.2 #10: "all installed themes must be built
+// THEME_COMPAT_VERSION is the host-side theme contract major
+// (docs/internal/theme-host-design.md §10.2 #10: "all installed themes must be built
 // against the host's Astro/contract generation"). A theme.json may declare
 // `vanblogCompatibility` ("^1", "1", "1.x", "*", absent = any); a declared
 // major mismatch refuses the load — switchTheme then keeps the current

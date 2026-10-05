@@ -1,11 +1,30 @@
 # Vanblog Theme 作者手册
 
 > **目标读者**：想写自己 theme 的人（或写 theme 的 AI agent）。
-> **前置阅读**：[`docs/theme-concepts.md`](./theme-concepts.md)（平台层 / base 主题 / vanblog 主题 的概念区分）。
+> **概念模型**：平台层 / base 主题 / vanblog 主题 的概念区分见下方 §0（原 `theme-concepts.md`，已并入本文）。
 >
 > **Spike 3 模型一句话**：每个 theme 是一个**独立的 Astro 项目**，通过 `@vanblog/base/*` alias 引用主仓库的 base 文件；要改写哪个 base 文件，就在 `src/base-overrides/<rel>` 放同路径文件。
 
 ---
+
+## 0. 概念模型（原 theme-concepts.md）
+
+**一句话版本：**
+
+- **平台层**（`app/`）：数据访问与渲染基础设施，不属于任何主题。
+- **base 主题**（`themes/base/`）：纯布局 + 简单颜色的 minimal 主题——验证后端能力、提供最基本的可读站点、兜底降级。
+- **vanblog 主题**（`themes/vanblog/`）：从 mereithhh 的 vanblog 项目迁移而来的完整视觉主题，**独立于 base 主题**，两个概念。
+
+**"builtin" 退役与新旧命名对照：**
+
+| 旧称呼                                    | 新称呼                  | 说明                                                                 |
+| ----------------------------------------- | ----------------------- | -------------------------------------------------------------------- |
+| `@vanblog/builtin/*` alias                | `@vanblog/base/*`       | 指向平台层（`app/src/<rel>`），先查主题的 `src/base-overrides/<rel>` |
+| `src/builtin-overrides/`                  | `src/base-overrides/`   | 主题局部覆盖平台层内容的目录                                         |
+| "builtin 源头"（`app/src/`）              | **平台层**（base 源头） | 只有基础设施 + base 布局，不含任何主题的视觉                         |
+| `pack.Builtins` / `builtinPacksDir`（Go） | 不变                    | Packs 的内置资源，与主题无关，维持原名                               |
+
+**心智模型（一句话记住）**：base 是地基，vanblog 是房子。地基验证能不能盖楼、提供最基本的结构；房子是从另一个项目整体搬来的成品——它们共享的只有"地块"（平台层）。
 
 ## 目录
 
@@ -982,7 +1001,7 @@ import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
 
 ## 参考
 
-- [`docs/theme-concepts.md`](./theme-concepts.md) — 平台层 / base 主题 / vanblog 主题 概念模型
+- [`docs/internal/theme-concepts.md`](../internal/theme-concepts.md) — 平台层 / base 主题 / vanblog 主题 概念模型
 - `themes/base/` — 官方最小模板（纯布局 + 简单颜色，脚手架起点）
 - `themes/vanblog/` — 官方旗舰主题（mereithhh 的 vanblog 前端迁移而来，独立视觉）
 - `app/integrations/themes/index.mjs` — alias 解析与 FORBIDDEN 校验的实现

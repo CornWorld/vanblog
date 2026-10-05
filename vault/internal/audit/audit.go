@@ -3,7 +3,7 @@
 //
 // 2026-09-17: replaces the per-collection JSVM audit hooks (system.pb.js +
 // lib/vanblog-audit.js, now retired). Motivation and boundary criteria:
-// docs/pocketbase-extension-contract.md「扩展边界判据」.
+// docs/internal/pocketbase-extension-contract.md「扩展边界判据」.
 //
 // Why Go wildcard hooks win over the JS version:
 //   - untagged OnRecord*Request fire for EVERY collection, including Pack

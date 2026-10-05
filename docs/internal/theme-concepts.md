@@ -1,5 +1,7 @@
 # Theme 概念模型：平台层 / base 主题 / vanblog 主题
 
+> **status: superseded** — 2026-10-05 起独特内容（一句话概念模型、"builtin" 退役对照、心智模型）已并入 [`docs/developer/theme-implementer-guide.md`](../developer/theme-implementer-guide.md) §0。以下为历史记录。
+
 > 目的：澄清三个容易混淆的概念，让"什么是平台层、什么是 base、什么是 vanblog 主题"在代码结构上清晰可辨。
 >
 > 背景：旧称 **builtin** 一词退役。它过去同时指代 4 件不同的事——`@vanblog/builtin/*` alias、`src/builtin-overrides/` 目录、`app/src/`（所谓"builtin 源头"），还跟 Packs 的 `builtinPacksDir`（Go 侧）撞词。这个词造成的认知混乱正是本文件要消除的。

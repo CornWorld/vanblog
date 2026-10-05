@@ -10,7 +10,7 @@ SDK：`createVanblogClient({ url: process.env.PB_URL })`，登录 `pb.collection
 
 ## 知识源
 
-`docs/` 是权威。**动手前读相关 docs**——用 `grep -n '^## ' docs/*.md` 找章节，不要盲改。本文件不抄录 docs 内容，只列规则。
+`docs/` 是权威。**动手前读相关 docs**——用 `grep -n '^## ' docs/**/*.md` 找章节（用户层 `guide/reference`、贡献者层 `developer`、内部设计 `internal`），不要盲改。本文件不抄录 docs 内容，只列规则。
 
 ## 构建与测试
 
@@ -38,13 +38,13 @@ npmmirror 偶发瞬时失败,重试即可。
 - `app/src/pages/api/**` — API 端点
 - `app/src/lib/**`、`app/src/loaders/**`、`app/src/live.config.*`、`app/src/middleware.*` — 平台基础设施
 - `vault/pb_migrations/*.go` — 已锁定的 schema 迁移
-- `sdk/src/` 公开 API 签名（L0 契约，破坏需 major 版本）
+- `sdk/src/` 公开 API 签名 —— 内部承重模块（admin / theme / loaders 直接消费），不是对外 semver 契约；调整签名前先查全部消费方
 - `themes/<name>/src/base-overrides/{pages/admin,pages/api,lib,loaders}/**` — integration 对这些路径 fail-closed
 
 ## 主题规则
 
 - 每个 theme 是独立 Astro 项目，通过 `@vanblog/base/*` alias 引用平台层
-- 覆盖 base 组件时**保留所有现有 props**，可加 optional 新 props——详见 `docs/theme-implementer-guide.md` 的 L0/L1/L2 契约
+- 覆盖 base 组件时**保留所有现有 props**，可加 optional 新 props——详见 `docs/developer/theme-implementer-guide.md` 的 L0/L1/L2（内部稳定性政策）
 - theme 必须自备：`src/middleware.ts`（可 re-export base）、`src/live.config.ts`（可空）、`src/layouts/PackPage.astro`
 - CSS 永远用 `var(--color-*)`，不要硬编码颜色
 

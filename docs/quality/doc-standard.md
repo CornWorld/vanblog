@@ -164,13 +164,14 @@ docs/guide/quickstart.md           G L0 新手：5 分钟跑起来
 docs/guide/backup-upgrade.md       G L2：备份/升级/回滚（ref reference/backup.md）
 docs/guide/reverse-proxy.md        G L2：反代/安全（ref reference/deployment.md）
 docs/guide/packs.md                G L2：安装/启用 Pack（ref reference/packs.md）
+docs/guide/comments-artalk.md      G L2：评论部署操作（架构事实 ref internal/comments-system.md）
 docs/faq.md                        Q 症状 → 原因 → ref
 docs/developer/theme-implementer-guide.md   G 开发者（主题作者）
 docs/developer/sdk-design.md               G 开发者（SDK）
-docs/developer/contribution.md             G 开发者（贡献）
+docs/developer/agent-design.md              G 开发者（内置 agent）
 ```
 
-> 存量文档（`docs/*.md` 平铺的 13 篇内部文档）按 §2 归位：面向用户/作者的进 `guide/` 或 `developer/`，纯内部设计笔记归 `docs/internal/`（明确标注，不进用户导航）。
+> 存量平铺文档已按 §2 归位（2026-10-05 执行）：内部设计笔记在 `docs/internal/`（不进用户导航），主题/SDK/agent 手册在 `docs/developer/`，评论部署手册在 `docs/guide/`。
 
 ## 附录 B：快速自查清单（作者写作前）
 

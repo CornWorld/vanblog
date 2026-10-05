@@ -26,7 +26,7 @@ export function buildPageHref(
  * Read a string-valued custom field from a post's `meta` (per-post custom
  * fields, posts.meta JSON). Keys are tried in order and the first non-empty
  * string wins — the canonical convention is documented in
- * docs/theme-implementer-guide.md (e.g. cover / image / ogImage → og:image).
+ * docs/developer/theme-implementer-guide.md (e.g. cover / image / ogImage → og:image).
  */
 export function postMetaString(
   meta: Record<string, unknown> | null | undefined,

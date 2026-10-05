@@ -3,7 +3,7 @@ package caddy
 // bootstrap.go contains the startup wiring that pushes the full Caddy config
 // (built from site.routing + system rules) into a running Caddy via its admin
 // API. The 6-step pipeline and retry policy are documented in
-// docs/architecture-layering.md §4.4 (Caddy Manager).
+// docs/internal/architecture-layering.md §4.4 (Caddy Manager).
 
 import (
 	"database/sql"

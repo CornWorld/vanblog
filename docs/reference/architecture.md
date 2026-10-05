@@ -1,6 +1,10 @@
+---
+title: 架构
+---
+
 # 架构 — 事实 (SSOT)
 
-> 部署相关事实见 [部署](deployment.md)。详细分层见 [architecture-layering.md](../architecture-layering.md)（内部）。
+> 部署相关事实见 [部署](deployment.md)。详细分层见 [architecture-layering.md](../internal/architecture-layering.md)（内部）。
 
 ## 三服务
 
@@ -36,6 +40,6 @@ Request → Caddy (:80/:443)
 ## 缓存 / 发布
 
 - 前台为 Astro SSR + 缓存失效机制；文章发布/修改/恢复触发缓存失效。
-- 增量渲染（ISR）与主题切换见 `docs/theme-host-design.md`（内部）。
+- 增量渲染（ISR）与主题切换见 `docs/internal/theme-host-design.md`（内部）。
 
-> 架构演进与分层决策（为什么 Go hooks vs JS hooks 等）见 [lessons-learned.md](../lessons-learned.md) §5。
+> 架构演进与分层决策（为什么 Go hooks vs JS hooks 等）见 [lessons-learned.md](../internal/lessons-learned.md) §5。

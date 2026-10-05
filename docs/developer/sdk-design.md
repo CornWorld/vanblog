@@ -1,6 +1,8 @@
 # Vanblog SDK 设计
 
 > **定位**:@vanblog/sdk 是 PocketBase JS SDK 的超集 —— 预配置 + 类型增强 + vanblog 服务命名空间 + 用户扩展能力。
+>
+> **稳定性定位（2026-10-05 起）**：SDK 是 vanblog 的内部承重模块（admin / theme / loaders 直接消费），**不是对外 semver 契约**。公开类型尽量保持稳定，但破坏性调整随仓库版本演进，不承诺 major 版本纪律。
 
 ## 核心原则
 

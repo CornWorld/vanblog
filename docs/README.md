@@ -1,3 +1,7 @@
+---
+title: Vanblog 文档
+---
+
 # Vanblog 文档
 
 > 面向用户的文档索引。开发者/贡献者文档见 [docs/developer/](developer/README.md)。
@@ -13,6 +17,7 @@
 | 升级 / 备份 / 回滚         | [备份与升级 (L2)](guide/backup-upgrade.md) |
 | 外置反代 + TLS / HTTP_ONLY | [反代与安全 (L2)](guide/reverse-proxy.md)  |
 | 安装和启用 Pack            | [Pack 使用 (L2)](guide/packs.md)           |
+| 部署评论（Artalk 同源）    | [评论集成 (L2)](guide/comments-artalk.md)  |
 | 写文章 / 换主题 / 后台功能 | [功能使用 (L1)](guide/features.md)         |
 | 遇到问题先查这里           | [FAQ](faq.md)                              |
 | 体验 / 部署 Demo 站        | [Demo 站](guide/demo.md)                   |
@@ -40,7 +45,7 @@
 - `docs/guide/` — 面向不同 level 用户的使用文档（任务导向）
 - `docs/reference/` — 按系统细分的事实文档（SSOT，使用文档引用这里）
 - `docs/developer/` — 开发者 / 贡献者文档（主题、SDK、贡献）
-- `docs/quality/` — 文档质量标准与检测
+- `docs/internal/` — 内部设计笔记（架构 / 契约 / 教训，不进用户导航）
 - `docs/faq.md` — 症状 → 原因 → 解决
 
 ## 维护约定

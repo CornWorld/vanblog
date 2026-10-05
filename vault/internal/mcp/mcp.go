@@ -9,7 +9,7 @@ package mcp
 // whitelist in paths.go enforces that); pb_query is strictly read-only.
 //
 // preview and build tools are intentionally NOT implemented in this phase —
-// they depend on infra that does not exist yet. See docs/theme-implementer-guide.md §11.
+// they depend on infra that does not exist yet. See docs/developer/theme-implementer-guide.md §11.
 
 import (
 	"context"

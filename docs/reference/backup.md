@@ -1,3 +1,7 @@
+---
+title: 备份 / 恢复 / 迁移
+---
+
 # 备份 / 恢复 / 迁移 — 事实 (SSOT)
 
 > 使用文档引用这里，不要复制。硬事实来源：`vanblog.sh`、`vault/internal/migration/`。

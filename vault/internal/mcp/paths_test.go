@@ -128,7 +128,7 @@ func TestResolveAllowed(t *testing.T) {
 		},
 		{
 			name: "docs denied",
-			rel:  "docs/theme-implementer-guide.md",
+			rel:  "docs/developer/theme-implementer-guide.md",
 			want: "",
 		},
 		{

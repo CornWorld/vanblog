@@ -1,6 +1,10 @@
+---
+title: Artalk 评论集成
+---
+
 # Artalk 评论系统集成（自托管 + 同源）
 
-> 本文是 Artalk 的**部署操作手册**。评论系统的架构与集成总览（conf 数据流、鉴权边界、provider 模型）见 [`comments-system.md`](./comments-system.md)。
+> 本文是 Artalk 的**部署操作手册**。评论系统的架构与集成总览（conf 数据流、鉴权边界、provider 模型）见 [`comments-system.md`](../internal/comments-system.md)。
 
 VanBlog 内置 Artalk 评论系统的支持，提供两种部署方式，**都走 Caddy 同源出口 `/comments/*`**，无跨域、无独立 TLS 证书、无额外端口暴露。
 

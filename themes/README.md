@@ -1,7 +1,6 @@
 # themes/ — 主题目录
 
-> 概念模型见 [`docs/theme-concepts.md`](../docs/theme-concepts.md)。
-> 主题作者手册见 [`docs/theme-implementer-guide.md`](../docs/theme-implementer-guide.md)。
+> 概念模型与主题作者手册见 [`docs/developer/theme-implementer-guide.md`](../docs/developer/theme-implementer-guide.md)。
 
 ## 三层模型（一句话）
 
