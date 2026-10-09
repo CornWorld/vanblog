@@ -153,6 +153,13 @@ echo "[vanblog] initializing pi agent config..."
 node "$WS_SCRIPTS/runtime/init-pi-config.mjs" || echo "[vanblog] pi config init skipped (will use fallback)"
 
 # 3.7. Start the Zen auth-stripping proxy used by pi's OpenCode Zen provider.
+# a8d50d5a 误删了这三行(同一提交只打算换掉 SSE chat/CLI),而 monitor_children
+# 仍在查 $PI_PROXY_PID、init-pi-config 的 zen 回退仍写 baseUrl=127.0.0.1:4330
+# → 变量为空 ⇒ `kill -0` 恒失败 ⇒ 每 5s 打 "FATAL: pi model proxy died" 并
+# exit 1(容器只能靠外部 sed 掉 exit 1 硬撑),且 4330 无人监听,zen 免费模型不可用。
+echo "[vanblog] starting pi model proxy..."
+node "$WS_SCRIPTS/runtime/pi-zen-proxy.mjs" &
+PI_PROXY_PID=$!
 
 # 4. Start Theme Host (loads active theme's SSR handler, routes /admin to app)
 DEFAULT_THEME=$(cat /etc/vanblog/default-theme 2>/dev/null || echo "vanblog")
