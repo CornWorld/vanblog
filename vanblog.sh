@@ -47,7 +47,7 @@ gum_ask() {
             --prompt.foreground="212" \
             --selected.background="212" \
             --unselected.foreground="250" \
-            $([[ "$default" = "y" ]] && echo "--default=true" || echo "--default=false") \
+            "$([[ "$default" = "y" ]] && echo "--default=true" || echo "--default=false")" \
             && return 0 || return 1
     else
         # 非交互（piped stdin）：从管道读取
@@ -226,7 +226,9 @@ read_compose_env() {
     # 优先使用 docker compose config 做 YAML 规范化解析，
     # 避免裸 grep 被注释行 / 多行值 / 特殊字符误判。
     if docker compose version >/dev/null 2>&1; then
-        val=$((cd "$VANBLOG_BASE_PATH" && docker compose config 2>/dev/null) | \
+        # 注意 $( 后面必须有空格:写成 $(( 会被 bash 当成算术展开(SC1102),
+        # 这段"用 compose config 做规范化解析"以前就是这么静默坏掉的。
+        val=$( (cd "$VANBLOG_BASE_PATH" && docker compose config 2>/dev/null) | \
               grep -E "VANBLOG_${key}[=:]" | head -1 | \
               sed -E 's/.*VANBLOG_'"${key}"'[=:][[:space:]]*//;
                        s/[[:space:]]*$//; s/^"//; s/"$//')
@@ -505,7 +507,8 @@ show_log() {
 
 backup_vanblog() {
     gum_info "备份 Vanblog"
-    local name="vanblog-backup-$(date +%Y%m%d%H%M%S).tar.gz"
+    local name
+    name="vanblog-backup-$(date +%Y%m%d%H%M%S).tar.gz"
     cd "$VANBLOG_BASE_PATH" || exit 1
     if dc down >/dev/null 2>&1; then
         gum_spin "压缩数据..." "tar czf $name data"

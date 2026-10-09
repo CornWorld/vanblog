@@ -141,6 +141,8 @@ done
 [[ -n "$AGENT_TIMEOUT_OVERRIDE" ]] && AGENT_TIMEOUT="$AGENT_TIMEOUT_OVERRIDE"
 [[ -n "$AGENT_MODEL_OVERRIDE" ]] && AGENT_MODEL="$AGENT_MODEL_OVERRIDE"
 [[ -n "$AGENT_BASE_URL_OVERRIDE" ]] && AGENT_BASE_URL="$AGENT_BASE_URL_OVERRIDE"
+# --api-key 之前只是接住参数没用上(help 里写着却静默忽略):这里补上。
+[[ -n "$AGENT_API_KEY_OVERRIDE" ]] && AGENT_API_KEY="$AGENT_API_KEY_OVERRIDE"
 [[ -n "$MEMORY_DIR_OVERRIDE" ]] && HOST_MEMORY_DIR="$MEMORY_DIR_OVERRIDE"
 
 # Recompute the pi model selector AFTER overrides are applied. It was captured
@@ -162,7 +164,6 @@ PI_SESSION_ARCHIVE="$ARTIFACTS_DIR/pi-session"
 
 # ── Cleanup trap ─────────────────────────────────────────────────
 cleanup() {
-  local reason="${1:-EXIT}"
   if [ "$DO_CLEANUP" = true ] && [ "$KEEP_EVIDENCE" = false ]; then
     info "Cleaning up container $CONTAINER_NAME..."
     docker rm -f "$CONTAINER_NAME" 2>/dev/null || true

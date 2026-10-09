@@ -18,12 +18,20 @@ on:
 jobs:
   shellcheck:
     runs-on: ubuntu-latest
-    container: koalaman/shellcheck:stable
     steps:
       - uses: actions/checkout@v4
+      # 不要用 koalaman/shellcheck:stable 当 job container:那个镜像里既没有
+      # /bin/sh 也没有 tail,Actions 初始化容器时会用 `--entrypoint tail` 去 hold,
+      # 于是每次都在 "Initialize containers" 阶段 10s 内失败(本 workflow 从加入
+      # 起就没真正跑过 shellcheck)。装到 runner 上跑同样的命令即可。
+      - name: Install shellcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y shellcheck
       - name: shellcheck all scripts
         run: |
+          set -o pipefail
+          shellcheck --version
           # -S warning: 只报 warning 及以上(style 提示噪音太大)
-          find scripts docker -name '*.sh' -print0 \
-            | xargs -0 shellcheck -S warning
-          shellcheck -S warning vanblog.sh entrypoint*.sh
+          find scripts docker -name '*.sh' -print0 | xargs -0 shellcheck -S warning
+          # 仓库根目录的安装器(entrypoint*.sh 不存在于根,只有 docker/ 下那份,
+          # 已被上面的 find 覆盖 —— 保留这个判断只为将来真加了根级脚本)。
+          if [ -f vanblog.sh ]; then shellcheck -S warning vanblog.sh; fi

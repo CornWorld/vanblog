@@ -210,7 +210,7 @@ fi
 info ""
 info "=== 阶段 4: 诊断 + 容器详情 ==="
 
-cd "$VANBLOG_BASE_PATH"
+cd "$VANBLOG_BASE_PATH" || { info "无法进入 $VANBLOG_BASE_PATH"; exit 1; }
 if docker compose ps --format '{{.Status}}' 2>/dev/null | grep -q "Up"; then
     assert_ok "diagnose: 容器运行中"
 else

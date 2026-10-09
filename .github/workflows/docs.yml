@@ -14,15 +14,18 @@ on:
     paths:
       - 'docs/**'
       - 'docs/.site/**'
+  # 手动跑一次(改 workflow 本身时也能立刻验证,不必等 docs/ 的改动)
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # 不要在这里写 version: pnpm/action-setup@v4 会与 package.json 的
+      # "packageManager": "pnpm@10.28.0" 冲突 → ERR_PNPM_BAD_PM_VERSION
+      # (本 workflow 从加入起就是这么挂的)。不传版本 = 以 packageManager 为准。
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 24

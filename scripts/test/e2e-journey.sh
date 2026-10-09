@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2034  # 下面那些 *_PAGE/_HTML/REV... 变量都是在 check "… \$VAR …" 里被 eval 间接读取的,shellcheck 看不见
 # ═══════════════════════════════════════════════════════════════
 # e2e-journey.sh — 容器全栈人类旅程验证(解锁流/feed 别名/可见性/theme 切换)
 #

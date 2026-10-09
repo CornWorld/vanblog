@@ -32,6 +32,7 @@ set -euo pipefail
 PB_URL="${PB_URL:-http://127.0.0.1:8090}"
 KEEP_SERVER="${KEEP_SERVER:-7}"
 
+# shellcheck source=/dev/null  # 路径来自环境变量(RESTIC_ENV_FILE),shellcheck 追不到
 if [ -n "${RESTIC_ENV_FILE:-}" ]; then set -a; . "$RESTIC_ENV_FILE"; set +a; fi
 if [ -n "${PB_PASSWORD_FILE:-}" ]; then PB_PASSWORD="$(cat "$PB_PASSWORD_FILE")"; fi
 : "${PB_EMAIL:?需要 PB_EMAIL}"
