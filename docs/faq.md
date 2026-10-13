@@ -43,7 +43,7 @@ title: FAQ
 
 ### 从原版 vanblog 迁移数据
 
-- 走后台「数据迁移」页（ZIP 导入，`POST /api/vanblog/migrate/import`）。不兼容数据会被归档而非丢弃。见 [参考: 备份](reference/backup.md)。
+- 原版「数据备份」JSON 先用 `scripts/migrate/orig-backup-to-zip.mjs` 转成导入包，再走后台「数据迁移」页导入；全流程见[从原版迁移](guide/migration.md)。
 
 ## 功能
 

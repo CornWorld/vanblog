@@ -15,6 +15,7 @@ title: Vanblog 文档
 | -------------------------- | ------------------------------------------ |
 | 5 分钟把 Vanblog 跑起来    | [快速开始 (L0)](guide/quickstart.md)       |
 | 升级 / 备份 / 回滚         | [备份与升级 (L2)](guide/backup-upgrade.md) |
+| 从原版 Vanblog 迁移        | [从原版迁移 (L2)](guide/migration.md)      |
 | 外置反代 + TLS / HTTP_ONLY | [反代与安全 (L2)](guide/reverse-proxy.md)  |
 | 安装和启用 Pack            | [Pack 使用 (L2)](guide/packs.md)           |
 | 部署评论（Artalk 同源）    | [评论集成 (L2)](guide/comments-artalk.md)  |

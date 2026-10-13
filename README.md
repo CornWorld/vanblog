@@ -76,6 +76,7 @@ docker compose up -d
 | 写文章 / 换主题 / 评论 | [功能使用](docs/guide/features.md)          |
 | 环境变量 / site 配置   | [配置参考](docs/reference/configuration.md) |
 | 备份 · 升级 · 回滚     | [备份与升级](docs/guide/backup-upgrade.md)  |
+| 从原版迁移             | [从原版迁移](docs/guide/migration.md)       |
 | 外置反代 / HTTP_ONLY   | [反代与安全](docs/guide/reverse-proxy.md)   |
 | 遇到问题               | [FAQ](docs/faq.md)                          |
 | 主题 / Pack 开发       | [开发者文档](docs/developer/README.md)      |
