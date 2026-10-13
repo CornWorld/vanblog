@@ -14,6 +14,7 @@ import (
 	"github.com/cornworld/vanblog/internal/mediaurl"
 	"github.com/cornworld/vanblog/internal/migrationschema"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/tools/types"
 )
 
 // ImportZip reads a zip archive produced by the export endpoints and imports
@@ -137,6 +138,17 @@ func (imp *Importer) importZipPost(
 	}
 	record.Set("top", ep.Top)
 	record.Set("copyright", ep.Copyright)
+
+	// Preserve original publish dates (blog timeline/archive ordering).
+	// pb's AutodateField.FindSetter returns a noopSetter, so record.Set()
+	// silently drops the value — SetRaw is the documented manual-set path
+	// and the autodate interceptor keeps it. Unparsable/empty → default.
+	if t, err := types.ParseDateTime(ep.Created); err == nil && !t.IsZero() {
+		record.SetRaw("created", t)
+	}
+	if t, err := types.ParseDateTime(ep.Updated); err == nil && !t.IsZero() {
+		record.SetRaw("updated", t)
+	}
 
 	// Resolve category
 	if ep.Category != "" {
