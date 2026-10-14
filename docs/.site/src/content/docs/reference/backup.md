@@ -58,7 +58,7 @@ title: 备份 / 恢复 / 迁移
 
 - **导出**：`GET /api/vanblog/export/all`（全部文章 + 正文引用图片）或 `GET /api/vanblog/export/post/{id}`（单篇），admin-only。
 - **导入**：`POST /api/vanblog/migrate/import`，admin-only，body 是上面导出格式的 ZIP（`posts.json` + `images/`），限 100MB，事务执行；单篇失败跳过并计入 `errors`，其余照常导入。
-- 导入为**新建**记录（导出 ZIP 里的 ID 不复用），按名字 resolve-or-create 分类/标签，正文图片字节上传为新 media 记录并改写 `/api/files/...` 链接，`created`/`updated` 原样保留（pb AutodateField 须 `SetRaw`，`Set` 是 no-op）。
+- 导入为**新建**记录（导出 ZIP 里的 ID 不复用），按名字 resolve-or-create 分类/标签，正文图片字节上传为 media 记录并改写 `/api/files/...` 链接（与库内已有同字节文件自动复用既有记录），`created`/`updated` 原样保留（pb AutodateField 须 `SetRaw`，`Set` 是 no-op）。
 - 原版 mereithhh/van-blog 备份 JSON 需先经 `scripts/migrate/orig-backup-to-zip.mjs` 转成导入 ZIP，步骤见[从原版迁移](../guide/migration.md)。
 - 导入结果 `{"posts": N, "errors": [...]}`：单篇失败计入 `errors` 并继续，其余照常导入。
 - 详细协议见后台「数据迁移」页与 `vault/internal/migration/`（内部实现）。
