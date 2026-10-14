@@ -32,6 +32,11 @@ export function createVanblogClient(
   const url = opts.url ?? getDefaultVanblogURL();
   const pb = new PocketBase(url) as VanblogClient;
 
+  // 关闭 auto-cancellation：同 client 上的并发请求（SSR Promise.all 批量
+  // 查询、编辑器多图并行上传）会被 SDK 默认的逐请求取消互相 abort，
+  // 表现为随机空结果。本应用没有依赖取消语义的交互，统一关闭。
+  pb.autoCancellation(false);
+
   // Attach vanblog service namespace (like pb.collection / pb.files)
   pb.vanblog = createVanblogServices(pb);
 
