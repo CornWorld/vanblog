@@ -155,6 +155,14 @@ func (m *Manager) reapplyS3Backend() {
 	}
 }
 
+// FindDuplicateByContent returns an existing media record whose stored bytes
+// hash identically to data, or nil if none. Migration/ingest callers use it to
+// reuse already-stored media instead of creating records the dedup hook would
+// immediately delete.
+func FindDuplicateByContent(app core.App, data []byte) (*core.Record, error) {
+	return New(app).CheckDuplicate(data)
+}
+
 // CheckDuplicate looks up an existing media record by content-hash sign.
 // Returns the existing record if found, nil otherwise.
 //

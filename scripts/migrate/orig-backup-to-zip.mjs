@@ -103,10 +103,13 @@ console.error(`原版备份: ${articles.length} 篇文章(含回收站)`);
 const skipDeleted = [];
 const outPosts = [];
 const usedKeys = new Set();
+const keyByFile = new Map(); // 同一文件多处引用 → 复用同一 key,不重复打包字节
 let imgRewrites = 0;
 let imgMissing = 0;
 
 function imgKeyFor(name) {
+  const known = keyByFile.get(name);
+  if (known) return known;
   // 用文件名本身做 key 一段路径;/api/files/<key> 与 zip images/<key> 对齐
   let key = name.replace(/[/\\]/g, "_");
   if (usedKeys.has(key)) {
@@ -115,6 +118,7 @@ function imgKeyFor(name) {
     key = `${key}_${i}`;
   }
   usedKeys.add(key);
+  keyByFile.set(name, key);
   return key;
 }
 
@@ -161,13 +165,16 @@ for (const a of articles) {
 mkdirSync(join(outDir, "images"), { recursive: true });
 writeFileSync(join(outDir, "posts.json"), JSON.stringify(outPosts, null, 2));
 
+const draftCount = Array.isArray(raw.drafts) ? raw.drafts.length : 0;
+
 console.error(``);
 console.error(`转换完成 → ${outDir}`);
-console.error(`  文章: ${outPosts.length}(回收站跳过 ${skipDeleted.length})`);
+console.error(`  文章: ${outPosts.length}(回收站跳过 ${skipDeleted.length},草稿不迁移: ${draftCount})`);
 console.error(`  图片改写: ${imgRewrites}(无字节保留原链 ${imgMissing})`);
 console.error(`下一步:`);
 console.error(`  cd ${outDir} && zip -r ../vanblog-import.zip .`);
 console.error(`  然后在新版后台「数据迁移」上传 vanblog-import.zip`);
+console.error(`  (导入接口上限 100MB;图片包很大时先确认打包后体积)`);
 if (skipDeleted.length) {
   console.error(`跳过的回收站文章: ${skipDeleted.join(" / ")}`);
 }

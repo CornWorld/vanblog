@@ -219,28 +219,48 @@ func (imp *Importer) uploadImagesAndRewrite(
 			continue
 		}
 
+		filename := path.Base(oldPath)
+
+		// Dedup fast path: identical bytes already stored → rewrite to the
+		// existing record. Creating a new record here would be deleted by
+		// the media dedup hook right after the save, leaving the rewritten
+		// content URL pointing at a dead record.
+		existing, err := media.FindDuplicateByContent(txApp, imgData)
+		if err != nil {
+			slog.Warn("[migration] dedup lookup failed", "file", filename, "err", err)
+		}
+		if existing != nil {
+			content = rewriteToRecord(content, oldURL(oldPath), existing)
+			continue
+		}
+
 		// Create a media record carrying the file. media.StoreLocalFile handles
 		// pb's FileField random-prefix renaming; we must read the stored name
 		// back from the record for the URL.
-		filename := path.Base(oldPath)
 		mediaRecord, err := media.StoreLocalFile(txApp, imgData, filename, "", "img")
 		if err != nil {
 			slog.Warn("[migration] failed to store media", "file", filename, "err", err)
 			continue
 		}
-
-		// Rewrite content: replace old /api/files/{oldPath} with the new URL.
-		newFilename := mediaRecord.GetString("file")
-		if newFilename == "" {
-			newFilename = filename
-		}
-		newURL := fmt.Sprintf("/api/files/%s/%s",
-			mediaRecord.BaseFilesPath(), newFilename)
-		oldURL := "/api/files/" + oldPath
-		content = strings.ReplaceAll(content, oldURL, newURL)
+		content = rewriteToRecord(content, oldURL(oldPath), mediaRecord)
 	}
 
 	return content
+}
+
+// oldURL renders the pre-migration URL for a zip image path.
+func oldURL(oldPath string) string {
+	return "/api/files/" + oldPath
+}
+
+// rewriteToRecord replaces all occurrences of oldURL with the record's file URL.
+func rewriteToRecord(content, oldURL string, record *core.Record) string {
+	newFilename := record.GetString("file")
+	if newFilename == "" {
+		newFilename = path.Base(oldURL)
+	}
+	newURL := fmt.Sprintf("/api/files/%s/%s", record.BaseFilesPath(), newFilename)
+	return strings.ReplaceAll(content, oldURL, newURL)
 }
 
 // findOrCreateCategory looks up a category by name, creating it if missing.
