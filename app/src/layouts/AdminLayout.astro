@@ -1,20 +1,241 @@
 ---
-// Admin layout: extends BaseLayout and loads the PocketBase browser SDK
-// so admin page scripts can call pb.collection(...).authWithPassword etc.
-import BaseLayout from './BaseLayout.astro';
+// ============================================================
+// 后台管理布局 —— 独立于前台站点的 admin shell
+// ------------------------------------------------------------
+// 2026-10-13 UX 改版：前身直接复用前台 BaseLayout（顶部是前台导航，
+// 无后台菜单/无登出入口），现在是真正的后台外壳：
+//   - 桌面端左侧固定侧边栏；移动端抽屉（顶栏汉堡按钮 + 遮罩）
+//   - 按角色/权限分组的导航，当前路由高亮（aria-current="page"）
+//   - 侧栏顶部快捷「新建文章」、底部用户区 + 退出登录 + 查看站点
+// 同时安装：
+//   - window.vanblog.pb   （@vanblog/sdk/browser initClient，供页面脚本用）
+//   - window.vanblogUI    （toast / confirmDialog / promptDialog，见 scripts/admin-ui.ts）
+// ============================================================
+// prerender=false 由各页面自行声明（astro 规则：布局里声明无效，见
+// astro/no-prerender-export-outside-pages）。
 
-// All admin pages are SSR — never cache.
+import '../styles/global.css';
+import 'katex/dist/katex.css';
+import Head from './partials/Head.astro';
+import Icon from '../components/admin/Icon.astro';
+import { getAuthUser, hasPermission, safe, buildPaletteTypeMap } from '@vanblog/sdk';
+import type { Site } from '@vanblog/sdk';
+
+// Admin 页面全部 SSR，绝不缓存。
 Astro.cache.set(false);
 
 interface Props {
   title: string;
-  [key: string]: any;
+  /** 沉浸式页面（编辑器）：隐藏侧边栏与主区留白，body[data-zen='1'] 服务端直出。 */
+  immersive?: boolean;
 }
+
+const { title, immersive } = Astro.props;
+const pb = Astro.locals.pb;
+
+const user = getAuthUser(pb);
+const isAdmin = user?.role === 'admin';
+const canEditPost =
+  !!hasPermission(pb, 'article:create') || !!hasPermission(pb, 'article:update');
+
+const site = (await Astro.locals.getSite()) as Partial<Site> | null;
+const siteName = site?.siteName || 'Vanblog';
+
+// 与前台一致的 palette 预载（防 FOUC）：Head partial 需要 name→type 映射。
+const palettes = await safe(() => pb.vanblog.palettes.list(), 'palettes');
+const paletteTypeMap = buildPaletteTypeMap(palettes.data ?? []);
+
+// ── 导航（按权限过滤后渲染）──
+interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+  show: boolean;
+}
+const nav: Array<{ group: string; items: NavItem[] }> = [
+  {
+    group: '内容',
+    items: [
+      { href: '/admin', label: '文章管理', icon: 'file-text', show: true },
+      { href: '/admin/categories', label: '分类', icon: 'folder', show: true },
+      { href: '/admin/tags', label: '标签', icon: 'tag', show: true },
+      { href: '/admin/media', label: '媒体库', icon: 'image', show: true },
+      { href: '/admin/trash', label: '回收站', icon: 'trash-2', show: canEditPost },
+    ],
+  },
+  {
+    group: '站点',
+    items: [
+      { href: '/admin/site', label: '站点与外观', icon: 'pen-tool', show: isAdmin },
+      { href: '/admin/routing', label: '路由配置', icon: 'git-branch', show: isAdmin },
+    ],
+  },
+  {
+    group: '运维',
+    items: [
+      { href: '/admin/backups', label: '数据备份', icon: 'database', show: isAdmin },
+      { href: '/admin/migrate', label: '数据迁移', icon: 'package', show: isAdmin },
+      { href: '/admin/audits', label: '审计日志', icon: 'clipboard', show: isAdmin },
+      { href: '/admin/users', label: '用户管理', icon: 'users', show: isAdmin },
+      { href: '/admin/terminal', label: 'AI 终端', icon: 'terminal', show: isAdmin },
+    ],
+  },
+];
+
+// 当前路由高亮：取最长匹配的非 /admin 前缀；都未命中且在 /admin 下时归 /admin。
+const path = Astro.url.pathname.replace(/\/+$/, '') || '/';
+const deepMatches = nav
+  .flatMap((g) => g.items)
+  .filter(
+    (i) =>
+      i.show && i.href !== '/admin' && (path === i.href || path.startsWith(i.href + '/')),
+  )
+  .sort((a, b) => b.href.length - a.href.length);
+const activeHref =
+  deepMatches[0]?.href ?? (path === '/admin' || path.startsWith('/admin/') ? '/admin' : null);
 ---
-<BaseLayout {...Astro.props}>
-  <script>
-    import { initClient } from '@vanblog/sdk/browser';
-    initClient();
-  </script>
-  <slot />
-</BaseLayout>
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <Head
+      title={title}
+      siteName={siteName}
+      sitePalette={site?.palette}
+      siteUpdated={site?.updated}
+      palettes={paletteTypeMap}
+    />
+  </head>
+  <body class="min-h-screen bg-[var(--bg)] text-[var(--text)]" data-zen={immersive ? '1' : undefined}>
+    <div class="flex min-h-screen">
+      <aside
+        id="admin-sidebar"
+        class="admin-sidebar"
+        data-open="false"
+        aria-label="管理后台导航"
+      >
+        <div class="flex flex-col gap-2 border-b border-[var(--border)] p-4">
+          <p class="text-xs tracking-wide text-[var(--text-muted)]">{siteName} · 管理后台</p>
+          {
+            canEditPost && (
+              <a href="/admin/edit/new" class="btn btn-primary justify-center">
+                + 新建文章
+              </a>
+            )
+          }
+        </div>
+
+        <nav class="flex flex-1 flex-col gap-5 overflow-y-auto p-3">
+          {
+            nav
+              .filter((group) => group.items.some((i) => i.show))
+              .map((group) => (
+                <div class="flex flex-col gap-1">
+                  <p class="px-3 pb-1 text-xs font-semibold text-[var(--text-muted)]">
+                    {group.group}
+                  </p>
+                  {group.items
+                    .filter((i) => i.show)
+                    .map((item) => (
+                      <a
+                        href={item.href}
+                        class="admin-nav-link"
+                        aria-current={activeHref === item.href ? 'page' : undefined}
+                      >
+                        <Icon name={item.icon} size={16} class="opacity-80" />
+                        {item.label}
+                      </a>
+                    ))}
+                </div>
+              ))
+          }
+        </nav>
+
+        <div class="flex flex-col gap-1 border-t border-[var(--border)] p-3 text-sm">
+          {
+            user ? (
+              <div class="flex items-center gap-2 px-3 py-1.5">
+                <span class="truncate font-medium" title={user.username}>
+                  {user.username}
+                </span>
+                <span class="badge badge-muted">{user.role}</span>
+              </div>
+            ) : (
+              <a href="/login" class="admin-nav-link">
+                登录
+              </a>
+            )
+          }
+          <a href="/" class="admin-nav-link">
+            <Icon name="external-link" size={14} class="opacity-80" /> 查看站点
+          </a>
+          {
+            user && (
+              <button type="button" id="admin-logout" class="admin-nav-link cursor-pointer text-left">
+                <Icon name="log-out" size={14} class="opacity-80" /> 退出登录
+              </button>
+            )
+          }
+        </div>
+      </aside>
+
+      <div id="admin-scrim" class="admin-scrim" data-open="false"></div>
+
+      <div id="admin-content" class="flex min-w-0 flex-1 flex-col">
+        <header
+          id="admin-topbar"
+          class="sticky top-0 z-30 flex items-center gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-3 py-2 md:hidden"
+        >
+          <button
+            type="button"
+            id="admin-menu-btn"
+            class="btn px-2 py-1"
+            aria-label="打开菜单"
+            aria-controls="admin-sidebar"
+          >
+            <Icon name="menu" size={18} />
+          </button>
+          <span class="text-sm font-semibold">{title}</span>
+        </header>
+
+        <main class="mx-auto w-full max-w-6xl min-w-0 flex-1 px-4 py-6 sm:px-6">
+          <slot />
+        </main>
+      </div>
+    </div>
+
+    <script>
+      import { initClient } from '@vanblog/sdk/browser';
+      initClient();
+    </script>
+    <script>
+      import { installAdminUI } from '../scripts/admin-ui';
+      installAdminUI();
+    </script>
+    <script>
+      import { logout } from '@vanblog/sdk/browser';
+
+      const wire = () => {
+        document
+          .getElementById('admin-logout')
+          ?.addEventListener('click', () => logout('/login'));
+
+        // 移动端抽屉：汉堡按钮开合，点遮罩关闭。
+        const sidebar = document.getElementById('admin-sidebar');
+        const scrim = document.getElementById('admin-scrim');
+        const setOpen = (open: boolean) => {
+          sidebar?.setAttribute('data-open', String(open));
+          scrim?.setAttribute('data-open', String(open));
+        };
+        document.getElementById('admin-menu-btn')?.addEventListener('click', () => {
+          setOpen(sidebar?.getAttribute('data-open') !== 'true');
+        });
+        scrim?.addEventListener('click', () => setOpen(false));
+      };
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', wire);
+      } else {
+        wire();
+      }
+    </script>
+  </body>
+</html>

@@ -86,14 +86,25 @@ if (alreadySetup) {
     const statusEl = document.getElementById('setup-status');
     const artalkSetup = document.getElementById('artalk-setup');
     const providerInputs = form.querySelectorAll('[name="commentsProvider"]');
-    const setupStatus = self.vanblog?.pb?.vanblog?.setup;
-    setupStatus?.status?.().then((status) => {
-      const artalk = form.querySelector('[value="artalk"]');
-      if (!status.capabilities?.artalk && artalk) {
-        artalk.disabled = true;
-        artalk.parentElement.title = '当前镜像不包含 Artalk，请使用 prod-artalk 镜像';
+    // 能力探测懒启动：is:inline 脚本先于 AdminLayout/BaseLayout 的
+    // initClient 模块执行，此处 self.vanblog 还是 undefined（曾导致
+    // 无 Artalk 镜像的「内置 Artalk」选项未被禁用，提交才报错）。
+    // 短轮询等 initClient 就绪后再探测。
+    const probeCapabilities = (tries) => {
+      const pb = self.vanblog?.pb;
+      if (!pb) {
+        if (tries > 0) return setTimeout(() => probeCapabilities(tries - 1), 50);
+        return;
       }
-    }).catch(() => {});
+      pb.vanblog.setup.status().then((status) => {
+        const artalk = form.querySelector('[value="artalk"]');
+        if (!status.capabilities?.artalk && artalk) {
+          artalk.disabled = true;
+          artalk.parentElement.title = '当前镜像不包含 Artalk，请使用 prod-artalk 镜像';
+        }
+      }).catch(() => {});
+    };
+    probeCapabilities(20);
     providerInputs.forEach((input) => input.addEventListener('change', () => {
       artalkSetup.classList.toggle('hidden', input.checked && input.value === 'artalk');
     }));

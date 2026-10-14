@@ -9,6 +9,8 @@
 @source "../layouts/**/*.astro";
 @source "../pages/**/*.astro";
 @source "../lib/**/*.astro";
+/* admin-ui 原语（scripts/admin-ui.ts）在 JS 里拼 Tailwind 类名，需扫描 */
+@source "../scripts/**/*.ts";
 
 /* ── Legacy plugin templates and root Pack Astro sources — Tailwind must scan these for utility classes ── */
 @source "../../plugins/**/frontend/**/*.html";
@@ -65,6 +67,10 @@
   --fill: var(--color-bg);
   --hover: var(--color-border);
   --accent: var(--color-accent);
+  /* 状态色（admin 徽标/提示用） */
+  --success: #16a34a;
+  --warning: #d97706;
+  --error: #dc2626;
 }
 html.dark {
   --bg: var(--color-bg-dark);
@@ -78,6 +84,9 @@ html.dark {
   --fill: var(--color-bg-dark);
   --hover: var(--color-border-dark);
   --accent: var(--color-accent-dark);
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --error: #f87171;
 }
 
 /* ── Base layer ── */
@@ -312,4 +321,164 @@ article li {
 }
 article hr {
   @apply my-8 border-[var(--border)];
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Admin UI —— 后台组件样式（AdminLayout / admin 各页共用）
+   ════════════════════════════════════════════════════════════════════════════ */
+@layer components {
+  /* ── 按钮 ── */
+  .btn {
+    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--text)] transition-colors hover:bg-[var(--fill)] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply border-transparent bg-[var(--accent)] text-white hover:opacity-90;
+  }
+  .btn-danger {
+    @apply border-[var(--error)]/40 text-[var(--error)] hover:bg-[var(--error)]/10;
+  }
+  .btn-sm {
+    @apply px-2 py-0.5 text-xs;
+  }
+
+  /* ── 后台表格 ── */
+  .table-wrap {
+    @apply overflow-x-auto;
+  }
+  .admin-table {
+    @apply w-full border-collapse text-sm;
+  }
+  .admin-table th {
+    @apply whitespace-nowrap border-b border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2.5 text-left text-xs font-semibold text-[var(--text-muted)];
+  }
+  .admin-table td {
+    @apply border-b border-[var(--border)] px-3 py-2.5 align-middle;
+  }
+  .admin-table tbody tr {
+    @apply transition-colors;
+  }
+  .admin-table tbody tr:hover {
+    @apply bg-[var(--fill)];
+  }
+
+  /* ── 状态徽标 ── */
+  .badge {
+    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium;
+  }
+  .badge-published {
+    border-color: color-mix(in srgb, var(--success) 35%, transparent);
+    color: var(--success);
+    background: color-mix(in srgb, var(--success) 12%, transparent);
+  }
+  .badge-draft {
+    border-color: var(--border);
+    color: var(--text-muted);
+    background: var(--fill);
+  }
+  .badge-hidden {
+    border-color: color-mix(in srgb, var(--warning) 35%, transparent);
+    color: var(--warning);
+    background: color-mix(in srgb, var(--warning) 12%, transparent);
+  }
+  .badge-top {
+    border-color: color-mix(in srgb, var(--warning) 35%, transparent);
+    color: var(--warning);
+    background: color-mix(in srgb, var(--warning) 12%, transparent);
+  }
+  .badge-private {
+    border-color: color-mix(in srgb, var(--error) 35%, transparent);
+    color: var(--error);
+    background: color-mix(in srgb, var(--error) 10%, transparent);
+  }
+  .badge-muted {
+    border-color: var(--border);
+    color: var(--text-muted);
+    background: var(--fill);
+  }
+
+  /* ── Admin 侧边栏（AdminLayout）── */
+  .admin-sidebar {
+    @apply fixed inset-y-0 left-0 z-40 flex w-60 shrink-0 -translate-x-full flex-col border-r border-[var(--border)] bg-[var(--surface)] transition-transform duration-200 md:static md:translate-x-0;
+  }
+  .admin-sidebar[data-open='true'] {
+    @apply translate-x-0 shadow-2xl;
+  }
+  .admin-scrim {
+    @apply fixed inset-0 z-30 hidden bg-black/40 md:hidden;
+  }
+  .admin-scrim[data-open='true'] {
+    @apply block;
+  }
+  .admin-nav-link {
+    @apply flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-[var(--text)] no-underline transition-colors hover:bg-[var(--fill)];
+  }
+  .admin-nav-link[aria-current='page'] {
+    @apply bg-[var(--accent)]/10 font-medium text-[var(--accent)];
+  }
+
+  /* ── KPI 指标卡 ── */
+  .kpi-card {
+    @apply rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4;
+  }
+  .kpi-label {
+    @apply text-xs text-[var(--text-muted)];
+  }
+  .kpi-value {
+    @apply text-2xl font-bold;
+  }
+
+  /* ── 编辑器沉浸布局（body[data-zen]，AdminLayout immersive 属性服务端直出）──
+     编辑页默认无侧边栏、无主区留白，编辑区 flex 精确吃满工具栏以下全部
+     空间（对齐原版 mereithhh 的沉浸写作体验）。导航经由工具栏「← 返回」。
+     注意：bytemd 根元素默认 height:300px，必须显式 100% 才会撑满包裹层。 */
+  body[data-zen='1'] {
+    height: 100vh;
+    overflow: hidden;
+  }
+  body[data-zen='1'] .admin-sidebar {
+    display: none;
+  }
+  body[data-zen='1'] .admin-scrim {
+    display: none !important;
+  }
+  body[data-zen='1'] #admin-menu-btn {
+    display: none;
+  }
+  /* 移动端顶栏在沉浸模式下只剩标题文字，一并隐藏（返回走工具栏）。
+     !important：顶栏自带 utilities 层的 display:flex，需覆盖。 */
+  body[data-zen='1'] #admin-topbar {
+    display: none !important;
+  }
+  body[data-zen='1'] main {
+    max-width: none !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  body[data-zen='1'] #admin-content {
+    height: 100vh;
+  }
+  body[data-zen='1'] #admin-content > main {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  /* 编辑页内容壳：工具栏/设置行/草稿条在上，编辑器吃掉剩余全部高度。
+     设置展开且空间不足时壳内滚动（写作态=收起，永不滚动）。 */
+  body[data-zen='1'] #editor-shell {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  body[data-zen='1'] #editor-shell > #bytemd-editor {
+    flex: 1 1 0;
+    height: auto !important;
+    min-height: 240px;
+  }
+  body[data-zen='1'] #bytemd-editor .bytemd {
+    height: 100% !important;
+  }
 }
