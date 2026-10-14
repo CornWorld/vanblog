@@ -23,6 +23,21 @@ export default defineConfig({
   },
   vite: {
     plugins: [tailwindcss()],
+    // 宿主机裸跑 `PB_URL=... pnpm dev` 时没有 Caddy，浏览器端 pb client
+    // (same-origin "/api") 无法直达 PocketBase —— 这里按前缀代理补齐。
+    // 仅在显式设置 PB_URL 时启用；容器/生产路径不受影响。astro 自己的
+    // /api/revalidate 不在代理前缀内。
+    server: process.env.PB_URL
+      ? {
+          proxy: ['/api/collections', '/api/files', '/api/vanblog', '/api/health', '/api/palette.css', '/api/themes', '/api/palettes', '/api/feed.xml', '/api/atom.xml'].reduce(
+            (acc, prefix) => {
+              acc[prefix] = { target: process.env.PB_URL, changeOrigin: true };
+              return acc;
+            },
+            {},
+          ),
+        }
+      : undefined,
     ssr: {
       noExternal: ['@vanblog/sdk'],
     },
