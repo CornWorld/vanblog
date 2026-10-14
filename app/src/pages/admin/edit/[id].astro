@@ -53,111 +53,212 @@ const mediaConfig: MediaConfig | undefined = site?.mediaConfig ?? undefined;
 const currentTagIds: string[] = Array.isArray(post.tags) ? post.tags : [];
 const currentCatId: string = post.category || '';
 const currentAuthorId: string = post.author || user.id;
+const postMeta: Record<string, unknown> = (post.meta as Record<string, unknown>) ?? {};
+const coverValue = typeof postMeta.cover === 'string' ? postMeta.cover : '';
 ---
-<AdminLayout title={isNew ? '新建文章' : '编辑文章'}>
-  <h1>{isNew ? '新建文章' : '编辑文章'}</h1>
-
+<AdminLayout title={isNew ? '新建文章' : '编辑文章'} immersive>
   {denied ? (
     <ErrorNotice code="403" title="无权限访问" message="编辑文章需要 article:create 或 article:update 权限。" />
   ) : notFound ? (
     <ErrorNotice code="404" title="文章不存在" message="该文章可能已被删除，或你没有访问权限。" />
   ) : (
-    <div class="flex flex-wrap gap-4 mb-4 items-end">
-    <label class="flex flex-col">
-      标题
-      <input type="text" id="f-title" value={post.title || ''} required class="w-80 px-1.5 py-0.5" />
-    </label>
-    <label class="flex flex-col">
-      路径
-      <input type="text" id="f-path" value={post.pathname || ''} placeholder="/my-post" class="w-48 px-1.5 py-0.5" />
-    </label>
-    <label class="flex flex-col">
-      状态
-      <select id="f-status">
-        <option value="draft" selected={post.status !== 'published' && post.status !== 'hidden'}>草稿</option>
-        <option value="published" selected={post.status === 'published'}>已发布</option>
-        <option value="hidden" selected={post.status === 'hidden'}>隐藏</option>
-      </select>
-    </label>
-    <label class="flex flex-col">
-      置顶
-      <input type="number" id="f-top" value={post.top ?? 0} min="0" class="w-20 px-1.5 py-0.5" />
-    </label>
+  <div id="editor-shell" class="flex flex-col flex-1 min-h-0">
+  <div id="draft-banner" class="hidden mb-2 px-3 py-2 rounded border border-[var(--warning)] bg-[var(--fill)] text-sm flex items-center gap-3 flex-wrap">
+    <span>检测到未保存的本地草稿（保存于 <span id="draft-time"></span>）</span>
+    <button type="button" id="draft-restore" class="btn btn-primary btn-sm">恢复</button>
+    <button type="button" id="draft-discard" class="btn btn-sm">丢弃</button>
   </div>
 
-  <div class="flex flex-wrap gap-4 mb-4 items-end">
-    <label class="flex flex-col">
-      分类
-      <select id="f-category" class="min-w-[180px]">
-        <option value="">（无）</option>
-        {cats.map(c => (
-          <option value={c.id} selected={currentCatId === c.id}>{c.name}</option>
-        ))}
-      </select>
-    </label>
-    <label class="flex flex-col" id="lbl-tags">
-      标签
-      <select id="f-tags" multiple size="4" class="min-w-[280px]">
-        {tags.map(t => (
-          <option value={t.id} selected={!!t.id && currentTagIds.includes(t.id)}>#{t.name}</option>
-        ))}
-      </select>
-      <small class="text-[var(--text-muted)]">Ctrl/Cmd 多选</small>
-    </label>
-    <label class="flex flex-col">
-      版权
-      <input type="text" id="f-copyright" value={post.copyright || ''} class="w-60 px-1.5 py-0.5" />
-    </label>
+  <!-- 粘性工具栏：返回 / 标题 / 保存状态 / 操作 -->
+  <div class="sticky top-0 z-20 flex items-center gap-3 py-2 bg-[var(--surface)] border-b border-[var(--border)]">
+    <a href="/admin" class="btn btn-sm">← 返回</a>
+    <input type="text" id="f-title" value={post.title || ''} placeholder="文章标题…" required
+      class="flex-1 min-w-0 px-2 py-1 text-lg font-semibold bg-transparent border-0 outline-none text-[var(--text)]" />
+    <span id="save-state" class="text-sm text-[var(--text-muted)] whitespace-nowrap"></span>
+    <button id="btn-save" type="button" class="btn btn-primary">保存</button>
+    <button id="btn-publish" type="button" class="btn">保存并发布</button>
   </div>
 
-  <details class="mb-4">
-    <summary class="cursor-pointer">高级（私有文章 / 密码）</summary>
-    <div class="flex gap-4 flex-wrap py-2">
-      <label><input type="checkbox" id="f-private" checked={!!post.private} /> 私有</label>
+  <!-- 元数据区 -->
+  <details id="editor-settings" class="my-3" open={isNew}>
+    <summary class="cursor-pointer select-none">设置</summary>
+    <div class="flex flex-wrap gap-4 py-3 items-end">
       <label class="flex flex-col">
-        密码（空则无）
-        <input type="text" id="f-password" value={post.password || ''} class="w-48 px-1.5 py-0.5" />
+        路径
+        <input type="text" id="f-path" value={post.pathname || ''} placeholder="/my-post" class="w-48 px-1.5 py-0.5" />
       </label>
-    </div>
-  </details>
-
-  <details class="mb-4">
-    <summary class="cursor-pointer">自定义字段（meta）</summary>
-    <div id="meta-rows" class="flex flex-col gap-2 py-2"></div>
-    <div class="flex gap-2 items-center">
-      <button type="button" id="meta-add" class="px-3 py-1 border border-[var(--border)] rounded">添加字段</button>
-      <small class="text-[var(--text-muted)]">字符串键值（值为 true/false 存为布尔）。主题可读取：如 <code>cover</code> → 文章分享卡片图。</small>
+      <label class="flex flex-col">
+        状态
+        <select id="f-status">
+          <option value="draft" selected={post.status !== 'published' && post.status !== 'hidden'}>草稿</option>
+          <option value="published" selected={post.status === 'published'}>已发布</option>
+          <option value="hidden" selected={post.status === 'hidden'}>隐藏</option>
+        </select>
+      </label>
+      <label class="flex flex-col">
+        置顶
+        <input type="number" id="f-top" value={post.top ?? 0} min="0" class="w-20 px-1.5 py-0.5" />
+      </label>
+      <label class="flex flex-col">
+        分类
+        <span class="flex gap-2">
+          <select id="f-category" class="min-w-[160px]">
+            <option value="">（无）</option>
+            {cats.map(c => (
+              <option value={c.id} selected={currentCatId === c.id}>{c.name}</option>
+            ))}
+          </select>
+          <button type="button" id="new-cat-btn" class="btn btn-sm">+ 新建分类</button>
+        </span>
+      </label>
+      <div class="flex flex-col gap-1">
+        标签
+        <div id="tag-chips" class="flex flex-wrap gap-1.5 max-w-[420px]">
+          {tags.map(t => (
+            <button type="button" class="btn btn-sm" aria-pressed={!!t.id && currentTagIds.includes(t.id)} data-id={t.id}>#{t.name}</button>
+          ))}
+        </div>
+        <span class="flex gap-2">
+          <input type="text" id="new-tag-name" placeholder="新建标签" class="w-32 px-1.5 py-0.5" />
+          <button type="button" id="new-tag-btn" class="btn btn-sm">+ 新建标签</button>
+        </span>
+      </div>
+      <label class="flex flex-col">
+        版权
+        <input type="text" id="f-copyright" value={post.copyright || ''} class="w-60 px-1.5 py-0.5" />
+      </label>
+      <label class="flex flex-col">
+        私有 / 密码
+        <span class="flex gap-2 items-center">
+          <input type="checkbox" id="f-private" checked={!!post.private} />
+          <input type="password" id="f-password" value={post.password || ''} placeholder="密码（空则无）" class="w-40 px-1.5 py-0.5" />
+        </span>
+      </label>
+      <div class="flex flex-col gap-1">
+        封面
+        <span class="flex gap-2 items-center flex-wrap">
+          <input type="text" id="f-cover" value={coverValue} placeholder="图片 URL" class="w-64 px-1.5 py-0.5" />
+          <img id="cover-preview" src={coverValue || undefined} alt="封面预览" class={`h-16 object-cover rounded border border-[var(--border)] ${coverValue ? '' : 'hidden'}`} />
+          <button type="button" id="cover-upload-btn" class="btn btn-sm">上传封面</button>
+          <button type="button" id="cover-pick-btn" class="btn btn-sm">从媒体库选择</button>
+          <input type="file" id="cover-file" accept="image/*" class="hidden" />
+        </span>
+      </div>
+      <div class="flex flex-col gap-1">
+        自定义字段（meta）
+        <div id="meta-rows" class="flex flex-col gap-2"></div>
+        <span class="flex gap-2 items-center">
+          <button type="button" id="meta-add" class="btn btn-sm">添加字段</button>
+          <small class="text-[var(--text-muted)]">字符串键值（true/false 存为布尔）</small>
+        </span>
+      </div>
     </div>
   </details>
 
   <ByteMdEditor initialContent={post.content || ''} mediaConfig={mediaConfig} />
 
-  <div class="mt-2 flex gap-4">
-    <button id="btn-save" type="button">保存</button>
-    <button id="btn-publish" type="button">保存并发布</button>
-    <a href="/admin">取消</a>
-  </div>
-<script is:inline type="application/json" id="editor-data" set:html={JSON.stringify({ postId: isNew ? null : id, authorId: currentAuthorId, meta: post.meta ?? {} }).replace(/<\//g, '<\\/')} />
-<script is:inline>
-    const { postId, authorId, meta: postMeta } = JSON.parse(document.getElementById('editor-data').textContent);
+  <!-- 媒体库选择器 -->
+  <dialog id="media-dialog" class="w-[90vw] max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow-2xl p-0 backdrop:bg-black/40">
+    <div class="p-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-semibold">选择封面</h2>
+        <button type="button" id="media-close" class="btn btn-sm">关闭</button>
+      </div>
+      <div id="media-grid" class="grid grid-cols-4 gap-2 overflow-y-auto max-h-[50vh]"></div>
+    </div>
+  </dialog>
 
-    // ── 自定义字段（meta）键值行：字符串值，true/false 存为布尔 ──
-    const metaRows = document.getElementById('meta-rows');
-    const metaAdd = document.getElementById('meta-add');
+<script is:inline type="application/json" id="editor-data" set:html={JSON.stringify({
+  postId: isNew ? null : id,
+  authorId: currentAuthorId,
+  meta: postMeta,
+  serverContent: post.content || '',
+  tags: tags.map(t => ({ id: t.id, name: t.name })),
+}).replace(/<\//g, '<\\/')} />
+<script is:inline>
+  (() => {
+    const { postId: initialPostId, authorId, meta: postMeta, serverContent } =
+      JSON.parse(document.getElementById('editor-data').textContent);
+
+    let postId = initialPostId;
+    let dirty = false;
+
+    const $ = (id) => document.getElementById(id);
+
+    // ── 保存状态指示 ──
+    function setSaved() {
+      const t = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      $('save-state').textContent = `已保存 ${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`;
+      $('save-state').style.color = 'var(--text-muted)';
+    }
+    function markDirty() {
+      if (dirty) return;
+      dirty = true;
+      $('save-state').textContent = '● 未保存';
+      $('save-state').style.color = 'var(--warning)';
+      scheduleDraftSave();
+    }
+
+    // ── 本地草稿防丢 ──
+    const draftKey = () => `vanblog:edit-draft:${postId || 'new'}`;
+    let draftTimer = null;
+    function scheduleDraftSave() {
+      if (draftTimer) clearTimeout(draftTimer);
+      draftTimer = setTimeout(() => {
+        if (!dirty) return;
+        try {
+          localStorage.setItem(draftKey(), JSON.stringify({
+            title: $('f-title').value,
+            content: $('post-content').value,
+            savedAt: Date.now(),
+          }));
+        } catch { /* 存储不可用时静默跳过 */ }
+      }, 1500);
+    }
+    function clearDraft() {
+      try { localStorage.removeItem(draftKey()); } catch { /* ignore */ }
+    }
+
+    // 启动时检测本地草稿
+    (function checkDraft() {
+      let draft = null;
+      try { draft = JSON.parse(localStorage.getItem(draftKey())); } catch { /* ignore */ }
+      if (!draft || typeof draft.content !== 'string') return;
+      const differs = isNew ? draft.content.trim() !== '' : draft.content !== serverContent;
+      if (!differs) return;
+      $('draft-banner').classList.remove('hidden');
+      const d = new Date(draft.savedAt);
+      const pad = (n) => String(n).padStart(2, '0');
+      $('draft-time').textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      $('draft-restore').addEventListener('click', () => {
+        $('f-title').value = draft.title || '';
+        window.dispatchEvent(new CustomEvent('vanblog:set-content', { detail: { value: draft.content } }));
+        markDirty();
+        $('draft-banner').classList.add('hidden');
+      });
+      $('draft-discard').addEventListener('click', () => {
+        clearDraft();
+        $('draft-banner').classList.add('hidden');
+      });
+    })();
+
+    // ── 自定义字段（meta）键值行 ──
+    const metaRows = $('meta-rows');
     function addMetaRow(key = '', value = '') {
       const row = document.createElement('div');
       row.className = 'flex gap-2';
       row.innerHTML =
         '<input class="meta-k w-44 px-1.5 py-0.5" placeholder="key（如 cover）" />' +
         '<input class="meta-v flex-1 px-1.5 py-0.5" placeholder="value" />' +
-        '<button type="button" class="meta-del px-2 border border-[var(--border)] rounded">删除</button>';
+        '<button type="button" class="meta-del btn btn-sm">删除</button>';
       row.querySelector('.meta-k').value = key;
       row.querySelector('.meta-v').value = value;
       row.querySelector('.meta-del').addEventListener('click', () => row.remove());
       metaRows.appendChild(row);
     }
     for (const [k, v] of Object.entries(postMeta || {})) addMetaRow(k, String(v ?? ''));
-    metaAdd.addEventListener('click', () => addMetaRow());
+    $('meta-add').addEventListener('click', () => addMetaRow());
     function collectMeta() {
       const out = {};
       for (const row of metaRows.children) {
@@ -168,41 +269,205 @@ const currentAuthorId: string = post.author || user.id;
         else if (v === 'false') v = false;
         out[k] = v;
       }
-      return Object.keys(out).length ? out : null;
+      return out;
     }
-    const save = async (publish) => {
-      const pb = self.vanblog.pb;
-      if (!pb) return alert('未登录');
 
-      const tagIds = Array.from(document.getElementById('f-tags').selectedOptions).map(o => o.value);
+    // ── 标签 Chip ──
+    const tagChips = $('tag-chips');
+    function addTagChip(id, name, pressed = true) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn btn-sm';
+      b.setAttribute('aria-pressed', String(pressed));
+      b.dataset.id = id;
+      b.textContent = '#' + name;
+      b.addEventListener('click', () => {
+        b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+        markDirty();
+      });
+      tagChips.appendChild(b);
+    }
+    tagChips.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-id]');
+      if (!b) return;
+      b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+      markDirty();
+    });
+    $('new-tag-btn').addEventListener('click', async () => {
+      const name = $('new-tag-name').value.trim();
+      if (!name) return self.vanblogUI?.toast('标签名不能为空', 'error');
+      const pb = self.vanblog?.pb;
+      if (!pb) return self.vanblogUI?.toast('未登录', 'error');
+      try {
+        const rec = await pb.collection('tags').create({ name });
+        addTagChip(rec.id, name, true);
+        $('new-tag-name').value = '';
+        self.vanblogUI?.toast('标签已创建', 'success');
+        markDirty();
+      } catch (e) { self.vanblogUI?.toast('创建标签失败: ' + e.message, 'error'); }
+    });
+
+    // ── 新建分类 ──
+    $('new-cat-btn').addEventListener('click', async () => {
+      const name = await self.vanblogUI?.promptDialog({
+        title: '新建分类',
+        label: '分类名称',
+        validate: (v) => (v && v.trim() ? null : '分类名不能为空'),
+      });
+      if (!name) return;
+      const pb = self.vanblog?.pb;
+      if (!pb) return self.vanblogUI?.toast('未登录', 'error');
+      try {
+        const rec = await pb.collection('categories').create({ name: name.trim() });
+        const opt = document.createElement('option');
+        opt.value = rec.id;
+        opt.textContent = rec.name;
+        opt.selected = true;
+        $('f-category').appendChild(opt);
+        self.vanblogUI?.toast('分类已创建', 'success');
+        markDirty();
+      } catch (e) { self.vanblogUI?.toast('创建分类失败: ' + e.message, 'error'); }
+    });
+
+    // ── 封面 ──
+    function setCover(url) {
+      $('f-cover').value = url;
+      const img = $('cover-preview');
+      if (url) { img.src = url; img.classList.remove('hidden'); }
+      else img.classList.add('hidden');
+      markDirty();
+    }
+    $('f-cover').addEventListener('change', () => setCover($('f-cover').value.trim()));
+    $('cover-upload-btn').addEventListener('click', () => $('cover-file').click());
+    $('cover-file').addEventListener('change', async () => {
+      const file = $('cover-file').files[0];
+      if (!file) return;
+      const pb = self.vanblog?.pb;
+      if (!pb) return self.vanblogUI?.toast('未登录', 'error');
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('staticType', 'img');
+        fd.append('storageType', 'local');
+        const rec = await pb.collection('media').create(fd);
+        setCover(`/api/files/media/${rec.id}/${rec.file}`);
+        self.vanblogUI?.toast('封面上传成功', 'success');
+      } catch (e) { self.vanblogUI?.toast('封面上传失败: ' + e.message, 'error'); }
+      $('cover-file').value = '';
+    });
+
+    // ── 媒体库选择器（动态 <dialog>）──
+    const mediaDialog = $('media-dialog');
+    $('cover-pick-btn').addEventListener('click', async () => {
+      const pb = self.vanblog?.pb;
+      if (!pb) return self.vanblogUI?.toast('未登录', 'error');
+      mediaDialog.showModal();
+      const grid = $('media-grid');
+      grid.innerHTML = '<span class="text-sm text-[var(--text-muted)]">加载中…</span>';
+      try {
+        const list = await pb.collection('media').getList(1, 24, { sort: '-created' });
+        grid.innerHTML = '';
+        for (const rec of list.items) {
+          const url = `/api/files/media/${rec.id}/${rec.file}`;
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = rec.file || '';
+          img.loading = 'lazy';
+          img.className = 'h-20 w-full object-cover rounded border border-[var(--border)] cursor-pointer hover:ring-2 hover:ring-[var(--accent)]';
+          img.addEventListener('click', () => {
+            setCover(url);
+            mediaDialog.close();
+          });
+          grid.appendChild(img);
+        }
+        if (!list.items.length) grid.innerHTML = '<span class="text-sm text-[var(--text-muted)]">媒体库为空</span>';
+      } catch (e) {
+        grid.innerHTML = '';
+        self.vanblogUI?.toast('加载媒体库失败: ' + e.message, 'error');
+        mediaDialog.close();
+      }
+    });
+    $('media-close').addEventListener('click', () => mediaDialog.close());
+
+    // ── 保存 ──
+    const save = async (publish) => {
+      const pb = self.vanblog?.pb;
+      if (!pb) return self.vanblogUI?.toast('未登录', 'error');
+
+      const title = $('f-title').value.trim();
+      if (!title) {
+        self.vanblogUI?.toast('标题不能为空', 'error');
+        $('f-title').focus();
+        return;
+      }
+
+      const meta = collectMeta();
+      const cover = $('f-cover').value.trim();
+      if (cover) meta.cover = cover;
+      else delete meta.cover;
+
+      const tagIds = Array.from(tagChips.querySelectorAll('button[aria-pressed="true"]')).map(b => b.dataset.id);
 
       const data = {
-        title: document.getElementById('f-title').value.trim(),
-        pathname: document.getElementById('f-path').value.trim(),
-        content: document.getElementById('post-content').value,
-        status: publish ? 'published' : document.getElementById('f-status').value,
-        top: Number(document.getElementById('f-top').value || 0),
-        category: document.getElementById('f-category').value || null,
+        title,
+        pathname: $('f-path').value.trim(),
+        content: $('post-content').value,
+        status: publish ? 'published' : $('f-status').value,
+        top: Number($('f-top').value || 0),
+        category: $('f-category').value || null,
         tags: tagIds,
-        copyright: document.getElementById('f-copyright').value,
-        private: document.getElementById('f-private').checked,
-        password: document.getElementById('f-password').value,
+        copyright: $('f-copyright').value,
+        private: $('f-private').checked,
+        password: $('f-password').value,
         author: authorId,
-        meta: collectMeta(),
+        meta: Object.keys(meta).length ? meta : null,
         deleted: false,
       };
 
-      if (!data.title) return alert('标题不能为空');
-
       try {
-        if (postId) await pb.collection('posts').update(postId, data);
-        else await pb.collection('posts').create(data);
-        location.href = '/admin';
-      } catch (e) { alert('保存失败: ' + e.message); }
+        if (postId) {
+          await pb.collection('posts').update(postId, data);
+        } else {
+          const rec = await pb.collection('posts').create(data);
+          const newId = rec.id;
+          clearDraft();
+          postId = newId;
+          history.replaceState(null, '', '/admin/edit/' + newId);
+        }
+        clearDraft();
+        dirty = false;
+        setSaved();
+        self.vanblogUI?.toast(publish ? '已发布' : '已保存', 'success');
+      } catch (e) {
+        self.vanblogUI?.toast('保存失败: ' + e.message, 'error');
+      }
     };
 
-    document.getElementById('btn-save').onclick = () => save(false);
-    document.getElementById('btn-publish').onclick = () => save(true);
-  </script>
+    $('btn-save').addEventListener('click', () => save(false));
+    $('btn-publish').addEventListener('click', () => save(true));
+
+    // ── 脏跟踪 ──
+    document.addEventListener('input', (e) => {
+      if (e.target.closest('form')) return;
+      if (e.target.matches('input, select, textarea')) markDirty();
+    });
+    document.addEventListener('change', (e) => {
+      if (e.target.matches('input, select, textarea')) markDirty();
+    });
+    document.addEventListener('vanblog:editor-change', markDirty);
+    window.addEventListener('beforeunload', (e) => {
+      if (!dirty) return;
+      e.preventDefault();
+      e.returnValue = '';
+    });
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        save(false);
+      }
+    });
+  })();
+</script>
+  </div>
   )}
 </AdminLayout>

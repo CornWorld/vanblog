@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import Icon from '../../components/admin/Icon.astro';
 import { getAuthUser } from '@vanblog/sdk';
 const pb = Astro.locals.pb;
 const isAdmin = getAuthUser(pb)?.role === 'admin';
@@ -10,13 +11,12 @@ const isAdmin = getAuthUser(pb)?.role === 'admin';
 <AdminLayout title="数据迁移">
   <h1>数据迁移</h1>
   <p class="flex gap-3 items-center">
-    <a href="/admin">← 返回</a>
     <a
-      class="text-sm underline"
+      class="text-sm underline inline-flex items-center gap-1"
       href={`/admin/terminal?name=${encodeURIComponent('AI 迁移助手')}&prompt=${encodeURIComponent(
         '你是 vanblog 数据迁移助手。先读 docs/reference/backup.md 的迁移协议和 docs/faq.md 的迁移条目,然后帮我完成数据导入:先了解我手上 ZIP 的来源格式(原版 mereithhh 或其他 fork),再给出校验与导入步骤,导入后核对文章数与图片链接改写结果。',
       )}`}
-    >🤖 AI 迁移助手</a>
+    ><Icon name="cpu" size={14} /> AI 迁移助手</a>
   </p>
   {!isAdmin ? (
     <p>仅管理员可访问。</p>
@@ -26,10 +26,12 @@ const isAdmin = getAuthUser(pb)?.role === 'admin';
       <section class="border border-[var(--border)] p-4">
         <h2 class="text-lg font-semibold mb-2">步骤 1：从源站点导出</h2>
         <p class="text-sm text-[var(--text-muted)] mb-3">
-          在另一台 Vanblog 实例（或迁移前的备份）上，用管理员身份调用导出接口获取 ZIP 包。
-          导出内容包含全部文章 + 文章内引用的图片，图片会自动打包进 images/ 目录。
+          也可以直接导出本站数据作为备份，或从另一台 Vanblog 实例导出后再导入本站。
         </p>
-        <pre class="overflow-x-auto bg-[var(--surface)] border border-[var(--border)] p-3 text-sm"><code># 全量导出（全部文章 + 图片）
+        <button id="btn-export-all" class="btn btn-primary mb-3"><Icon name="download" size={14} /> 导出本站数据 (ZIP)</button>
+        <details>
+          <summary class="cursor-pointer font-semibold text-sm">curl 说明</summary>
+        <pre class="overflow-x-auto bg-[var(--surface)] border border-[var(--border)] p-3 text-sm mt-2"><code># 全量导出（全部文章 + 图片）
 curl -X GET http://&lt;源站&gt;:8090/api/vanblog/export/all \
   -H "Authorization: Bearer &lt;管理员TOKEN&gt;" \
   -o vanblog_export.zip
@@ -38,6 +40,7 @@ curl -X GET http://&lt;源站&gt;:8090/api/vanblog/export/all \
 curl -X GET http://&lt;源站&gt;:8090/api/vanblog/export/post/&lt;文章ID&gt; \
   -H "Authorization: Bearer &lt;管理员TOKEN&gt;" \
   -o post_&lt;文章ID&gt;.zip</code></pre>
+        </details>
       </section>
 
       <!-- Step 2: Upload ZIP to import -->
@@ -64,12 +67,48 @@ curl -X GET http://&lt;源站&gt;:8090/api/vanblog/export/post/&lt;文章ID&gt; 
   )}
 
   <script>
-    document.getElementById('btn-zip-import')?.addEventListener('click', async () => {
+    const getPb = () => (self as any).vanblog?.pb;
+
+    document.getElementById('btn-export-all')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '打包中…';
+      try {
+        const pb = getPb();
+        const resp = await fetch('/api/vanblog/export/all', {
+          headers: { Authorization: 'Bearer ' + pb.authStore.token },
+        });
+        if (!resp.ok) throw new Error(resp.statusText || '导出失败');
+        const blob = await resp.blob();
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `vanblog-export-${stamp}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+        (self as any).vanblogUI?.toast('已开始下载', 'success');
+      } catch (err: any) {
+        (self as any).vanblogUI?.toast(err?.message || '导出失败', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    });
+
+    document.getElementById('btn-zip-import')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
       const fileInput = document.getElementById('zip-file') as HTMLInputElement;
       const resultDiv = document.getElementById('zip-result');
       if (!fileInput || !resultDiv) return;
       const file = fileInput.files?.[0];
-      if (!file) { alert('请选择 ZIP 文件'); return; }
+      if (!file) { (self as any).vanblogUI?.toast('请选择 ZIP 文件', 'error'); return; }
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '导入中…';
       try {
         const resp = await fetch('/api/vanblog/migrate/import', {
           method: 'POST',
@@ -87,6 +126,7 @@ curl -X GET http://&lt;源站&gt;:8090/api/vanblog/export/post/&lt;文章ID&gt; 
             <ul class="list-disc list-inside mt-1 text-sm">
               <li>文章: ${result.posts || 0}</li>
             </ul>
+            <a class="text-sm underline mt-2 inline-block" href="/admin">→ 去文章列表核对</a>
             ${result.errors && result.errors.length > 0 ? `<p class="text-orange-600 dark:text-orange-400 text-sm mt-1">⚠ 部分数据导入异常: ${result.errors.join(', ')}</p>` : ''}
           </div>
         `;
@@ -94,6 +134,9 @@ curl -X GET http://&lt;源站&gt;:8090/api/vanblog/export/post/&lt;文章ID&gt; 
         if (resultDiv) {
           resultDiv.innerHTML = `<p class="text-red-600 dark:text-red-400 mt-3">错误: ${err.message}</p>`;
         }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
       }
     });
   </script>

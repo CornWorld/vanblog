@@ -10,9 +10,14 @@ const canDelete = !!hasPermission(pb, 'article:delete');
 
 const PER_PAGE = 24;
 const page = getPage(Astro.url.searchParams);
+const q = (Astro.url.searchParams.get('q') ?? '').trim();
+const qFilter = q ? `file ~ "${q.replace(/"/g, '\\"')}"` : '';
 
 const { data: result } = await safe(
-  () => pb.collection('media').getList<Media>(page, PER_PAGE, { sort: '-created' }),
+  () => pb.collection('media').getList<Media>(page, PER_PAGE, {
+    sort: '-created',
+    ...(qFilter ? { filter: qFilter } : {}),
+  }),
   'admin/media'
 );
 const media = result?.items ?? [];
@@ -21,81 +26,215 @@ const totalPages = result?.totalPages ?? 1;
 ---
 <AdminLayout title="媒体管理">
   <h1>媒体管理</h1>
-  <p><a href="/admin">← 返回管理</a></p>
 
-  <form id="upload-form" class="flex items-center gap-2 mb-4">
-    <input id="upload-input" type="file" accept="image/*" multiple required class="text-sm" />
-    <button type="submit">上传</button>
-    <span id="upload-status" class="text-sm text-[var(--text-muted)]"></span>
-  </form>
-
-  {media.length === 0 ? (
-    <p>暂无媒体文件。</p>
-  ) : (
-    <>
-    <div id="media-grid" class="flex flex-wrap gap-4">
-      {media.map(m => (
-        <figure class="m-0 w-40 border border-[var(--border)] p-2">
-          {m.staticType === 'img' && (
-            <img
-              src={`/api/files/media/${m.id}/${m.file}`}
-              alt={m.file}
-              loading="lazy"
-              class="w-full h-[120px] object-cover block"
-            />
-          )}
-          <figcaption class="text-xs mt-1 break-all">
-            {m.file}
-            <br />
-            <small class="text-[var(--text-muted)]">[{m.storageType}/{m.fileType}]</small>
-          </figcaption>
-          <div class="flex gap-2 mt-1">
-            <button type="button" class="btn-copy text-xs" data-url={`/api/files/media/${m.id}/${m.file}`}>复制 URL</button>
-            {canDelete && (
-              <button
-                type="button"
-                class="btn-delete text-red-600 text-xs"
-                data-id={m.id}
-                data-name={m.file}
-              >删除</button>
-            )}
-          </div>
-        </figure>
-      ))}
+  <!-- 本页不做 wasm 规格化：这是用户希望保留原始字节（BMP/TIFF 等）时的通道，编辑器负责转换。 -->
+  <section class="mb-4">
+    <div class="flex items-center gap-2 flex-wrap mb-2">
+      <label class="btn btn-primary btn-sm cursor-pointer">
+        选择文件
+        <input id="upload-input" type="file" accept="image/*" multiple hidden />
+      </label>
+      <button type="button" id="paste-btn" class="btn btn-sm">从剪贴板上传</button>
+      <span id="upload-status" class="text-sm text-[var(--text-muted)]" aria-live="polite"></span>
+      <form method="get" action="/admin/media" class="flex items-center gap-2 ml-auto">
+        <input
+          type="search"
+          name="q"
+          value={q}
+          placeholder="搜索文件名"
+          class="text-sm px-2 py-1 border border-[var(--border)] rounded bg-[var(--surface)] text-[var(--text)]"
+        />
+        <button type="submit" class="btn btn-sm">搜索</button>
+        {q && <a href="/admin/media" class="text-sm text-[var(--text-muted)]">清除</a>}
+      </form>
     </div>
 
-    <p class="text-xs text-[var(--text-muted)] mt-3">
-      共 {totalMedia} 个 · 第 {page}/{totalPages} 页
-    </p>
+    <div id="dropzone" class="relative">
+      <div id="dropzone-overlay" hidden class="absolute inset-0 z-10 border-2 border-dashed border-[var(--accent)] rounded-lg bg-[var(--fill)] flex items-center justify-center text-sm text-[var(--accent)] pointer-events-none">
+        松开鼠标上传到媒体库
+      </div>
+      {media.length === 0 ? (
+        <p id="media-empty" class="border border-dashed border-[var(--border)] rounded-lg p-6 text-center text-[var(--text-muted)] text-sm">
+          {q ? `没有匹配「${q}」的媒体文件。` : '暂无媒体文件，可拖拽图片到此处或点击「选择文件」上传。'}
+        </p>
+      ) : (
+        <div id="media-grid" class="flex flex-wrap gap-4 border border-dashed border-[var(--border)] rounded-lg p-4">
+          {media.map((m) => {
+            const url = `/api/files/media/${m.id}/${m.file}`;
+            return (
+              <figure class="m-0 w-40 border border-[var(--border)] p-2" data-id={m.id} data-name={m.file} data-url={url}>
+                {m.staticType === 'img' && (
+                  <button type="button" class="btn-lightbox block w-full p-0 border-0 bg-transparent cursor-zoom-in" data-url={url} aria-label={`放大查看 ${m.file}`}>
+                    <img src={url} alt={m.file} loading="lazy" class="w-full h-[120px] object-cover block" />
+                  </button>
+                )}
+                <figcaption class="text-xs mt-1 break-all">
+                  {m.file}
+                  <br />
+                  <small class="text-[var(--text-muted)]">[{m.storageType}/{m.fileType}]</small>
+                </figcaption>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  <button type="button" class="btn-copy text-xs" data-url={url}>复制 URL</button>
+                  <button type="button" class="btn-copy-md text-xs" data-url={url} data-name={m.file}>复制 MD</button>
+                  {canDelete && (
+                    <button type="button" class="btn-delete text-xs text-[var(--error)]" data-id={m.id} data-name={m.file}>删除</button>
+                  )}
+                  {canDelete && (
+                    <label class="text-xs text-[var(--text-muted)] flex items-center gap-1">
+                      <input type="checkbox" class="batch-check" value={m.id} data-name={m.file} /> 多选
+                    </label>
+                  )}
+                </div>
+              </figure>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  </section>
 
-    {totalPages > 1 && (
-      <nav class="flex gap-2 mt-2 text-sm" aria-label="分页">
-        {page > 1 && <a href={buildPageHref('/admin/media', Astro.url.searchParams, page - 1)} class="px-2 py-0.5 border rounded">上一页</a>}
-        {page < totalPages && <a href={buildPageHref('/admin/media', Astro.url.searchParams, page + 1)} class="px-2 py-0.5 border rounded">下一页</a>}
-      </nav>
-    )}
+  {media.length > 0 && (
+    <>
+      <p class="text-xs text-[var(--text-muted)] mt-3">
+        共 {totalMedia} 个 · 第 {page}/{totalPages} 页
+      </p>
+      {totalPages > 1 && (
+        <nav class="flex gap-2 mt-2 text-sm" aria-label="分页">
+          {page > 1 && <a href={buildPageHref('/admin/media', Astro.url.searchParams, page - 1)} class="px-2 py-0.5 border border-[var(--border)] rounded">上一页</a>}
+          {page < totalPages && <a href={buildPageHref('/admin/media', Astro.url.searchParams, page + 1)} class="px-2 py-0.5 border border-[var(--border)] rounded">下一页</a>}
+        </nav>
+      )}
     </>
   )}
 
+  <div id="batch-bar" hidden class="sticky bottom-2 mt-3 flex items-center gap-3 border border-[var(--border)] rounded-lg bg-[var(--surface)] px-3 py-2 text-sm">
+    <span>已选 <span id="batch-count">0</span> 项</span>
+    <button type="button" id="batch-delete" class="btn btn-danger btn-sm">批量删除</button>
+  </div>
+
   <script is:inline data-can-delete={canDelete}>
     const canDelete = document.currentScript.dataset.canDelete === 'true';
-    const pb = self.vanblog.pb;
     const grid = document.getElementById('media-grid');
     const status = document.getElementById('upload-status');
+    const getPB = () => self.vanblog?.pb;
 
-    // Upload: pb.collection('media').create(FormData) — same shape as the
-    // editor's uploadImages. No client-side wasm normalization here on
-    // purpose: this page is the escape hatch when users want the original
-    // bytes preserved (BMP/TIFF/etc.). The editor handles conversion.
-    document.getElementById('upload-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const input = document.getElementById('upload-input');
-      const files = Array.from(input.files || []);
-      if (files.length === 0) return;
-      if (!pb) return alert('未登录');
-      status.textContent = `上传中 0/${files.length}…`;
+    function escapeAttr(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    }
+
+    function toast(msg, type, ttl) {
+      self.vanblogUI?.toast(msg, type, ttl);
+    }
+
+    function updateBatchBar() {
+      const bar = document.getElementById('batch-bar');
+      if (!bar || !canDelete) return;
+      const checked = document.querySelectorAll('#media-grid .batch-check:checked');
+      bar.hidden = checked.length === 0;
+      const count = document.getElementById('batch-count');
+      if (count) count.textContent = String(checked.length);
+    }
+
+    async function copyText(text, fallbackMsg) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (err) {
+        console.error('[media] copy failed:', err);
+        toast(fallbackMsg, 'error');
+        return false;
+      }
+    }
+
+    function flashButton(btn) {
+      const original = btn.textContent;
+      btn.textContent = '✓';
+      setTimeout(() => { btn.textContent = original; }, 1500);
+    }
+
+    async function deleteMedia(id, name) {
+      const ok = await self.vanblogUI?.confirmDialog({
+        title: '删除媒体文件',
+        message: `确认删除 ${name}？该操作不可撤销。`,
+        confirmText: '删除',
+        danger: true,
+      });
+      if (!ok) return false;
+      const pb = getPB();
+      if (!pb) { toast('未登录', 'error'); return false; }
+      try {
+        await pb.vanblog.media.delete(id);
+        document.querySelector(`#media-grid figure[data-id="${CSS.escape(id)}"]`)?.remove();
+        toast(`已删除 ${name}`, 'success');
+        return true;
+      } catch (err) {
+        console.error('[media] delete failed:', err);
+        toast(`删除失败：${err?.message ?? err}`, 'error');
+        return false;
+      }
+    }
+
+    function openLightbox(name, url) {
+      document.getElementById('media-lightbox')?.remove();
+      const dlg = document.createElement('dialog');
+      dlg.id = 'media-lightbox';
+      dlg.className = 'w-[90vw] max-w-3xl rounded-xl border border-[var(--border)] bg-[var(--surface)] p-0 backdrop:bg-black/60';
+      dlg.innerHTML = `
+        <div class="p-4">
+          <img src="${escapeAttr(url)}" alt="${escapeAttr(name)}" class="max-w-full max-h-[70vh] mx-auto block" />
+          <div class="flex items-center gap-2 mt-3 flex-wrap">
+            <span class="text-sm break-all mr-auto">${escapeAttr(name)}</span>
+            <button type="button" class="btn btn-sm lb-copy" data-url="${escapeAttr(url)}">复制 URL</button>
+            <button type="button" class="btn btn-sm lb-copy-md" data-url="${escapeAttr(url)}" data-name="${escapeAttr(name)}">复制 MD</button>
+            <button type="button" class="btn btn-sm lb-close">关闭</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(dlg);
+      dlg.querySelector('.lb-copy')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        if (await copyText(location.origin + btn.dataset.url, '复制失败')) flashButton(btn);
+      });
+      dlg.querySelector('.lb-copy-md')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        if (await copyText(`![${btn.dataset.name}](${btn.dataset.url})`, '复制失败')) flashButton(btn);
+      });
+      dlg.querySelector('.lb-close')?.addEventListener('click', () => dlg.close());
+      dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+      dlg.addEventListener('close', () => dlg.remove());
+      dlg.showModal();
+    }
+
+    function bindRow(root) {
+      root.querySelector('button.btn-lightbox[data-url]')?.addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        openLightbox(btn.closest('figure')?.dataset.name ?? '', btn.dataset.url);
+      });
+      root.querySelector('button.btn-copy[data-url]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        if (await copyText(location.origin + btn.dataset.url, '复制失败')) flashButton(btn);
+      });
+      root.querySelector('button.btn-copy-md[data-url]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        if (await copyText(`![${btn.dataset.name}](${btn.dataset.url})`, '复制失败')) flashButton(btn);
+      });
+      root.querySelector('button.btn-delete[data-id]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        await deleteMedia(btn.dataset.id, btn.dataset.name);
+      });
+      root.querySelectorAll('.batch-check').forEach((cb) =>
+        cb.addEventListener('change', updateBatchBar)
+      );
+    }
+
+    async function uploadFiles(files) {
+      const list = files.filter(Boolean);
+      if (list.length === 0) return;
+      const pb = getPB();
+      if (!pb) { toast('未登录', 'error'); return; }
       let ok = 0;
-      for (const f of files) {
+      for (const f of list) {
+        if (status) status.textContent = `上传中 ${ok}/${list.length}…`;
         try {
           const fd = new FormData();
           fd.append('file', f);
@@ -107,15 +246,83 @@ const totalPages = result?.totalPages ?? 1;
         } catch (err) {
           console.error('[media] upload failed:', err);
         }
-        status.textContent = `上传中 ${ok}/${files.length}…`;
       }
-      status.textContent = `完成：${ok}/${files.length} 成功`;
+      toast(`完成 ${ok}/${list.length}`, ok === list.length ? 'success' : 'error');
+      if (status) status.textContent = `完成 ${ok}/${list.length}`;
+      if (ok > 0) document.getElementById('media-empty')?.remove();
+    }
+
+    // Upload: pb.collection('media').create(FormData) — same shape as the
+    // editor's uploadImages. No client-side wasm normalization here on
+    // purpose: this page is the escape hatch when users want the original
+    // bytes preserved (BMP/TIFF/etc.). The editor handles conversion.
+    document.getElementById('upload-input')?.addEventListener('change', async (e) => {
+      const input = e.currentTarget;
+      await uploadFiles(Array.from(input.files ?? []));
       input.value = '';
     });
 
-    function escapeAttr(s) {
-      return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-    }
+    document.getElementById('paste-btn')?.addEventListener('click', async () => {
+      if (!navigator.clipboard?.read) { toast('当前浏览器不支持读取剪贴板', 'error'); return; }
+      try {
+        const items = await navigator.clipboard.read();
+        const files = [];
+        for (const item of items) {
+          const type = item.types.find((t) => t.startsWith('image/'));
+          if (type) {
+            const blob = await item.getType(type);
+            files.push(new File([blob], `clipboard-${Date.now()}.${type.split('/')[1] || 'png'}`, { type }));
+          }
+        }
+        if (files.length === 0) { toast('剪贴板中没有图片', 'info'); return; }
+        await uploadFiles(files);
+      } catch (err) {
+        console.error('[media] clipboard read failed:', err);
+        toast('读取剪贴板失败', 'error');
+      }
+    });
+
+    // Dropzone: highlight overlay while dragging over the grid container.
+    const overlay = document.getElementById('dropzone-overlay');
+    document.getElementById('dropzone')?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (overlay) overlay.hidden = false;
+    });
+    document.getElementById('dropzone')?.addEventListener('dragleave', (e) => {
+      if (e.target === e.currentTarget && overlay) overlay.hidden = true;
+    });
+    document.getElementById('dropzone')?.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      if (overlay) overlay.hidden = true;
+      await uploadFiles(Array.from(e.dataTransfer?.files ?? []));
+    });
+
+    // Batch delete.
+    document.getElementById('batch-delete')?.addEventListener('click', async () => {
+      const checked = Array.from(document.querySelectorAll('#media-grid .batch-check:checked'));
+      if (checked.length === 0) return;
+      const ok = await self.vanblogUI?.confirmDialog({
+        title: '批量删除',
+        message: `确认删除选中的 ${checked.length} 个媒体文件？该操作不可撤销。`,
+        confirmText: '全部删除',
+        danger: true,
+      });
+      if (!ok) return;
+      const pb = getPB();
+      if (!pb) { toast('未登录', 'error'); return; }
+      let done = 0;
+      for (const cb of checked) {
+        try {
+          await pb.vanblog.media.delete(cb.value);
+          cb.closest('figure')?.remove();
+          done++;
+        } catch (err) {
+          console.error('[media] batch delete failed:', err);
+        }
+      }
+      updateBatchBar();
+      toast(done === checked.length ? `已删除 ${done} 项` : `完成：${done}/${checked.length} 成功`, done === checked.length ? 'success' : 'error');
+    });
 
     function prependMedia(m) {
       if (!grid) return;
@@ -124,42 +331,21 @@ const totalPages = result?.totalPages ?? 1;
       const imgUrl = `/api/files/media/${m.id}/${m.file}`;
       const safeFile = escapeAttr(m.file);
       const safeType = escapeAttr(`${m.storageType}/${m.fileType}`);
+      fig.dataset.id = m.id;
+      fig.dataset.name = m.file;
+      fig.dataset.url = imgUrl;
       fig.innerHTML = `
-        ${m.staticType === 'img' ? `<img src="${imgUrl}" alt="${safeFile}" loading="lazy" class="w-full h-[120px] object-cover block" />` : ''}
+        ${m.staticType === 'img' ? `<button type="button" class="btn-lightbox block w-full p-0 border-0 bg-transparent cursor-zoom-in" data-url="${imgUrl}" aria-label="放大查看 ${safeFile}"><img src="${imgUrl}" alt="${safeFile}" loading="lazy" class="w-full h-[120px] object-cover block" /></button>` : ''}
         <figcaption class="text-xs mt-1 break-all">${safeFile}<br><small class="text-[var(--text-muted)]">[${safeType}]</small></figcaption>
-        <div class="flex gap-2 mt-1">
+        <div class="flex flex-wrap gap-2 mt-1">
           <button type="button" class="btn-copy text-xs" data-url="${imgUrl}">复制 URL</button>
-          ${canDelete ? `<button type="button" class="btn-delete text-red-600 text-xs" data-id="${m.id}" data-name="${safeFile}">删除</button>` : ''}
+          <button type="button" class="btn-copy-md text-xs" data-url="${imgUrl}" data-name="${safeFile}">复制 MD</button>
+          ${canDelete ? `<button type="button" class="btn-delete text-xs text-[var(--error)]" data-id="${m.id}" data-name="${safeFile}">删除</button>` : ''}
+          ${canDelete ? `<label class="text-xs text-[var(--text-muted)] flex items-center gap-1"><input type="checkbox" class="batch-check" value="${m.id}" data-name="${safeFile}" /> 多选</label>` : ''}
         </div>
       `;
       bindRow(fig);
       grid.prepend(fig);
-    }
-
-    function bindRow(root) {
-      const del = root.querySelector('button.btn-delete[data-id]');
-      if (del) del.addEventListener('click', async () => {
-        const id = del.dataset.id;
-        const name = del.dataset.name;
-        if (!id || !confirm(`确认删除媒体文件 ${name}？该操作不可撤销。`)) return;
-        if (!pb) return alert('未登录');
-        try {
-          await pb.vanblog.media.delete(id);
-          del.closest('figure')?.remove();
-        } catch (err) {
-          alert('删除失败: ' + err.message);
-        }
-      });
-      const copy = root.querySelector('button.btn-copy');
-      if (copy) copy.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(location.origin + copy.dataset.url);
-          copy.textContent = '已复制';
-          setTimeout(() => copy.textContent = '复制 URL', 1500);
-        } catch {
-          alert('复制失败：' + copy.dataset.url);
-        }
-      });
     }
 
     // Bind existing rows (initial render).

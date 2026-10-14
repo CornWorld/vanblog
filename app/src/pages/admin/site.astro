@@ -6,7 +6,7 @@ import ErrorNotice from '../../components/ErrorNotice.astro';
 import ThemeCard from '../../components/admin/ThemeCard.astro';
 import PaletteCard from '../../components/admin/PaletteCard.astro';
 import { requireAdmin, safe } from '@vanblog/sdk';
-import type { Site } from '@vanblog/sdk';
+import type { NavItem, LinkItem, SocialItem, Site } from '@vanblog/sdk';
 const pb = Astro.locals.pb;
 
 
@@ -45,6 +45,37 @@ const boolField = (k: keyof Site, def = false): boolean => {
   return v === undefined || v === null ? def : !!v;
 };
 
+// ── Tab 状态：SSR 依 searchParams.tab 决定初始激活（无 JS 也正确）──
+const TABS = [
+  { key: 'basic', label: '基本信息' },
+  { key: 'appearance', label: '外观' },
+  { key: 'about', label: '关于页' },
+  { key: 'comments', label: '评论与修订' },
+  { key: 'custom', label: '自定义注入' },
+] as const;
+const tabParam = Astro.url.searchParams.get('tab') ?? 'basic';
+const activeTab = (TABS.some((t) => t.key === tabParam) ? tabParam : 'basic') as string;
+const tabActive = (key: string) => (key === activeTab ? '' : 'hidden');
+
+// ── nav / links / socials 行编辑器预填 ──
+// Site 模型 shape（sdk/src/models/fields.ts，均为数组、非 JSON 字符串）：
+//   nav:     { name: string; value: string; level: number }[]（strict）
+//   links:   { name: string; url: string; desc?: string; logo?: string }[]（strict）
+//   socials: { type: string; value: string }[]（strict）
+const parseArrayField = <T,>(raw: unknown): { rows: T[]; error: boolean } => {
+  if (raw === undefined || raw === null || raw === '') return { rows: [], error: false };
+  try {
+    const v = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!Array.isArray(v)) return { rows: [], error: true };
+    return { rows: v as T[], error: false };
+  } catch {
+    return { rows: [], error: true };
+  }
+};
+const navParsed = parseArrayField<NavItem>(site?.nav);
+const linksParsed = parseArrayField<LinkItem>(site?.links);
+const socialsParsed = parseArrayField<SocialItem>(site?.socials);
+
 // 外观：服务端并行拉取主题 / 调色盘列表（卡片 SSR 直出，避免客户端闪烁）。
 // GET /api/themes 返回 { themes: [{ name, label, settings? }] }（settings 为
 // theme.json 声明的可配置项 schema）；主题设置当前值走 SDK themes.settings。
@@ -72,7 +103,6 @@ const settingsSchema = themes.find((t) => t.name === currentTheme)?.settings ?? 
 ---
 <AdminLayout title="站点配置">
   <h1>站点配置</h1>
-  <p><a href="/admin">← 返回</a></p>
 
   {tlsWarning && (
     <p class="text-sm bg-yellow-100 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-100 border border-yellow-300 dark:border-yellow-700 rounded px-3 py-2 mb-3">
@@ -85,168 +115,261 @@ const settingsSchema = themes.find((t) => t.name === currentTheme)?.settings ?? 
   ) : !site ? (
     <p>未找到 site 记录（请确认数据库已初始化）。</p>
   ) : (
-    <form id="site-form" class="flex flex-col gap-4 max-w-3xl">
-      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
-        <legend>基本信息</legend>
-        <label>站点名</label><input name="siteName" value={field('siteName')} class="px-1.5 py-0.5" />
-        <label>站点描述</label><input name="siteDesc" value={field('siteDesc')} class="px-1.5 py-0.5" />
-        <label>作者</label><input name="author" value={field('author')} class="px-1.5 py-0.5" />
-        <label>BaseURL</label><input name="baseUrl" value={field('baseUrl')} placeholder="https://example.com" class="px-1.5 py-0.5" />
-        <label>Favicon URL</label><input name="favicon" value={field('favicon')} class="px-1.5 py-0.5" />
-        <label>版权</label><input name="copyrightAgreement" value={field('copyrightAgreement')} class="px-1.5 py-0.5" />
-      </fieldset>
+    <>
+      <div role="tablist" aria-label="站点配置分区" class="flex flex-wrap gap-1 border-b border-[var(--border)] mb-4 max-w-3xl">
+        {TABS.map((t) => (
+          <button
+            type="button"
+            role="tab"
+            data-tab-btn={t.key}
+            aria-selected={t.key === activeTab ? 'true' : 'false'}
+            aria-controls={'panel-' + t.key}
+            class:list={['btn', t.key === activeTab && 'bg-[var(--surface)] border-b-2 border-[var(--accent)]']}
+          >{t.label}</button>
+        ))}
+      </div>
 
-      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
-        <legend>外观</legend>
+      <form id="site-form" class="flex flex-col gap-4 max-w-3xl">
+        {/* ── Tab 1：基本信息 ── */}
+        <section id="panel-basic" role="tabpanel" data-tab-panel="basic" class:list={[tabActive('basic'), 'flex flex-col gap-4']}>
+          <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
+            <legend>基本信息</legend>
+            <label>站点名</label><input name="siteName" value={field('siteName')} class="px-1.5 py-0.5" />
+            <label>站点描述</label><input name="siteDesc" value={field('siteDesc')} class="px-1.5 py-0.5" />
+            <label>作者</label><input name="author" value={field('author')} class="px-1.5 py-0.5" />
+            <label>BaseURL</label><input name="baseUrl" value={field('baseUrl')} placeholder="https://example.com" class="px-1.5 py-0.5" />
+            <label>Favicon URL</label><input name="favicon" value={field('favicon')} class="px-1.5 py-0.5" />
+            <label>版权</label><input name="copyrightAgreement" value={field('copyrightAgreement')} class="px-1.5 py-0.5" />
+          </fieldset>
 
-        <label>活动主题</label>
-        <div class="col-span-2 flex flex-col gap-2">
-          <input type="hidden" name="activeTheme" value={currentTheme} />
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {themes.length === 0 ? (
-              <p class="text-sm text-[var(--text-muted)]">未加载到主题列表（后端 /api/themes 不可达？）</p>
-            ) : (
-              themes.map((t) => (
-                <ThemeCard name={t.name} label={t.label} active={t.name === currentTheme} />
-              ))
+          {/* 导航菜单：Site.nav = { name, value, level }[] */}
+          <fieldset data-row-rubric="nav" class="flex flex-col gap-2 border border-[var(--border)] p-4">
+            <legend>导航菜单</legend>
+            {navParsed.error && (
+              <p class="text-sm text-red-600 dark:text-red-400">nav 字段格式解析失败，已重置为空表；保存将覆盖现有值。</p>
             )}
-          </div>
-          <small class="text-[var(--text-muted)]">
-            {import.meta.env.DEV ? '保存后即时生效' : '保存后需重建容器/重新加载主题'}
-          </small>
-          <div class="flex items-center gap-2">
-            <button type="button" id="theme-reload-btn" class="px-3 py-1 border border-[var(--border)] rounded w-fit">重新加载主题</button>
-            <span id="theme-reload-status" class="text-sm text-[var(--text-muted)]"></span>
-          </div>
-          <small class="text-[var(--text-muted)]">通过 ssh / 挂载方式放入新主题后，点「重新加载主题」让它的静态资源生效（无需重启容器）</small>
-        </div>
+            <div data-rows class="flex flex-col gap-2">
+              {navParsed.rows.map((row) => (
+                <div class="flex gap-2 items-center">
+                  <input data-nav-name value={row.name} placeholder="名称" class="px-1.5 py-0.5 flex-1" />
+                  <input data-nav-value value={row.value} placeholder="路径，如 /posts/" class="px-1.5 py-0.5 flex-[2]" />
+                  <input type="hidden" data-nav-level value={String(row.level ?? 0)} />
+                  <button type="button" data-del-row class="btn btn-danger btn-sm" aria-label="删除该行">删除</button>
+                </div>
+              ))}
+            </div>
+            <button type="button" data-add-row class="btn btn-sm justify-self-start w-fit">＋ 添加一行</button>
+          </fieldset>
 
-        <details class="col-span-2 mt-2">
-          <summary class="cursor-pointer text-sm text-[var(--text-muted)]">高级选项</summary>
-          <div class="grid grid-cols-[160px_1fr] gap-2 items-center mt-2">
+          {/* 友情链接：Site.links = { name, url, desc?, logo? }[] */}
+          <fieldset data-row-rubric="links" class="flex flex-col gap-2 border border-[var(--border)] p-4">
+            <legend>友情链接</legend>
+            {linksParsed.error && (
+              <p class="text-sm text-red-600 dark:text-red-400">links 字段格式解析失败，已重置为空表；保存将覆盖现有值。</p>
+            )}
+            <div data-rows class="flex flex-col gap-2">
+              {linksParsed.rows.map((row) => (
+                <div class="flex gap-2 items-center">
+                  <input data-link-name value={row.name} placeholder="名称" class="px-1.5 py-0.5 flex-1" />
+                  <input data-link-url value={row.url} placeholder="https://" class="px-1.5 py-0.5 flex-[2]" />
+                  <button type="button" data-del-row class="btn btn-danger btn-sm" aria-label="删除该行">删除</button>
+                </div>
+              ))}
+            </div>
+            <button type="button" data-add-row class="btn btn-sm justify-self-start w-fit">＋ 添加一行</button>
+          </fieldset>
 
-            <label>调色盘</label>
-            <div class="flex flex-col gap-2">
-              <input type="hidden" name="palette" value={currentPalette} />
+          {/* 社交链接：Site.socials = { type, value }[] */}
+          <fieldset data-row-rubric="socials" class="flex flex-col gap-2 border border-[var(--border)] p-4">
+            <legend>社交链接</legend>
+            {socialsParsed.error && (
+              <p class="text-sm text-red-600 dark:text-red-400">socials 字段格式解析失败，已重置为空表；保存将覆盖现有值。</p>
+            )}
+            <div data-rows class="flex flex-col gap-2">
+              {socialsParsed.rows.map((row) => (
+                <div class="flex gap-2 items-center">
+                  <input data-social-type value={row.type} placeholder="类型，如 github" class="px-1.5 py-0.5 flex-1" />
+                  <input data-social-value value={row.value} placeholder="链接或 ID" class="px-1.5 py-0.5 flex-[2]" />
+                  <button type="button" data-del-row class="btn btn-danger btn-sm" aria-label="删除该行">删除</button>
+                </div>
+              ))}
+            </div>
+            <button type="button" data-add-row class="btn btn-sm justify-self-start w-fit">＋ 添加一行</button>
+          </fieldset>
+        </section>
+
+        {/* ── Tab 2：外观 ── */}
+        <section id="panel-appearance" role="tabpanel" data-tab-panel="appearance" class:list={[tabActive('appearance'), 'flex flex-col gap-4']}>
+          <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
+            <legend>外观</legend>
+
+            <label>活动主题</label>
+            <div class="col-span-2 flex flex-col gap-2">
+              <input type="hidden" name="activeTheme" value={currentTheme} />
               <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {palettes.length === 0 ? (
-                  <p class="text-sm text-[var(--text-muted)]">未加载到调色盘列表（后端 /api/palettes 不可达？）</p>
+                {themes.length === 0 ? (
+                  <p class="text-sm text-[var(--text-muted)]">未加载到主题列表（后端 /api/themes 不可达？）</p>
                 ) : (
-                  palettes.map((p) => (
-                    <PaletteCard name={p.name} label={p.label} type={p.type} active={p.name === currentPalette} />
+                  themes.map((t) => (
+                    <ThemeCard name={t.name} label={t.label} active={t.name === currentTheme} />
                   ))
                 )}
               </div>
-              <small class="text-[var(--text-muted)]">点击调色盘卡片即时预览（访客偏好 localStorage）；保存后写入站点默认调色盘</small>
+              <small class="text-[var(--text-muted)]">
+                {import.meta.env.DEV ? '保存后即时生效' : '保存后需重建容器/重新加载主题'}
+              </small>
+              <div class="flex items-center gap-2">
+                <button type="button" id="theme-reload-btn" class="px-3 py-1 border border-[var(--border)] rounded w-fit">重新加载主题</button>
+                <span id="theme-reload-status" class="text-sm text-[var(--text-muted)]"></span>
+              </div>
+              <small class="text-[var(--text-muted)]">通过 ssh / 挂载方式放入新主题后，点「重新加载主题」让它的静态资源生效（无需重启容器）</small>
             </div>
 
-            <label>切换主题时调色盘</label>
-            <select name="paletteMigrationMode">
-              <option value="keep" selected={field('paletteMigrationMode') === 'keep'}>保持当前（默认）</option>
-              <option value="silent" selected={field('paletteMigrationMode') === 'silent'}>自动迁移到推荐值</option>
-              <option value="prompt" selected={field('paletteMigrationMode') === 'prompt'}>每次询问</option>
+            <details class="col-span-2 mt-2">
+              <summary class="cursor-pointer text-sm text-[var(--text-muted)]">高级选项</summary>
+              <div class="grid grid-cols-[160px_1fr] gap-2 items-center mt-2">
+
+                <label>调色盘</label>
+                <div class="flex flex-col gap-2">
+                  <input type="hidden" name="palette" value={currentPalette} />
+                  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {palettes.length === 0 ? (
+                      <p class="text-sm text-[var(--text-muted)]">未加载到调色盘列表（后端 /api/palettes 不可达？）</p>
+                    ) : (
+                      palettes.map((p) => (
+                        <PaletteCard name={p.name} label={p.label} type={p.type} active={p.name === currentPalette} />
+                      ))
+                    )}
+                  </div>
+                  <small class="text-[var(--text-muted)]">点击调色盘卡片即时预览（访客偏好 localStorage）；保存后写入站点默认调色盘</small>
+                </div>
+
+                <label>切换主题时调色盘</label>
+                <select name="paletteMigrationMode">
+                  <option value="keep" selected={field('paletteMigrationMode') === 'keep'}>保持当前（默认）</option>
+                  <option value="silent" selected={field('paletteMigrationMode') === 'silent'}>自动迁移到推荐值</option>
+                  <option value="prompt" selected={field('paletteMigrationMode') === 'prompt'}>每次询问</option>
+                </select>
+
+              </div>
+            </details>
+
+            <details class="col-span-2 mt-2">
+              <summary class="cursor-pointer text-sm text-[var(--text-muted)]">预览站点</summary>
+              <p class="text-xs text-[var(--text-muted)] mb-2">实时预览站点首页。点击调色盘卡片后，预览 iframe 会即时反映所选调色盘（同源访客调色盘机制）。</p>
+              <iframe id="site-preview-frame" src="/" title="站点预览" class="w-full h-[600px] bg-white border border-[var(--border)] rounded"></iframe>
+            </details>
+          </fieldset>
+
+          <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
+            <legend>主题设置（{currentTheme}）</legend>
+            {Object.keys(settingsSchema).length === 0 ? (
+              <p class="text-sm text-[var(--text-muted)] col-span-2">当前主题未声明可配置项（theme.json 的 settings 字段）。</p>
+            ) : (
+              Object.entries(settingsSchema).map(([key, spec]) => (
+                <Fragment>
+                  <label>{spec.label || key}</label>
+                  {spec.type === 'boolean' ? (
+                    <input type="checkbox" data-theme-setting={key} checked={themeSettingsValues[key] !== undefined ? !!themeSettingsValues[key] : spec.default === true} />
+                  ) : spec.type === 'select' ? (
+                    <select data-theme-setting={key} class="px-1.5 py-0.5 w-fit">
+                      {(spec.values ?? []).map((v) => (
+                        <option value={v} selected={String(themeSettingsValues[key] ?? spec.default ?? '') === v}>{v}</option>
+                      ))}
+                    </select>
+                  ) : spec.type === 'text' ? (
+                    <textarea rows="2" data-theme-setting={key} placeholder={spec.placeholder || ''} class="px-1.5 py-0.5">{String(themeSettingsValues[key] ?? spec.default ?? '')}</textarea>
+                  ) : (
+                    <input data-theme-setting={key} value={String(themeSettingsValues[key] ?? spec.default ?? '')} placeholder={spec.placeholder || ''} class="px-1.5 py-0.5" />
+                  )}
+                </Fragment>
+              ))
+            )}
+            <div class="col-span-2 flex items-center gap-2">
+              <button type="button" id="theme-settings-save" class="px-3 py-1 border border-[var(--border)] rounded w-fit">保存主题设置</button>
+              <span id="theme-settings-status" class="text-sm text-[var(--text-muted)]"></span>
+              <small class="text-[var(--text-muted)]">与下方主表单「保存」相互独立：此项单独 PUT 主题设置，不会提交主表单。</small>
+            </div>
+            <small class="text-[var(--text-muted)] col-span-2">由主题 theme.json 声明、独立于主表单保存；保存后页面缓存约 12s 内刷新。切换主题并保存后，此表单变为新主题的配置。</small>
+          </fieldset>
+        </section>
+
+        {/* ── Tab 3：关于页 ── */}
+        <section id="panel-about" role="tabpanel" data-tab-panel="about" class:list={[tabActive('about'), 'flex flex-col gap-4']}>
+          <fieldset class="flex flex-col gap-2 border border-[var(--border)] p-4">
+            <legend>关于页</legend>
+            <label>关于页内容（Markdown）</label>
+            <textarea name="aboutContent" rows="12" class="px-1.5 py-0.5 font-mono">{field('aboutContent')}</textarea>
+            <small class="text-[var(--text-muted)]">
+              保存后前台 <a href="/about" target="_blank" rel="noopener" class="underline">/about</a> 生效。
+            </small>
+          </fieldset>
+        </section>
+
+        {/* ── Tab 4：评论与修订 ── */}
+        <section id="panel-comments" role="tabpanel" data-tab-panel="comments" class:list={[tabActive('comments'), 'flex flex-col gap-4']}>
+          <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
+            <legend>评论</legend>
+            <label>评论 provider</label>
+            <select name="commentsProvider" id="commentsProvider">
+              {['disabled', 'artalk', 'external'].map(t => (
+                <option value={t} selected={field('commentsProvider') === t}>{t}</option>
+              ))}
             </select>
 
-          </div>
-        </details>
+            <!-- Provider-specific config fields (shown/hidden by JS) -->
+            <div id="comments-config-artalk" class="comments-config-group col-span-2 grid grid-cols-subgrid gap-2 items-center" style="display:none">
+              <label>Artalk Server</label>
+              <input name="artalk_server" placeholder="https://comment.example.com" class="px-1.5 py-0.5" />
+              <label>Artalk Site 名</label>
+              <input name="artalk_site" placeholder="VanBlog" class="px-1.5 py-0.5" />
+              <button type="button" id="comments-manage-btn" class="col-span-2 justify-self-start">打开评论管理（免二次登录）</button>
+            </div>
+            <div id="comments-config-external" class="comments-config-group col-span-2 grid grid-cols-subgrid gap-2" style="display:none">
+              <label>自定义脚本 / HTML</label>
+              <textarea name="external_script" rows="4" class="px-1.5 py-0.5 font-mono text-sm" placeholder="&lt;script src=&quot;...&quot;&gt;&lt;/script&gt;"></textarea>
+            </div>
+          </fieldset>
 
-        <details class="col-span-2 mt-2">
-          <summary class="cursor-pointer text-sm text-[var(--text-muted)]">预览站点</summary>
-          <p class="text-xs text-[var(--text-muted)] mb-2">实时预览站点首页。点击调色盘卡片后，预览 iframe 会即时反映所选调色盘（同源访客调色盘机制）。</p>
-          <iframe id="site-preview-frame" src="/" title="站点预览" class="w-full h-[600px] bg-white border border-[var(--border)] rounded"></iframe>
-        </details>
-      </fieldset>
+          <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
+            <legend>修订</legend>
+            <label>启用修订</label>
+            <label><input type="checkbox" name="revisionsEnabled" checked={boolField('revisionsEnabled', true)} /> 启用</label>
+            <label>保留数量</label>
+            <input type="number" name="revisionsRetention" value={site?.revisionsRetention ?? 50} class="px-1.5 py-0.5 w-[120px]" />
+          </fieldset>
+        </section>
 
-      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
-        <legend>主题设置（{currentTheme}）</legend>
-        {Object.keys(settingsSchema).length === 0 ? (
-          <p class="text-sm text-[var(--text-muted)] col-span-2">当前主题未声明可配置项（theme.json 的 settings 字段）。</p>
-        ) : (
-          Object.entries(settingsSchema).map(([key, spec]) => (
-            <Fragment>
-              <label>{spec.label || key}</label>
-              {spec.type === 'boolean' ? (
-                <input type="checkbox" data-theme-setting={key} checked={themeSettingsValues[key] !== undefined ? !!themeSettingsValues[key] : spec.default === true} />
-              ) : spec.type === 'select' ? (
-                <select data-theme-setting={key} class="px-1.5 py-0.5 w-fit">
-                  {(spec.values ?? []).map((v) => (
-                    <option value={v} selected={String(themeSettingsValues[key] ?? spec.default ?? '') === v}>{v}</option>
-                  ))}
-                </select>
-              ) : spec.type === 'text' ? (
-                <textarea rows="2" data-theme-setting={key} placeholder={spec.placeholder || ''} class="px-1.5 py-0.5">{String(themeSettingsValues[key] ?? spec.default ?? '')}</textarea>
-              ) : (
-                <input data-theme-setting={key} value={String(themeSettingsValues[key] ?? spec.default ?? '')} placeholder={spec.placeholder || ''} class="px-1.5 py-0.5" />
-              )}
-            </Fragment>
-          ))
-        )}
-        <div class="col-span-2 flex items-center gap-2">
-          <button type="button" id="theme-settings-save" class="px-3 py-1 border border-[var(--border)] rounded w-fit">保存主题设置</button>
-          <span id="theme-settings-status" class="text-sm text-[var(--text-muted)]"></span>
+        {/* ── Tab 5：自定义注入 ── */}
+        <section id="panel-custom" role="tabpanel" data-tab-panel="custom" class:list={[tabActive('custom'), 'flex flex-col gap-4']}>
+          <fieldset class="flex flex-col gap-2 border border-[var(--border)] p-4">
+            <legend>自定义注入</legend>
+            <label>customHead（HTML，raw 注入 &lt;head&gt;）</label>
+            <textarea name="customHead" rows="3" class="px-1.5 py-0.5 font-mono">{field('customHead')}</textarea>
+            <label>customScript（JS）</label>
+            <textarea name="customScript" rows="3" class="px-1.5 py-0.5 font-mono">{field('customScript')}</textarea>
+          </fieldset>
+
+          <fieldset class="flex flex-col gap-2 border border-[var(--border)] p-4">
+            <legend>自定义代码（站点级 CSS / JS）</legend>
+            <label>自定义 CSS（注入每页 &lt;head&gt;）</label>
+            <textarea id="custom-css" rows="6" class="px-1.5 py-0.5 font-mono text-sm" placeholder="/* 例如: .site-custom-probe { color: red } */"></textarea>
+            <label>自定义 JS（&lt;script type="module"&gt; 注入每页底部）</label>
+            <textarea id="custom-js" rows="4" class="px-1.5 py-0.5 font-mono text-sm" placeholder="console.log('hello')"></textarea>
+            <div class="flex items-center gap-2">
+              <button type="button" id="custom-code-save" class="px-3 py-1 border border-[var(--border)] rounded w-fit">保存自定义代码</button>
+              <span id="custom-code-status" class="text-sm text-[var(--text-muted)]"></span>
+            </div>
+            <small class="text-[var(--text-muted)]">自定义 CSS/JS 以受管 pack（site-custom）落盘，与 Pack 前端同一注入链路；两项均空保存 = 卸载。customHead/customScript 为 raw 注入、优先级更高。</small>
+          </fieldset>
+        </section>
+
+        <div class="flex gap-4 items-center">
+          <button type="submit" id="site-form-save">保存</button>
+          <small class="text-[var(--text-muted)]">nav / 友情链接 / 社交链接已在「基本信息」Tab 提供可视化行编辑器，随本表单一并保存。</small>
         </div>
-        <small class="text-[var(--text-muted)] col-span-2">由主题 theme.json 声明、独立于上方表单保存；保存后页面缓存约 12s 内刷新。切换主题并保存后，此表单变为新主题的配置。</small>
-      </fieldset>
-
-      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
-        <legend>评论</legend>
-        <label>评论 provider</label>
-        <select name="commentsProvider" id="commentsProvider">
-          {['disabled', 'artalk', 'external'].map(t => (
-            <option value={t} selected={field('commentsProvider') === t}>{t}</option>
-          ))}
-        </select>
-
-        <!-- Provider-specific config fields (shown/hidden by JS) -->
-        <div id="comments-config-artalk" class="comments-config-group col-span-2 grid grid-cols-subgrid gap-2 items-center" style="display:none">
-          <label>Artalk Server</label>
-          <input name="artalk_server" placeholder="https://comment.example.com" class="px-1.5 py-0.5" />
-          <label>Artalk Site 名</label>
-          <input name="artalk_site" placeholder="VanBlog" class="px-1.5 py-0.5" />
-          <button type="button" id="comments-manage-btn" class="col-span-2 justify-self-start">打开评论管理（免二次登录）</button>
-        </div>
-        <div id="comments-config-external" class="comments-config-group col-span-2 grid grid-cols-subgrid gap-2" style="display:none">
-          <label>自定义脚本 / HTML</label>
-          <textarea name="external_script" rows="4" class="px-1.5 py-0.5 font-mono text-sm" placeholder="&lt;script src=&quot;...&quot;&gt;&lt;/script&gt;"></textarea>
-        </div>
-      </fieldset>
-
-      <fieldset class="flex flex-col gap-2 border border-[var(--border)] p-4">
-        <legend>关于页 / 自定义注入</legend>
-        <label>关于页内容（Markdown）</label>
-        <textarea name="aboutContent" rows="6" class="px-1.5 py-0.5 font-mono">{field('aboutContent')}</textarea>
-        <label>customHead（HTML，raw 注入 &lt;head&gt;）</label>
-        <textarea name="customHead" rows="3" class="px-1.5 py-0.5 font-mono">{field('customHead')}</textarea>
-        <label>customScript（JS）</label>
-        <textarea name="customScript" rows="3" class="px-1.5 py-0.5 font-mono">{field('customScript')}</textarea>
-      </fieldset>
-
-      <fieldset class="flex flex-col gap-2 border border-[var(--border)] p-4">
-        <legend>自定义代码（站点级 CSS / JS）</legend>
-        <label>自定义 CSS（注入每页 &lt;head&gt;）</label>
-        <textarea id="custom-css" rows="6" class="px-1.5 py-0.5 font-mono text-sm" placeholder="/* 例如: .site-custom-probe { color: red } */"></textarea>
-        <label>自定义 JS（&lt;script type="module"&gt; 注入每页底部）</label>
-        <textarea id="custom-js" rows="4" class="px-1.5 py-0.5 font-mono text-sm" placeholder="console.log('hello')"></textarea>
-        <div class="flex items-center gap-2">
-          <button type="button" id="custom-code-save" class="px-3 py-1 border border-[var(--border)] rounded w-fit">保存自定义代码</button>
-          <span id="custom-code-status" class="text-sm text-[var(--text-muted)]"></span>
-        </div>
-        <small class="text-[var(--text-muted)]">以受管 pack（site-custom）落盘，与 Pack 前端同一注入链路；两项均空保存 = 卸载。已有 customHead/customScript 字段继续可用（raw 注入，优先级更高）。</small>
-      </fieldset>
-
-      <fieldset class="grid grid-cols-[160px_1fr] gap-2 items-center border border-[var(--border)] p-4">
-        <legend>修订</legend>
-        <label>启用修订</label>
-        <label><input type="checkbox" name="revisionsEnabled" checked={boolField('revisionsEnabled', true)} /> 启用</label>
-        <label>保留数量</label>
-        <input type="number" name="revisionsRetention" value={site?.revisionsRetention ?? 50} class="px-1.5 py-0.5 w-[120px]" />
-      </fieldset>
-
-      <div class="flex gap-4 items-center">
-        <button type="submit">保存</button>
-        <small class="text-[var(--text-muted)]">仅保存上方字段；JSON 数组（nav/links/socials 等）请用 API 编辑</small>
-      </div>
-    </form>
+      </form>
+    </>
   )}
 
   <script is:inline type="application/json" id="site-data" set:html={JSON.stringify({ siteId: id, commentsConfig: site?.commentsConfig || {} }).replace(/<\//g, '<\\/')} />
@@ -259,6 +382,109 @@ const settingsSchema = themes.find((t) => t.name === currentTheme)?.settings ?? 
     // handler on this page, including the pre-existing ones).
     const getPb = () => self.vanblog && self.vanblog.pb;
     if (siteId) {
+      // ── Tab 切换：hidden class + history.replaceState 同步 ?tab= ──
+      const tablist = document.querySelector('[role="tablist"]');
+      if (tablist) {
+        const btns = Array.from(tablist.querySelectorAll('[data-tab-btn]'));
+        const panels = Array.from(document.querySelectorAll('[data-tab-panel]'));
+        function activateTab(key) {
+          btns.forEach((b) => {
+            const on = b.getAttribute('data-tab-btn') === key;
+            b.setAttribute('aria-selected', on ? 'true' : 'false');
+            b.classList.toggle('bg-[var(--surface)]', on);
+            b.classList.toggle('border-b-2', on);
+            b.classList.toggle('border-[var(--accent)]', on);
+          });
+          panels.forEach((p) => {
+            p.classList.toggle('hidden', p.getAttribute('data-tab-panel') !== key);
+          });
+          history.replaceState(null, '', '/admin/site?tab=' + encodeURIComponent(key));
+        }
+        btns.forEach((b) => {
+          b.addEventListener('click', () => activateTab(b.getAttribute('data-tab-btn')));
+        });
+      }
+
+      // ── 行编辑器：加行 / 删行（nav / links / socials）──
+      document.querySelectorAll('[data-row-rubric]').forEach((fs) => {
+        const rows = fs.querySelector('[data-rows]');
+        const del = (row) => row.remove();
+        fs.addEventListener('click', (e) => {
+          const t = e.target instanceof Element ? e.target : null;
+          if (!t) return;
+          const delBtn = t.closest('[data-del-row]');
+          if (delBtn && rows) { del(delBtn.closest('.flex')); markDirty(); }
+          if (t.closest('[data-add-row]') && rows) {
+            const rubric = fs.getAttribute('data-row-rubric');
+            const row = document.createElement('div');
+            row.className = 'flex gap-2 items-center';
+            if (rubric === 'nav') {
+              row.innerHTML =
+                '<input data-nav-name placeholder="名称" class="px-1.5 py-0.5 flex-1" />' +
+                '<input data-nav-value placeholder="路径，如 /posts/" class="px-1.5 py-0.5 flex-[2]" />' +
+                '<input type="hidden" data-nav-level value="0" />';
+            } else if (rubric === 'links') {
+              row.innerHTML =
+                '<input data-link-name placeholder="名称" class="px-1.5 py-0.5 flex-1" />' +
+                '<input data-link-url placeholder="https://" class="px-1.5 py-0.5 flex-[2]" />';
+            } else {
+              row.innerHTML =
+                '<input data-social-type placeholder="类型，如 github" class="px-1.5 py-0.5 flex-1" />' +
+                '<input data-social-value placeholder="链接或 ID" class="px-1.5 py-0.5 flex-[2]" />';
+            }
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.setAttribute('data-del-row', '');
+            delBtn.className = 'btn btn-danger btn-sm';
+            delBtn.setAttribute('aria-label', '删除该行');
+            delBtn.textContent = '删除';
+            row.appendChild(delBtn);
+            rows.appendChild(row);
+            row.querySelector('input')?.focus();
+            markDirty();
+          }
+        });
+      });
+
+      // ── 行编辑器 → Site 模型序列化（strict shape）──
+      function serializeRowFields() {
+        const nav = [];
+        const links = [];
+        const socials = [];
+        document.querySelectorAll('[data-row-rubric="nav"] [data-rows] > div').forEach((row) => {
+          const name = row.querySelector('[data-nav-name]');
+          const value = row.querySelector('[data-nav-value]');
+          if (!name || !value) return;
+          const level = row.querySelector('[data-nav-level]');
+          nav.push({ name: name.value, value: value.value, level: Number(level && level.value) || 0 });
+        });
+        document.querySelectorAll('[data-row-rubric="links"] [data-rows] > div').forEach((row) => {
+          const name = row.querySelector('[data-link-name]');
+          const url = row.querySelector('[data-link-url]');
+          if (!name || !url) return;
+          links.push({ name: name.value, url: url.value });
+        });
+        document.querySelectorAll('[data-row-rubric="socials"] [data-rows] > div').forEach((row) => {
+          const type = row.querySelector('[data-social-type]');
+          const value = row.querySelector('[data-social-value]');
+          if (!type || !value) return;
+          socials.push({ type: type.value, value: value.value });
+        });
+        return { nav, links, socials };
+      }
+
+      // ── 主表单 dirty 指示 ──
+      const saveBtn = document.getElementById('site-form-save');
+      const SAVE_LABEL = '保存';
+      function markDirty() {
+        if (saveBtn && saveBtn.textContent === SAVE_LABEL) saveBtn.textContent = SAVE_LABEL + ' •';
+      }
+      const siteForm = document.getElementById('site-form');
+      if (siteForm) {
+        siteForm.addEventListener('input', markDirty);
+        siteForm.addEventListener('change', markDirty);
+      }
+
       // ── Show/hide provider-specific config panels ──
       const providerSelect = document.getElementById('commentsProvider');
       const panels = {
@@ -304,8 +530,10 @@ const settingsSchema = themes.find((t) => t.name === currentTheme)?.settings ?? 
             if (!pb) { status.textContent = '客户端未就绪，请刷新重试'; return; }
             await pb.vanblog.themes.saveSettings(themeName, values);
             status.textContent = '已保存（页面缓存约 12s 内刷新）';
+            self.vanblogUI?.toast('已保存', 'success');
           } catch (err) {
             status.textContent = '保存失败: ' + (err?.message ?? err);
+            self.vanblogUI?.toast('保存失败: ' + (err?.message ?? err), 'error');
           }
         });
       }
@@ -330,8 +558,10 @@ const settingsSchema = themes.find((t) => t.name === currentTheme)?.settings ?? 
             if (!pb) { status.textContent = '客户端未就绪，请刷新重试'; return; }
             await pb.send('/api/vanblog/custom-code', { method: 'PUT', body: { css: cssTa.value, js: jsTa.value } });
             status.textContent = '已保存（页面缓存约 12s 内刷新）';
+            self.vanblogUI?.toast('已保存', 'success');
           } catch (err) {
             status.textContent = '保存失败: ' + (err?.message ?? err);
+            self.vanblogUI?.toast('保存失败: ' + (err?.message ?? err), 'error');
           }
         });
       }
@@ -355,6 +585,7 @@ const settingsSchema = themes.find((t) => t.name === currentTheme)?.settings ?? 
           };
         }
 
+        const rowFields = serializeRowFields();
         const data = {
           siteName: fd.get('siteName'),
           siteDesc: fd.get('siteDesc'),
@@ -365,6 +596,9 @@ const settingsSchema = themes.find((t) => t.name === currentTheme)?.settings ?? 
           palette: fd.get('palette'),
           activeTheme: fd.get('activeTheme'),
           paletteMigrationMode: fd.get('paletteMigrationMode'),
+          nav: rowFields.nav,
+          links: rowFields.links,
+          socials: rowFields.socials,
           commentsProvider: provider,
           commentsConfig: commentsConfig,
           aboutContent: fd.get('aboutContent'),
@@ -376,10 +610,13 @@ const settingsSchema = themes.find((t) => t.name === currentTheme)?.settings ?? 
         };
         try {
           const pb = getPb();
-          if (!pb) { alert('客户端未就绪，请刷新重试'); return; }
+          if (!pb) { self.vanblogUI?.toast('客户端未就绪，请刷新重试', 'error'); return; }
           await pb.collection('site').update(siteId, data);
-          alert('已保存');
-        } catch (err) { alert('保存失败: ' + err.message); }
+          if (saveBtn) saveBtn.textContent = SAVE_LABEL;
+          self.vanblogUI?.toast('已保存', 'success');
+        } catch (err) {
+          self.vanblogUI?.toast('保存失败: ' + err.message, 'error');
+        }
       });
 
       // ── 评论 SSO：换票进 Artalk（免二次登录） ──
@@ -387,7 +624,7 @@ const settingsSchema = themes.find((t) => t.name === currentTheme)?.settings ?? 
       if (manageBtn) {
         manageBtn.addEventListener('click', async () => {
           const server = (document.querySelector('[name="artalk_server"]')?.value || '').replace(/\/+$/, '');
-          if (!server) { alert('请先填写 Artalk Server 并保存'); return; }
+          if (!server) { self.vanblogUI?.toast('请先填写 Artalk Server 并保存', 'info'); return; }
           const authToken = (getPb() || {}).authStore?.token || '';
           try {
             const tokRes = await fetch('/api/vanblog/comments-sso/token', {
@@ -406,7 +643,7 @@ const settingsSchema = themes.find((t) => t.name === currentTheme)?.settings ?? 
             localStorage.setItem('ArtalkUser', JSON.stringify(login));
             window.open('/', '_blank');
           } catch (err) {
-            alert('评论管理登录失败：' + (err.message || err));
+            self.vanblogUI?.toast('评论管理登录失败：' + (err.message || err), 'error');
           }
         });
       }

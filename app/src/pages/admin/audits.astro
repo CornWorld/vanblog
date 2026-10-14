@@ -38,10 +38,45 @@ function expandName(a: any): string {
   const u = a?.expand?.actor;
   return u?.username || u?.email || a?.actor || '-';
 }
+
+const esc = (s: string) => s
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;');
+
+function fmtJson(value: unknown): string {
+  const walk = (v: unknown, indent: number): string => {
+    const pad = '  '.repeat(indent);
+    const padIn = '  '.repeat(indent + 1);
+    if (v === null || typeof v === 'boolean') {
+      return `<span class="text-[var(--error)]">${esc(String(v))}</span>`;
+    }
+    if (typeof v === 'number') {
+      return `<span class="text-[var(--warning)]">${esc(String(v))}</span>`;
+    }
+    if (typeof v === 'string') {
+      return `<span class="text-[var(--success)]">"${esc(v)}"</span>`;
+    }
+    if (Array.isArray(v)) {
+      if (v.length === 0) return '[]';
+      const items = v.map(item => `${padIn}${walk(item, indent + 1)}`).join('<span class="text-[var(--text-muted)]">,</span>\n');
+      return `[\n${items}\n${pad}]`;
+    }
+    if (typeof v === 'object') {
+      const entries = Object.entries(v as Record<string, unknown>);
+      if (entries.length === 0) return '{}';
+      const items = entries.map(([k, val]) =>
+        `${padIn}<span class="text-[var(--accent)]">"${esc(k)}"</span><span class="text-[var(--text-muted)]">: </span>${walk(val, indent + 1)}`
+      ).join('<span class="text-[var(--text-muted)]">,</span>\n');
+      return `{\n${items}\n${pad}}`;
+    }
+    return esc(String(v));
+  };
+  return walk(value, 0);
+}
 ---
 <AdminLayout title="审计日志">
   <h1>审计日志</h1>
-  <p><a href="/admin">← 返回</a></p>
 
   {denied ? (
     <ErrorNotice code="403" title="无权限访问" message="审计日志仅管理员可见。" />
@@ -61,35 +96,37 @@ function expandName(a: any): string {
     {audits.length === 0 ? (
       <p>{(action || resultQ) ? '没有匹配的记录。' : '暂无审计记录。'}</p>
     ) : (
-      <table class="w-full border-collapse text-xs">
+      <div class="table-wrap">
+      <table class="admin-table w-full text-xs">
         <thead>
-          <tr class="text-left border-b border-[var(--border)]">
+          <tr>
             <th>时间</th><th>用户</th><th>动作</th><th>目标</th><th>结果</th><th>IP</th><th>详情</th>
           </tr>
         </thead>
         <tbody>
           {audits.map(a => (
-            <tr class="border-b border-[var(--border)] align-top">
+            <tr class="align-top">
               <td><small>{fmtDateTime(a.created)}</small></td>
               <td>{expandName(a)}</td>
               <td>{a.action}</td>
               <td class="break-all">{a.target}</td>
               <td>{a.result === 'failure' ? (
-                <span class="text-red-600">失败</span>
-              ) : <span class="text-green-600">成功</span>}</td>
+                <span class="badge badge-private">失败</span>
+              ) : <span class="badge badge-published">成功</span>}</td>
               <td><small>{a.ip || '-'}</small></td>
               <td>
-                {a.detail && (
+                {a.detail ? (
                   <details>
                     <summary class="cursor-pointer">查看</summary>
-                    <pre class="whitespace-pre-wrap text-[11px] bg-gray-50 p-1">{JSON.stringify(a.detail, null, 2)}</pre>
+                    <pre class="whitespace-pre-wrap text-[11px] p-1" set:html={fmtJson(a.detail)} />
                   </details>
-                )}
+                ) : '—'}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
     )}
 
     <p class="text-xs text-[var(--text-muted)] mt-2">

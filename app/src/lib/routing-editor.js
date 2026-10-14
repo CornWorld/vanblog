@@ -208,7 +208,7 @@ export function initRoutingEditor({ TYPE_OPTIONS }) {
       try {
         rule = readRow(tr);
       } catch (e) {
-        alert(e.message);
+        self.vanblogUI?.toast(e.message, "error");
         return;
       }
       status.textContent = "校验中…";
@@ -229,49 +229,54 @@ export function initRoutingEditor({ TYPE_OPTIONS }) {
   // ── save / apply ──
 
   document.getElementById("btn-save").addEventListener("click", async () => {
-    if (!pb) return alert("未登录");
+    if (!pb) return self.vanblogUI?.toast("登录已失效，请重新登录", "error");
     const rules = [];
     try {
       for (const tr of document.querySelectorAll("#rules-body tr"))
         rules.push(readRow(tr));
     } catch (e) {
-      alert(e.message);
+      self.vanblogUI?.toast(e.message, "error");
       return;
     }
     status.textContent = "保存中（最长可能 30s）…";
     try {
       const r = await pb.vanblog.routing.replace(rules, getAllowlist());
-      if (r.applied) status.textContent = "✓ 已保存并应用到 Caddy";
-      else if (r.rolled_back) {
+      if (r.applied) {
+        status.textContent = "✓ 已保存并应用到 Caddy";
+        self.vanblogUI?.toast("路由已保存并应用", "success");
+      } else if (r.rolled_back) {
         status.textContent = "✗ 已回滚：" + (r.error || "未知错误");
-        alert("保存失败，已恢复到之前的规则：\n" + (r.error || ""));
-      } else if (r.restart_needed)
+        self.vanblogUI?.toast("保存失败，已恢复到之前的规则：" + (r.error || ""), "error", 6000);
+      } else if (r.restart_needed) {
         status.textContent = '已保存，重启 vanblog 后生效（或点"立即应用"）';
-      else if (r.error) {
+        self.vanblogUI?.toast('已保存，重启 vanblog 后生效', "success");
+      } else if (r.error) {
         status.textContent = "✗ 保存失败：" + r.error;
-        alert("保存失败：" + r.error);
+        self.vanblogUI?.toast("保存失败：" + r.error, "error", 6000);
       } else status.textContent = "未应用：" + JSON.stringify(r);
     } catch (e) {
       status.textContent = "✗ 保存被拒绝：" + e.message;
-      alert("保存被拒绝：\n" + e.message);
+      self.vanblogUI?.toast("保存被拒绝：" + e.message, "error", 6000);
     }
     refreshStatus();
     refreshAudits();
   });
 
   document.getElementById("btn-apply").addEventListener("click", async () => {
-    if (!pb) return alert("未登录");
+    if (!pb) return self.vanblogUI?.toast("登录已失效，请重新登录", "error");
     status.textContent = "应用中（最长可能 30s）…";
     try {
       const r = await pb.vanblog.routing.apply();
-      if (r.applied) status.textContent = "✓ 已应用到运行中的 Caddy";
-      else if (r.error) {
+      if (r.applied) {
+        status.textContent = "✓ 已应用到运行中的 Caddy";
+        self.vanblogUI?.toast("已应用到运行中的 Caddy", "success");
+      } else if (r.error) {
         status.textContent = "✗ 应用失败：" + r.error;
-        alert("应用失败：" + r.error);
+        self.vanblogUI?.toast("应用失败：" + r.error, "error", 6000);
       } else status.textContent = "未应用：" + JSON.stringify(r);
     } catch (e) {
       status.textContent = "应用请求失败：" + e.message;
-      alert("应用请求失败：" + e.message);
+      self.vanblogUI?.toast("应用请求失败：" + e.message, "error", 6000);
     }
     refreshStatus();
   });

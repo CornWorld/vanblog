@@ -27,7 +27,6 @@ function fmtBytes(bytes: number): string {
 
 <AdminLayout title="数据备份">
   <h1>数据备份</h1>
-  <p><a href="/admin">← 返回管理</a></p>
 
   {!isAdmin ? (
     <p>仅管理员可访问。</p>
@@ -57,7 +56,8 @@ function fmtBytes(bytes: number): string {
         ) : backups.length === 0 ? (
           <p id="empty-backups">暂无备份。</p>
         ) : (
-          <table class="w-full border-collapse" id="backup-table">
+          <div class="table-wrap">
+          <table class="admin-table" id="backup-table">
             <thead>
               <tr class="text-left border-b border-[var(--border)]">
                 <th class="py-2 pr-4">文件</th>
@@ -83,6 +83,7 @@ function fmtBytes(bytes: number): string {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
     </div>
@@ -104,7 +105,7 @@ function fmtBytes(bytes: number): string {
 
     document.getElementById('btn-create-backup')?.addEventListener('click', async () => {
       const vanblog = self.vanblog;
-      if (!isAdmin || !vanblog?.pb) return alert('管理员登录已失效，请重新登录');
+      if (!isAdmin || !vanblog?.pb) return self.vanblogUI?.toast('管理员登录已失效，请重新登录', 'error');
       const pb = vanblog.pb;
       setBusy(true, '正在创建备份，请勿关闭页面…');
       try {
@@ -120,7 +121,7 @@ function fmtBytes(bytes: number): string {
       button.addEventListener('click', async () => {
         const key = button.dataset.key;
         const pb = self.vanblog.pb;
-        if (!key || !pb) return alert('管理员登录已失效，请重新登录');
+        if (!key || !pb) return self.vanblogUI?.toast('管理员登录已失效，请重新登录', 'error');
         setBusy(true, '正在准备安全下载链接…');
         try {
           const url = await pb.vanblog.backups.downloadUrl(key);
@@ -140,9 +141,15 @@ function fmtBytes(bytes: number): string {
     document.querySelectorAll('.btn-delete-backup[data-key]').forEach((button) => {
       button.addEventListener('click', async () => {
         const key = button.dataset.key;
-        if (!key || !confirm(`确认永久删除备份 ${key}？该操作不可撤销。`)) return;
+        if (!key) return;
+        if (!(await self.vanblogUI?.confirmDialog({
+          title: '删除备份',
+          message: `确认永久删除备份 ${key}？该操作不可撤销。`,
+          confirmText: '删除',
+          danger: true,
+        }))) return;
         const pb = self.vanblog.pb;
-        if (!pb) return alert('管理员登录已失效，请重新登录');
+        if (!pb) return self.vanblogUI?.toast('管理员登录已失效，请重新登录', 'error');
         setBusy(true, '正在删除备份…');
         try {
           await pb.vanblog.backups.delete(key);
@@ -159,11 +166,24 @@ function fmtBytes(bytes: number): string {
       button.addEventListener('click', async () => {
         const key = button.dataset.key;
         if (!key) return;
-        if (!confirm(`恢复 ${key} 将覆盖当前数据并重启服务。\n\n确认继续？`)) return;
-        const typed = prompt(`这是不可逆的危险操作。请输入备份文件名以确认：\n${key}`);
-        if (typed !== key) return alert('文件名不匹配，已取消恢复');
+        if (!(await self.vanblogUI?.confirmDialog({
+          title: '恢复备份',
+          message: `恢复 ${key} 将覆盖当前数据并重启服务。\n恢复后当前登录状态可能失效。确认继续？`,
+          confirmText: '继续恢复',
+          danger: true,
+        }))) return;
+        const typed = await self.vanblogUI?.promptDialog({
+          title: '确认恢复（不可逆）',
+          message: `这是不可逆的危险操作。请输入备份文件名以确认：\n${key}`,
+          label: '备份文件名',
+          placeholder: key,
+          confirmText: '恢复',
+          danger: true,
+          validate: (v) => (v === key ? null : '文件名不匹配'),
+        });
+        if (typed !== key) return;
         const pb = self.vanblog.pb;
-        if (!pb) return alert('管理员登录已失效，请重新登录');
+        if (!pb) return self.vanblogUI?.toast('管理员登录已失效，请重新登录', 'error');
 
         setBusy(true, '恢复请求已提交，等待服务重启…');
         try {

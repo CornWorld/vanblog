@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import Icon from '../../components/admin/Icon.astro';
 import { getAuthUser } from '@vanblog/sdk';
 
 const pb = Astro.locals.pb;
@@ -15,7 +16,7 @@ const isDev = process.env.VANBLOG_MODE === 'dev';
 <AdminLayout title="AI 终端">
   <div class="flex items-center justify-between mb-3">
     <div>
-      <h1 class="text-xl font-bold">🖥️ AI 终端</h1>
+      <h1 class="text-xl font-bold flex items-center gap-2"><Icon name="terminal" size={20} /> AI 终端</h1>
       <p class="text-sm text-[var(--text-muted)] mt-1">
         平台 agent 的完整交互界面(pi 原生 TUI:流式、工具可见、逐条审批、会话续聊)。
         与 <code>docker exec</code> 终端共享同一会话目录。

@@ -27,7 +27,6 @@ const adminCount = users.filter((u: any) => u.role === 'admin').length;
 ---
 <AdminLayout title="用户管理">
   <h1>用户管理</h1>
-  <p><a href="/admin">← 返回</a></p>
 
   {denied ? (
     <ErrorNotice code="403" title="无权限访问" message="用户管理仅管理员可见。" />
@@ -44,7 +43,8 @@ const adminCount = users.filter((u: any) => u.role === 'admin').length;
     <button type="submit">+ 新建</button>
   </form>
 
-  <table class="w-full border-collapse">
+  <div class="table-wrap">
+  <table class="admin-table">
     <thead>
       <tr class="text-left border-b border-[var(--border)]">
         <th>用户名</th><th>昵称</th><th>邮箱</th><th>角色</th><th>权限</th><th>操作</th>
@@ -52,7 +52,7 @@ const adminCount = users.filter((u: any) => u.role === 'admin').length;
     </thead>
     <tbody>
       {users.map((u: any) => (
-        <tr data-id={u.id} data-role={u.role} class="border-b border-[var(--border)]">
+        <tr data-id={u.id} data-role={u.role} data-username={u.username} class="border-b border-[var(--border)]">
           <td>{u.username}</td>
           <td><input class="f-nickname" value={u.nickname || ''} class="w-full" /></td>
           <td><small>{u.email}</small></td>
@@ -76,21 +76,26 @@ const adminCount = users.filter((u: any) => u.role === 'admin').length;
             </details>
           </td>
           <td class="flex gap-2">
-            <button class="btn-save">保存</button>
-            <button class="btn-reset" title="发送重置密码邮件 / 或在此设置新密码">改密码</button>
-            <button class="btn-del text-red-600">删除</button>
+            <button class="btn btn-sm btn-save">保存</button>
+            <button class="btn btn-sm btn-reset" title="为该用户设置新密码">改密码</button>
+            <button class="btn btn-sm btn-danger btn-del">删除</button>
           </td>
         </tr>
       ))}
     </tbody>
   </table>
+  </div>
 <script is:inline type="application/json" id="users-data" set:html={JSON.stringify({ adminCount })} />
   <script is:inline>
     const { adminCount } = JSON.parse(document.getElementById('users-data').textContent);
-    const pb = self.vanblog.pb;
+    // 懒解析：is:inline 脚本先于 AdminLayout 的 initClient 模块执行，
+    // 顶层直接取 self.vanblog.pb 会让整个脚本在解析期崩掉（表单裸提交）。
+    const getPb = () => self.vanblog?.pb;
 
     document.getElementById('new-user').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const pb = getPb();
+      if (!pb) return self.vanblogUI?.toast('登录已失效，请重新登录', 'error');
       const fd = new FormData(e.currentTarget);
       try {
         await pb.collection('users').create({
@@ -103,7 +108,7 @@ const adminCount = users.filter((u: any) => u.role === 'admin').length;
           permissions: [],
         });
         location.reload();
-      } catch (err) { alert('新建失败: ' + (err).message); }
+      } catch (err) { self.vanblogUI?.toast('新建失败: ' + (err).message, 'error'); }
     });
 
     // Demoting the last admin locks all admin routes (UpdateRule
@@ -119,8 +124,10 @@ const adminCount = users.filter((u: any) => u.role === 'admin').length;
     document.querySelectorAll('tr[data-id]').forEach((tr) => {
       const id = tr.dataset.id;
       tr.querySelector('.btn-save').onclick = async () => {
+        const pb = getPb();
+        if (!pb) return self.vanblogUI?.toast('登录已失效，请重新登录', 'error');
         if (isLastAdminDowngrade(tr)) {
-          alert('无法降级：这是系统里唯一的管理员。请先把另一个用户提升为管理员。');
+          self.vanblogUI?.toast('无法降级：这是系统里唯一的管理员。请先把另一个用户提升为管理员。', 'error', 5000);
           return;
         }
         const perms = Array.from(tr.querySelectorAll('.f-perm:checked')).map((c) => c.value);
@@ -130,27 +137,47 @@ const adminCount = users.filter((u: any) => u.role === 'admin').length;
             role: tr.querySelector('.f-role').value,
             permissions: perms,
           });
-          alert('已保存');
-        } catch (err) { alert('保存失败: ' + (err).message); }
+          self.vanblogUI?.toast('已保存', 'success');
+        } catch (err) { self.vanblogUI?.toast('保存失败: ' + (err).message, 'error'); }
       };
       tr.querySelector('.btn-reset').onclick = async () => {
-        const pw = prompt('输入新密码（留空取消）');
+        const pb = getPb();
+        if (!pb) return self.vanblogUI?.toast('登录已失效，请重新登录', 'error');
+        const username = tr.querySelector('td')?.textContent?.trim() || '该用户';
+        const pw = await self.vanblogUI?.promptDialog({
+          title: `重置密码 — ${username}`,
+          message: '新密码至少 8 位。重置后请通知该用户重新登录。',
+          label: '新密码',
+          type: 'password',
+          placeholder: '至少 8 位',
+          confirmText: '重置',
+          danger: true,
+          validate: (v) => (v.length >= 8 ? null : '密码至少 8 位'),
+        });
         if (!pw) return;
         try {
           await pb.collection('users').update(id, { password: pw, passwordConfirm: pw });
-          alert('已重置');
-        } catch (err) { alert('重置失败: ' + (err).message); }
+          self.vanblogUI?.toast('密码已重置', 'success');
+        } catch (err) { self.vanblogUI?.toast('重置失败: ' + (err).message, 'error'); }
       };
       tr.querySelector('.btn-del').onclick = async () => {
+        const pb = getPb();
+        if (!pb) return self.vanblogUI?.toast('登录已失效，请重新登录', 'error');
         if (tr.dataset.role === 'admin' && adminCount <= 1) {
-          alert('无法删除：这是系统里唯一的管理员。');
+          self.vanblogUI?.toast('无法删除：这是系统里唯一的管理员。', 'error');
           return;
         }
-        if (!confirm('确定删除该用户？')) return;
+        const name = tr.dataset.username || '该用户';
+        if (!(await self.vanblogUI?.confirmDialog({
+          title: '删除用户',
+          message: `确定删除用户 ${name}？该操作不可撤销。`,
+          confirmText: '删除',
+          danger: true,
+        }))) return;
         try {
           await pb.vanblog.users.delete(id);
           tr.remove();
-        } catch (err) { alert('删除失败: ' + (err).message); }
+        } catch (err) { self.vanblogUI?.toast('删除失败: ' + (err).message, 'error'); }
       };
     });
   </script>

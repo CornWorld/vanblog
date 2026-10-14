@@ -46,7 +46,6 @@ const TYPE_OPTIONS = ['proxy', 'redirect', 'rewrite', 'block', 'cache'];
 
 <AdminLayout title="路由配置">
   <h1>路由配置</h1>
-  <p><a href="/admin">← 返回</a></p>
 
   {denied ? (
     <ErrorNotice code="403" title="无权限访问" message="路由配置仅管理员可编辑。" />
@@ -129,7 +128,8 @@ const TYPE_OPTIONS = ['proxy', 'redirect', 'rewrite', 'block', 'cache'];
       proxy 类目标的 host 必须命中私有网段或下方 allowlist，否则保存会被拒绝。
     </p>
 
-    <table class="w-full border-collapse text-sm">
+    <div class="table-wrap">
+    <table class="admin-table">
       <thead>
         <tr class="text-left border-b border-[var(--border)]">
           <th class="w-32">ID</th>
@@ -159,18 +159,19 @@ const TYPE_OPTIONS = ['proxy', 'redirect', 'rewrite', 'block', 'cache'];
             </td>
             <td><input class="f-strip w-full px-1 py-0.5 font-mono text-xs" value={r.stripPathPrefix || ''} placeholder="/prefix" title="仅 proxy 类型生效：转发到上游前先剥离该路径前缀（Caddy rewrite strip_path_prefix）。留空则不剥离。" /></td>
             <td class="flex gap-2">
-              <button type="button" class="btn-test text-xs">试一下</button>
-              <button type="button" class="btn-del text-red-600 text-xs">删除</button>
+              <button type="button" class="btn btn-sm btn-test">试一下</button>
+              <button type="button" class="btn btn-sm btn-danger btn-del">删除</button>
             </td>
           </tr>
         ))}
       </tbody>
     </table>
+    </div>
 
     <div class="flex gap-2 mt-3">
-      <button type="button" id="btn-add" class="px-2 py-0.5 border rounded">+ 添加规则</button>
-      <button type="button" id="btn-save" class="px-3 py-0.5 bg-[var(--accent)] text-white rounded">保存</button>
-      <button type="button" id="btn-apply" class="px-3 py-0.5 border rounded">立即应用</button>
+      <button type="button" id="btn-add" class="btn">+ 添加规则</button>
+      <button type="button" id="btn-save" class="btn btn-primary">保存</button>
+      <button type="button" id="btn-apply" class="btn">立即应用</button>
       <span id="save-status" class="text-xs text-[var(--text-muted)] self-center"></span>
     </div>
 

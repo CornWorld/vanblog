@@ -5,7 +5,7 @@ import type { MediaConfig } from '../lib/media/normalizeImage';
 interface Props { initialContent?: string; mediaConfig?: MediaConfig }
 const { initialContent = '', mediaConfig } = Astro.props
 ---
-<div id="bytemd-editor" data-initial={initialContent} style="height: calc(100vh - 200px);"></div>
+<div id="bytemd-editor" data-initial={initialContent} style="height: calc(100vh - 260px);"></div>
 <input type="hidden" id="post-content" value={initialContent} />
 <div id="upload-status" aria-live="polite" style="position: fixed; bottom: 1rem; right: 1rem; max-width: 360px; font-size: 13px; color: #555; background: rgba(255,255,255,0.95); border: 1px solid #ddd; border-radius: 6px; padding: 8px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; z-index: 100;"></div>
 {mediaConfig && <script is:inline type="application/json" id="media-config">{JSON.stringify(mediaConfig)}</script>}
@@ -106,7 +106,7 @@ const { initialContent = '', mediaConfig } = Astro.props
     );
     const valid = results.filter(Boolean);
     if (valid.length === 0 && files.length > 0) {
-      alert('图片上传失败，请检查网络或登录状态');
+      self.vanblogUI?.toast('图片上传失败，请检查网络或登录状态', 'error');
     }
     return valid;
   }
@@ -140,7 +140,7 @@ const { initialContent = '', mediaConfig } = Astro.props
                   ctx.editor.focus();
                 }
               }
-        } catch { alert('剪切板无图片'); }
+        } catch { self.vanblogUI?.toast('剪切板无图片', 'error'); }
       }},
     };
   }
@@ -200,6 +200,17 @@ const { initialContent = '', mediaConfig } = Astro.props
     editor.$on('change', (e: { detail: { value: string } }) => {
       editor.$set({ value: e.detail.value });
       if (hiddenInput) hiddenInput.value = e.detail.value;
+      // 供页面脚本标脏（edit 页监听 vanblog:editor-change）
+      document.dispatchEvent(new CustomEvent('vanblog:editor-change'));
+    });
+
+    // 页面脚本可投递 vanblog:set-content（detail.value 为 markdown），
+    // 用于本地草稿「恢复」——同步编辑器与隐藏 input。
+    window.addEventListener('vanblog:set-content', (e: Event) => {
+      const value = (e as CustomEvent<{ value?: string }>).detail?.value;
+      if (typeof value !== 'string') return;
+      editor.$set({ value });
+      if (hiddenInput) hiddenInput.value = value;
     });
 
     window.__bytemdEditor = editor;

@@ -2,9 +2,10 @@
 export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import Icon from '../../components/admin/Icon.astro';
 import { getAuthUser, hasPermission, safe, getPage, buildPageHref } from '@vanblog/sdk';
 import { fmtDateTime } from '@vanblog/sdk';
-import type { Post } from '@vanblog/sdk';
+import type { Post, Tag, Category } from '@vanblog/sdk';
 const pb = Astro.locals.pb;
 
 
@@ -14,126 +15,538 @@ const canEditPost = !!hasPermission(pb, 'article:create') || !!hasPermission(pb,
 const canDeletePost = !!hasPermission(pb, 'article:delete');
 
 const PER_PAGE = 20;
-const page = getPage(Astro.url.searchParams);
-const q = (Astro.url.searchParams.get('q') || '').trim();
-const status = Astro.url.searchParams.get('status') || '';
+const params = Astro.url.searchParams;
+const page = getPage(params);
+const q = (params.get('q') || '').trim();
+const statusRaw = params.get('status') || '';
+const status = ['draft', 'published', 'hidden'].includes(statusRaw) ? statusRaw : '';
+const category = params.get('category') || '';
+const tag = params.get('tag') || '';
+const SORTS = ['-updated', '-created', '-viewCount', '-top,-updated'] as const;
+const sortParam = params.get('sort') || '';
+const sort = (SORTS as readonly string[]).includes(sortParam) ? sortParam : '-updated';
 
-const parts: string[] = [];
-if (q) parts.push(`title ~ "${q.replace(/"/g, '\\"')}"`);
+// 任一筛选非空（含显式 sort）时显示「清除」链接。
+const hasFilter = !!(q || status || category || tag || sortParam);
+
+const esc = (s: string) => s.replace(/"/g, '\\"');
+// 软删除文章归回收站管，主列表一律排除，与下方 KPI 计数口径一致。
+const parts: string[] = ['deleted != true'];
+if (q) parts.push(`title ~ "${esc(q)}"`);
 if (status) parts.push(`status = "${status}"`);
+if (category) parts.push(`category = "${esc(category)}"`);
+if (tag) parts.push(`tags ?= "${esc(tag)}"`);
 const filter = parts.join(' && ');
 
-const { data: result } = await safe(
-  () => pb.collection('posts').getList<Post>(page, PER_PAGE, {
-    sort: '-updated',
-    filter: filter || undefined,
-  }),
-  'admin'
-);
-const posts = result?.items ?? [];
-const totalPosts = result?.totalItems ?? 0;
-const totalPages = result?.totalPages ?? 1;
 
+// ── 列表 + KPI + 字典，全部并行；safe() 兜底避免单点失败整页报错 ──
+const [listRes, kpi] = await Promise.all([
+  safe(
+    () => pb.collection('posts').getList<Post>(page, PER_PAGE, { sort, filter }),
+    'admin/posts',
+  ),
+  Promise.all([
+    safe(() => pb.collection('posts').getList<Post>(1, 1, { filter: 'status = "draft" && deleted != true' }), 'admin/kpi-draft'),
+    safe(() => pb.collection('posts').getList<Post>(1, 1, { filter: 'status = "published" && deleted != true' }), 'admin/kpi-published'),
+    safe(() => pb.collection('posts').getList<Post>(1, 1, { filter: 'status = "hidden" && deleted != true' }), 'admin/kpi-hidden'),
+    safe(async () => {
+      // 个人博客规模：全量拉 viewCount 单字段求和，可接受。
+      const rows = await pb.collection('posts').getFullList<{ viewCount?: number }>({
+        fields: 'viewCount',
+        filter: 'deleted != true',
+      });
+      return rows.reduce((sum, r) => sum + (r.viewCount ?? 0), 0);
+    }, 'admin/kpi-views'),
+    safe(() => pb.collection('media').getList(1, 1), 'admin/kpi-media'),
+    safe(() => pb.vanblog.posts.trash(), 'admin/kpi-trash'),
+    safe(() => pb.collection('categories').getFullList<Category>({ sort: 'name' }), 'admin/cats'),
+    safe(() => pb.collection('tags').getFullList<Tag>({ sort: 'name' }), 'admin/tags'),
+  ]),
+]);
 
+const posts = listRes.data?.items ?? [];
+const totalPosts = listRes.data?.totalItems ?? 0;
+const totalPages = listRes.data?.totalPages ?? 1;
+
+const [draftRes, publishedRes, hiddenRes, viewsRes, mediaRes, trashRes, catsRes, tagsRes] = kpi;
+const countDraft = draftRes.data?.totalItems ?? 0;
+const countPublished = publishedRes.data?.totalItems ?? 0;
+const countHidden = hiddenRes.data?.totalItems ?? 0;
+const totalViews = viewsRes.data ?? 0;
+const mediaCount = mediaRes.data?.totalItems ?? 0;
+const trashCount = trashRes.data?.length ?? 0;
+
+// 分类名 id→name 映射渲染（不 expand，省一次 join）。
+const catName = new Map(catsRes.data?.map((c) => [c.id, c.name]) ?? []);
+const cats = catsRes.data ?? [];
+const tags = tagsRes.data ?? [];
+
+const STATUS_LABEL = { draft: '草稿', published: '已发布', hidden: '隐藏' } as const;
+
+const fmtNum = (n: number) => n.toLocaleString('zh-CN');
 ---
 <AdminLayout title="管理">
-  <h1>文章管理</h1>
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1>文章管理</h1>
+    {canEditPost && <a href="/admin/edit/new" class="btn btn-primary">+ 新建文章</a>}
+  </div>
 
-  <nav class="flex gap-4 flex-wrap mb-4">
-    {canEditPost && <a href="/admin/new">+ 新建文章</a>}
-    <a href="/admin/tags">标签</a>
-    <a href="/admin/categories">分类</a>
-    <a href="/admin/media">媒体</a>
-    {canEditPost && <a href="/admin/trash">回收站</a>}
-    {isAdmin && <a href="/admin/users">用户</a>}
-    {isAdmin && <a href="/admin/site">站点</a>}
-    {isAdmin && <a href="/admin/routing">路由</a>}
-    {isAdmin && <a href="/admin/audits">审计</a>}
-    {isAdmin && <a href="/admin/backups">备份</a>}
-    {isAdmin && <a href="/admin/terminal">AI 终端</a>}
-    {isAdmin && <a href="/admin/migrate">迁移</a>}
-  </nav>
-
-  <p class="text-xs text-[var(--text-muted)]">
+  <p class="mt-1 text-xs text-[var(--text-muted)]">
     当前用户：<strong>{user?.username}</strong> [{user?.role}]
     {user?.permissions && user.permissions.length > 0 && (
       <span> · 权限: {user.permissions.join(', ')}</span>
     )}
   </p>
 
-  <form method="get" class="flex gap-2 flex-wrap items-center my-3 text-sm">
-    <input name="q" value={q} placeholder="标题关键字" class="px-1.5 py-0.5 w-48" />
-    <select name="status" class="px-1.5 py-0.5">
-      <option value="" selected={!status}>全部状态</option>
-      <option value="draft" selected={status === 'draft'}>draft</option>
-      <option value="published" selected={status === 'published'}>published</option>
-      <option value="hidden" selected={status === 'hidden'}>hidden</option>
+  <div class="mb-5 mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="kpi-card">
+      <p class="kpi-label">文章（发布 / 草稿 / 隐藏）</p>
+      <p class="kpi-value">
+        {fmtNum(countPublished)}
+        <span class="text-base font-normal text-[var(--text-muted)]">/ {fmtNum(countDraft)} / {fmtNum(countHidden)}</span>
+      </p>
+    </div>
+    <div class="kpi-card">
+      <p class="kpi-label">总阅读</p>
+      <p class="kpi-value">{fmtNum(totalViews)}</p>
+    </div>
+    <div class="kpi-card">
+      <p class="kpi-label">媒体文件</p>
+      <p class="kpi-value">{fmtNum(mediaCount)}</p>
+    </div>
+    <a href="/admin/trash" class="kpi-card no-underline transition-colors hover:bg-[var(--fill)]">
+      <p class="kpi-label">回收站</p>
+      <p class="kpi-value">{fmtNum(trashCount)}</p>
+    </a>
+  </div>
+
+  <form method="get" class="mb-4 flex flex-wrap items-center gap-2 text-sm">
+    <input name="q" value={q} placeholder="标题关键字" class="w-44" />
+    <select name="status" aria-label="状态">
+      <option value="">全部状态</option>
+      <option value="draft" selected={status === 'draft'}>草稿</option>
+      <option value="published" selected={status === 'published'}>已发布</option>
+      <option value="hidden" selected={status === 'hidden'}>隐藏</option>
     </select>
-    <button type="submit">筛选</button>
-    {(q || status) && <a href="/admin" class="text-[var(--text-muted)]">清除</a>}
+    <select name="category" aria-label="分类">
+      <option value="">全部分类</option>
+      {cats.map((c) => <option value={c.id} selected={category === c.id}>{c.name}</option>)}
+    </select>
+    <select name="tag" aria-label="标签">
+      <option value="">全部标签</option>
+      {tags.map((t) => <option value={t.id} selected={tag === t.id}>{t.name}</option>)}
+    </select>
+    <select name="sort" aria-label="排序">
+      <option value="-updated" selected={sort === '-updated'}>最近更新</option>
+      <option value="-created" selected={sort === '-created'}>最近创建</option>
+      <option value="-viewCount" selected={sort === '-viewCount'}>阅读最多</option>
+      <option value="-top,-updated" selected={sort === '-top,-updated'}>置顶优先</option>
+    </select>
+    <button type="submit" class="btn">筛选</button>
+    {hasFilter && <a href="/admin" class="text-[var(--text-muted)] underline-offset-2 hover:underline">清除</a>}
   </form>
 
   {posts.length === 0 ? (
-    <p>{(q || status) ? '没有匹配的文章。' : '暂无文章。'}{canEditPost && !(q || status) && <a href="/admin/new">创建第一篇</a>}</p>
+    <div class="rounded-lg border border-dashed border-[var(--border)] p-8 text-center text-sm text-[var(--text-muted)]">
+      {hasFilter ? '没有匹配的文章。' : '暂无文章。'}
+      {canEditPost && !hasFilter && (
+        <a href="/admin/edit/new" class="ml-1 text-[var(--accent)] underline underline-offset-2">创建第一篇</a>
+      )}
+    </div>
   ) : (
     <>
-    <table class="w-full border-collapse">
-      <thead>
-        <tr class="text-left border-b border-[var(--border)]">
-          <th>标题</th>
-          <th>状态</th>
-          <th>更新时间</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        {posts.map(post => (
-          <tr class="border-b border-[var(--border)]">
-            <td>{post.title}</td>
-            <td>{post.status}</td>
-            <td>{fmtDateTime(post.updated)}</td>
-            <td class="flex gap-2 flex-wrap">
-              {canEditPost && <a href={`/admin/edit/${post.id}`}>编辑</a>}
-              <a href={`/admin/revisions/${post.id}`}>修订</a>
-              <a href={`/posts/${post.id}`} target="_blank">查看</a>
-              {canDeletePost && (
-                <a href={`#del-${post.id}`} data-del={post.id} class="text-red-600">删除</a>
+      {/*
+        桌面表格（checkbox 列与批量栏只在有内容管理权限时渲染，
+        避免只读用户看到一个没有按钮的批量栏。
+      */}
+      {(canEditPost || canDeletePost) ? (
+        <div class="table-wrap hidden md:block">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th class="w-10">
+                  <input type="checkbox" id="check-all" aria-label="全选本页" />
+                </th>
+                <th>标题</th>
+                <th>状态</th>
+                <th>分类 / 标签</th>
+                <th class="text-right">阅读</th>
+                <th>更新时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {posts.map((post) => {
+                const badgeCls = post.status ? `badge badge-${post.status}` : 'badge badge-muted';
+                const statusLabel = post.status ? STATUS_LABEL[post.status] : '—';
+                return (
+                  <tr data-id={post.id}>
+                    <td>
+                      <input type="checkbox" class="row-check" value={post.id} aria-label={`选择 ${post.title}`} />
+                    </td>
+                    <td class="max-w-xs">
+                      <p class="truncate font-medium">{post.title}</p>
+                      <p class="truncate text-xs text-[var(--text-muted)]">/{post.pathname || post.id}</p>
+                      {((post.top ?? 0) > 0 || post.private || post.password) && (
+                        <p class="mt-1 flex flex-wrap gap-1">
+                          {(post.top ?? 0) > 0 && <span class="badge badge-top" title={`置顶权重 ${post.top}`}>置顶 {post.top}</span>}
+                          {post.private && <span class="badge badge-private" title="私密文章"><Icon name="lock" size={11} /></span>}
+                          {post.password && <span class="badge badge-private" title="密码保护"><Icon name="key" size={11} /></span>}
+                        </p>
+                      )}
+                    </td>
+                    <td>
+                      <span class={badgeCls}>{statusLabel}</span>
+                      {canEditPost && (
+                        <select class="f-status mt-1 block text-xs" data-id={post.id} aria-label="快捷改状态">
+                          <option value="draft" selected={post.status === 'draft'}>草稿</option>
+                          <option value="published" selected={post.status === 'published'}>已发布</option>
+                          <option value="hidden" selected={post.status === 'hidden'}>隐藏</option>
+                        </select>
+                      )}
+                    </td>
+                    <td class="whitespace-nowrap text-xs text-[var(--text-muted)]">
+                      {(post.category && catName.get(post.category)) || '—'}
+                      <span class="mx-1">·</span>
+                      {post.tags?.length ?? 0} 标签
+                    </td>
+                    <td class="text-right tabular-nums">{fmtNum(post.viewCount ?? 0)}</td>
+                    <td class="whitespace-nowrap text-xs text-[var(--text-muted)]">{fmtDateTime(post.updated)}</td>
+                    <td>
+                      <div class="flex flex-wrap items-center gap-1.5">
+                        {canEditPost && <a href={`/admin/edit/${post.id}`} class="btn btn-sm">编辑</a>}
+                        <a href={`/admin/revisions/${post.id}`} class="btn btn-sm">修订</a>
+                        <a href={`/posts/${post.id}`} target="_blank" rel="noopener" class="btn btn-sm">查看</a>
+                        {isAdmin && (
+                          <button type="button" class="btn btn-sm act-export" data-id={post.id} data-pathname={post.pathname || post.id}>导出</button>
+                        )}
+                        {canDeletePost && (
+                          <button type="button" class="btn btn-danger btn-sm act-del" data-id={post.id} data-title={post.title}>删除</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div class="table-wrap hidden md:block">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>标题</th>
+                <th>状态</th>
+                <th>分类 / 标签</th>
+                <th class="text-right">阅读</th>
+                <th>更新时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {posts.map((post) => (
+                <tr data-id={post.id}>
+                  <td class="max-w-xs">
+                    <p class="truncate font-medium">{post.title}</p>
+                    <p class="truncate text-xs text-[var(--text-muted)]">/{post.pathname || post.id}</p>
+                  </td>
+                  <td><span class={post.status ? `badge badge-${post.status}` : 'badge badge-muted'}>{post.status ? STATUS_LABEL[post.status] : '—'}</span></td>
+                  <td class="whitespace-nowrap text-xs text-[var(--text-muted)]">
+                    {(post.category && catName.get(post.category)) || '—'}
+                    <span class="mx-1">·</span>
+                    {post.tags?.length ?? 0} 标签
+                  </td>
+                  <td class="text-right tabular-nums">{fmtNum(post.viewCount ?? 0)}</td>
+                  <td class="whitespace-nowrap text-xs text-[var(--text-muted)]">{fmtDateTime(post.updated)}</td>
+                  <td>
+                    <div class="flex flex-wrap items-center gap-1.5">
+                      <a href={`/admin/revisions/${post.id}`} class="btn btn-sm">修订</a>
+                      <a href={`/posts/${post.id}`} target="_blank" rel="noopener" class="btn btn-sm">查看</a>
+                      {isAdmin && (
+                        <button type="button" class="btn btn-sm act-export" data-id={post.id} data-pathname={post.pathname || post.id}>导出</button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* 移动端卡片：与表格同一数据源 map 第二次 */}
+      <ul class="flex flex-col gap-3 md:hidden">
+        {posts.map((post) => {
+          const badgeCls = post.status ? `badge badge-${post.status}` : 'badge badge-muted';
+          const statusLabel = post.status ? STATUS_LABEL[post.status] : '—';
+          return (
+            <li data-id={post.id} class="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="truncate font-medium">{post.title}</p>
+                  <p class="truncate text-xs text-[var(--text-muted)]">/{post.pathname || post.id}</p>
+                </div>
+                <span class={badgeCls}>{statusLabel}</span>
+              </div>
+              {((post.top ?? 0) > 0 || post.private || post.password) && (
+                <p class="mt-1 flex flex-wrap gap-1">
+                  {(post.top ?? 0) > 0 && <span class="badge badge-top" title={`置顶权重 ${post.top}`}>置顶 {post.top}</span>}
+                  {post.private && <span class="badge badge-private" title="私密文章"><Icon name="lock" size={11} /></span>}
+                  {post.password && <span class="badge badge-private" title="密码保护"><Icon name="key" size={11} /></span>}
+                </p>
               )}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+              <p class="mt-1.5 text-xs text-[var(--text-muted)]">
+                {(post.category && catName.get(post.category)) || '—'}
+                <span class="mx-1">·</span>{post.tags?.length ?? 0} 标签
+                <span class="mx-1">·</span>阅读 {fmtNum(post.viewCount ?? 0)}
+                <span class="mx-1">·</span>{fmtDateTime(post.updated)}
+              </p>
+              <div class="mt-2.5 flex flex-wrap items-center gap-2">
+                {canEditPost && (
+                  <select class="f-status text-xs" data-id={post.id} aria-label="快捷改状态">
+                    <option value="draft" selected={post.status === 'draft'}>草稿</option>
+                    <option value="published" selected={post.status === 'published'}>已发布</option>
+                    <option value="hidden" selected={post.status === 'hidden'}>隐藏</option>
+                  </select>
+                )}
+                {canEditPost && <a href={`/admin/edit/${post.id}`} class="btn btn-sm">编辑</a>}
+                {canDeletePost && (
+                  <button type="button" class="btn btn-danger btn-sm act-del" data-id={post.id} data-title={post.title}>删除</button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
 
-    <p class="text-xs text-[var(--text-muted)] mt-2">
-      共 {totalPosts} 篇 · 第 {page}/{totalPages} 页
-    </p>
-
-    {totalPages > 1 && (
-      <nav class="flex gap-2 mt-2 text-sm" aria-label="分页">
-        {page > 1 && <a href={buildPageHref('/admin', Astro.url.searchParams, page - 1)} class="px-2 py-0.5 border rounded">上一页</a>}
-        {page < totalPages && <a href={buildPageHref('/admin', Astro.url.searchParams, page + 1)} class="px-2 py-0.5 border rounded">下一页</a>}
-      </nav>
-    )}
+      {/* 批量操作栏：无选中时不可见，选中后吸底 */}
+      {(canEditPost || canDeletePost) && (
+        <div
+          id="bulk-bar"
+          hidden
+          class="sticky bottom-3 z-20 mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm shadow-lg"
+        >
+          <span id="bulk-count" class="mr-1 text-[var(--text-muted)]">已选 0 篇</span>
+          {canEditPost && (
+            <>
+              <button type="button" class="btn btn-sm" data-bulk-status="published">设为发布</button>
+              <button type="button" class="btn btn-sm" data-bulk-status="draft">设为草稿</button>
+              <button type="button" class="btn btn-sm" data-bulk-status="hidden">设为隐藏</button>
+            </>
+          )}
+          {canDeletePost && (
+            <button type="button" class="btn btn-danger btn-sm" id="bulk-trash">移入回收站</button>
+          )}
+        </div>
+      )}
     </>
   )}
 
+  <p class="mt-3 text-xs text-[var(--text-muted)]">
+    共 {totalPosts} 篇 · 第 {page}/{totalPages} 页
+  </p>
+
+  {totalPages > 1 && (
+    <nav class="mt-2 flex gap-2 text-sm" aria-label="分页">
+      {page > 1 && <a href={buildPageHref('/admin', params, page - 1)} class="btn btn-sm">上一页</a>}
+      {page < totalPages && <a href={buildPageHref('/admin', params, page + 1)} class="btn btn-sm">下一页</a>}
+    </nav>
+  )}
+
   <script is:inline>
-    document.querySelectorAll('a[data-del]').forEach((a) => {
-      a.addEventListener('click', async (e) => {
-        e.preventDefault();
-        const id = a.dataset.del;
-        if (!id || !confirm('确定删除该文章？（软删除：deleted=true）')) return;
-        const pb = self.vanblog.pb;
-        if (!pb) return alert('未登录');
-        try {
-          // soft-delete: mark deleted=true so it stays in revisions/audits
-          await pb.collection('posts').update(id, { deleted: true });
-          location.reload();
-        } catch (err) {
-          alert('删除失败: ' + err.message);
+    (() => {
+      // AdminLayout 的 initClient 是 deferred module，晚于本内联块执行，
+      // 因此 pb 一律在使用点懒解析。
+      const getPb = () => self.vanblog?.pb ?? null;
+
+      const STATUS_LABEL = { draft: '草稿', published: '已发布', hidden: '隐藏' };
+
+      // ── 批量选择与批量栏 ──
+      const bulkBar = document.getElementById('bulk-bar');
+      const bulkCount = document.getElementById('bulk-count');
+      const checkAll = document.getElementById('check-all');
+      const rowChecks = () => Array.from(document.querySelectorAll('.row-check'));
+      const syncBulkBar = () => {
+        const checks = rowChecks();
+        const n = checks.filter((c) => c.checked).length;
+        if (bulkBar) bulkBar.hidden = n === 0;
+        if (bulkCount) bulkCount.textContent = '已选 ' + n + ' 篇';
+        if (checkAll) {
+          checkAll.checked = n > 0 && n === checks.length;
+          checkAll.indeterminate = n > 0 && n < checks.length;
+        }
+      };
+      const selectedIds = () => rowChecks().filter((c) => c.checked).map((c) => c.value);
+
+      checkAll?.addEventListener('change', () => {
+        rowChecks().forEach((c) => { c.checked = checkAll.checked; });
+        syncBulkBar();
+      });
+
+      // ── 行内状态快捷切换：记下聚焦时的旧值，失败时回滚 ──
+      document.addEventListener('focusin', (e) => {
+        const sel = e.target;
+        if (sel instanceof HTMLSelectElement && sel.classList.contains('f-status')) {
+          sel.dataset.prev = sel.value;
         }
       });
-    });
+
+      document.addEventListener('change', async (e) => {
+        const t = e.target;
+        if (t instanceof HTMLInputElement && t.classList.contains('row-check')) {
+          syncBulkBar();
+          return;
+        }
+        if (!(t instanceof HTMLSelectElement) || !t.classList.contains('f-status')) return;
+        const pb = getPb();
+        if (!pb) {
+          self.vanblogUI?.toast('登录已失效，请重新登录', 'error');
+          return;
+        }
+        const id = t.dataset.id;
+        const status = t.value;
+        if (!id || !status) return;
+        t.disabled = true;
+        try {
+          await pb.collection('posts').update(id, { status: status });
+          self.vanblogUI?.toast('状态已更新', 'success');
+          // 同步该行徽标，免刷新。
+          const row = t.closest('td') || t.closest('li');
+          const badge = row?.querySelector('.badge-published, .badge-draft, .badge-hidden, .badge-muted');
+          if (badge) {
+            badge.className = 'badge badge-' + status;
+            badge.textContent = STATUS_LABEL[status] || status;
+          }
+        } catch (err) {
+          self.vanblogUI?.toast('状态更新失败: ' + (err && err.message ? err.message : err), 'error');
+          t.value = t.dataset.prev || t.value;
+        } finally {
+          t.disabled = false;
+        }
+      });
+
+      // ── 批量操作 ──
+      document.querySelectorAll('[data-bulk-status]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const pb = getPb();
+          if (!pb) return self.vanblogUI?.toast('登录已失效，请重新登录', 'error');
+          const ids = selectedIds();
+          const status = btn.dataset.bulkStatus;
+          if (!ids.length || !status) return;
+          btn.disabled = true;
+          let ok = 0;
+          let fail = 0;
+          for (const id of ids) {
+            try {
+              await pb.collection('posts').update(id, { status: status });
+              ok++;
+            } catch {
+              fail++;
+            }
+          }
+          btn.disabled = false;
+          self.vanblogUI?.toast(
+            '批量修改完成：成功 ' + ok + ' 篇' + (fail ? '，失败 ' + fail + ' 篇' : ''),
+            fail ? 'error' : 'success',
+            4000,
+          );
+          location.reload();
+        });
+      });
+
+      document.getElementById('bulk-trash')?.addEventListener('click', async () => {
+        const pb = getPb();
+        if (!pb) return self.vanblogUI?.toast('登录已失效，请重新登录', 'error');
+        const ids = selectedIds();
+        if (!ids.length) return;
+        if (!(await self.vanblogUI?.confirmDialog({
+          title: '移入回收站',
+          message: '将选中的 ' + ids.length + ' 篇文章移入回收站？可在回收站恢复。',
+          confirmText: '移入回收站',
+          danger: true,
+        }))) return;
+        let ok = 0;
+        let fail = 0;
+        for (const id of ids) {
+          try {
+            await pb.collection('posts').update(id, { deleted: true });
+            ok++;
+          } catch {
+            fail++;
+          }
+        }
+        self.vanblogUI?.toast(
+          '已移入回收站：成功 ' + ok + ' 篇' + (fail ? '，失败 ' + fail + ' 篇' : ''),
+          fail ? 'error' : 'success',
+          4000,
+        );
+        location.reload();
+      });
+
+      // ── 行内删除 + 导出（事件委托，桌面表格与移动卡片共用） ──
+      document.addEventListener('click', async (e) => {
+        const target = e.target;
+        if (!(target instanceof Element)) return;
+
+        const del = target.closest('.act-del');
+        if (del) {
+          const pb = getPb();
+          if (!pb) return self.vanblogUI?.toast('登录已失效，请重新登录', 'error');
+          const id = del.dataset.id;
+          const title = del.dataset.title || '该文章';
+          if (!id) return;
+          if (!(await self.vanblogUI?.confirmDialog({
+            title: '移入回收站',
+            message: '「' + title + '」将移入回收站，可在回收站恢复。',
+            confirmText: '移入回收站',
+            danger: true,
+          }))) return;
+          try {
+            await pb.collection('posts').update(id, { deleted: true });
+            self.vanblogUI?.toast('已移入回收站', 'success');
+            document.querySelectorAll('[data-id="' + window.CSS.escape(id) + '"]').forEach((el) => el.remove());
+            syncBulkBar();
+          } catch (err) {
+            self.vanblogUI?.toast('删除失败: ' + (err && err.message ? err.message : err), 'error');
+          }
+          return;
+        }
+
+        const exp = target.closest('.act-export');
+        if (exp) {
+          const pb = getPb();
+          if (!pb) return self.vanblogUI?.toast('登录已失效，请重新登录', 'error');
+          const id = exp.dataset.id;
+          if (!id) return;
+          const btn = exp;
+          btn.disabled = true;
+          try {
+            const resp = await fetch('/api/vanblog/export/post/' + id, {
+              headers: { Authorization: 'Bearer ' + pb.authStore.token },
+            });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            // pathname 可能含路径分隔符，替换掉避免浏览器改写文件名。
+            a.download = (exp.dataset.pathname || id).replace(/[\\/]+/g, '-') + '.zip';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            self.vanblogUI?.toast('已开始下载', 'success');
+          } catch (err) {
+            self.vanblogUI?.toast('导出失败: ' + (err && err.message ? err.message : err), 'error');
+          } finally {
+            btn.disabled = false;
+          }
+        }
+      });
+
+      // bfcache 返回时浏览器可能保留勾选状态，恢复一次批量栏显示。
+      window.addEventListener('pageshow', syncBulkBar);
+    })();
   </script>
 </AdminLayout>

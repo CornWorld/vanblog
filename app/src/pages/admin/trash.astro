@@ -24,50 +24,70 @@ const { data: trash = [] } = denied ? { data: [] } : await safe(
 
 <AdminLayout title="回收站">
   <h1>回收站</h1>
-  <p><a href="/admin">← 返回</a></p>
 
   {denied ? (
     <ErrorNotice code="403" title="无权限访问" message="回收站需要 article:create 或 article:update 权限。" />
   ) : trash.length === 0 ? (
     <p>回收站为空。</p>
   ) : (
-    <table class="w-full border-collapse">
+    <div class="flex items-center gap-3 flex-wrap mb-3">
+      <div class="flex items-center gap-2 flex-wrap" data-bulk-bar hidden>
+        <span data-bulk-info class="text-[var(--text-muted)] text-sm"></span>
+        <button type="button" class="btn btn-sm" data-bulk-restore>恢复选中</button>
+        {canDeletePost && (
+          <button type="button" class="btn btn-sm btn-danger" data-bulk-purge>彻底删除选中</button>
+        )}
+      </div>
+      {canDeletePost && (
+        <button type="button" class="btn btn-sm btn-danger ml-auto" data-empty-trash>清空回收站</button>
+      )}
+    </div>
+    <div class="table-wrap">
+    <table class="admin-table">
       <thead>
         <tr class="text-left border-b border-[var(--border)]">
+          <th class="w-8"><input type="checkbox" aria-label="全选" data-select-all /></th>
           <th>标题</th><th>状态</th><th>删除时间</th><th>操作</th>
         </tr>
       </thead>
       <tbody>
         {trash.map(post => (
           <tr data-id={post.id} class="border-b border-[var(--border)]">
+            <td><input type="checkbox" class="row-select" aria-label={`选择 ${post.title}`} value={post.id} /></td>
             <td>{post.title}</td>
-            <td>{post.status}</td>
+            <td><span class={`badge badge-${post.status}`}>{post.status}</span></td>
             <td>{fmtDateTime(post.updated)}</td>
             <td class="flex gap-2 flex-wrap">
-              <button class="btn-restore">恢复</button>
+              <button class="btn btn-sm btn-restore">恢复</button>
               {canDeletePost && (
-                <button class="btn-purge text-red-600">彻底删除</button>
+                <button class="btn btn-sm btn-danger btn-purge">彻底删除</button>
               )}
             </td>
           </tr>
         ))}
       </tbody>
     </table>
+    </div>
   )}
 
   <script is:inline>
     document.querySelectorAll('tr[data-id]').forEach((tr) => {
       const id = tr.dataset.id;
+      const title = tr.querySelector('td')?.textContent?.trim() || '该文章';
 
       tr.querySelector('.btn-restore').addEventListener('click', async () => {
-        if (!id || !confirm('恢复该文章？（deleted=false）')) return;
+        if (!id || !(await self.vanblogUI?.confirmDialog({
+          title: '恢复文章',
+          message: `恢复「${title}」到文章列表？`,
+          confirmText: '恢复',
+        }))) return;
         const pb = self.vanblog?.pb;
-        if (!pb) return alert('未登录');
+        if (!pb) return self.vanblogUI?.toast('登录已失效，请重新登录', 'error');
         try {
           await pb.vanblog.posts.restore(id);
           location.reload();
         } catch (err) {
-          alert('恢复失败: ' + err.message);
+          self.vanblogUI?.toast('恢复失败: ' + err.message, 'error');
         }
       });
 
@@ -75,17 +95,95 @@ const { data: trash = [] } = denied ? { data: [] } : await safe(
       if (purgeBtn) {
         purgeBtn.addEventListener('click', async () => {
           if (!id) return;
-          if (!confirm('彻底删除？该操作不可撤销。')) return;
+          if (!(await self.vanblogUI?.confirmDialog({
+            title: '彻底删除',
+            message: `彻底删除「${title}」？该操作不可撤销，修订历史将一并丢失。`,
+            confirmText: '彻底删除',
+            danger: true,
+          }))) return;
           const pb = self.vanblog?.pb;
-          if (!pb) return alert('未登录');
+          if (!pb) return self.vanblogUI?.toast('登录已失效，请重新登录', 'error');
           try {
             await pb.vanblog.posts.purge(id);
             location.reload();
           } catch (err) {
-            alert('删除失败: ' + err.message);
+            self.vanblogUI?.toast('删除失败: ' + err.message, 'error');
           }
         });
       }
+    });
+    // ---- 多选与批量操作 ----
+    const bar = document.querySelector('[data-bulk-bar]');
+    const info = document.querySelector('[data-bulk-info]');
+    const selectAll = document.querySelector('[data-select-all]');
+    const getSelected = () =>
+      Array.from(document.querySelectorAll('.row-select:checked')).map((el) => el.value);
+
+    const updateBar = () => {
+      const n = getSelected().length;
+      if (!bar || !info) return;
+      bar.hidden = n === 0;
+      info.textContent = `已选中 ${n} 项`;
+      if (selectAll) selectAll.checked = n > 0 && n === document.querySelectorAll('.row-select').length;
+    };
+
+    document.querySelectorAll('.row-select').forEach((el) =>
+      el.addEventListener('change', updateBar)
+    );
+    selectAll?.addEventListener('change', () => {
+      document.querySelectorAll('.row-select').forEach((el) => (el.checked = selectAll.checked));
+      updateBar();
+    });
+
+    const batch = async (ids, action, label) => {
+      const pb = self.vanblog?.pb;
+      if (!pb) return self.vanblogUI?.toast('登录已失效，请重新登录', 'error');
+      let ok = 0, fail = 0;
+      for (const id of ids) {
+        try {
+          await pb.vanblog.posts[action](id);
+          ok++;
+        } catch {
+          fail++;
+        }
+      }
+      self.vanblogUI?.toast(`${label}: 成功 ${ok} 项${fail ? `，失败 ${fail} 项` : ''}`, fail ? 'error' : 'success');
+      location.reload();
+    };
+
+    document.querySelector('[data-bulk-restore]')?.addEventListener('click', async () => {
+      const ids = getSelected();
+      if (!ids.length) return;
+      if (!(await self.vanblogUI?.confirmDialog({
+        title: '批量恢复',
+        message: `恢复选中的 ${ids.length} 篇文章到文章列表？`,
+        confirmText: '恢复',
+      }))) return;
+      await batch(ids, 'restore', '批量恢复');
+    });
+
+    document.querySelector('[data-bulk-purge]')?.addEventListener('click', async () => {
+      const ids = getSelected();
+      if (!ids.length) return;
+      if (!(await self.vanblogUI?.confirmDialog({
+        title: '批量彻底删除',
+        message: `彻底删除选中的 ${ids.length} 篇文章？该操作不可撤销，修订历史将一并丢失。`,
+        confirmText: '彻底删除',
+        danger: true,
+      }))) return;
+      await batch(ids, 'purge', '批量删除');
+    });
+
+    document.querySelector('[data-empty-trash]')?.addEventListener('click', async () => {
+      const ids = Array.from(document.querySelectorAll('tr[data-id]')).map((tr) => tr.dataset.id);
+      if (!ids.length) return;
+      if (!(await self.vanblogUI?.confirmDialog({
+        title: '清空回收站',
+        message: `将永久删除回收站中的全部 ${ids.length} 篇文章，此操作不可逆，修订历史无法恢复。确定继续？`,
+        confirmText: '全部彻底删除',
+        danger: true,
+      }))) return;
+      await batch(ids, 'purge', '清空回收站');
     });
   </script>
 </AdminLayout>

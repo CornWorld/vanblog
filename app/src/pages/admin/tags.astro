@@ -3,7 +3,7 @@ export const prerender = false;
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { safe } from '@vanblog/sdk';
-import type { Tag } from '@vanblog/sdk';
+import type { Post, Tag } from '@vanblog/sdk';
 
 const pb = Astro.locals.pb;
 
@@ -11,45 +11,74 @@ const { data: tags = [] } = await safe(
   () => pb.collection('tags').getFullList<Tag>({ sort: 'name' }),
   'admin/tags'
 );
+
+const { data: posts = [] } = await safe(
+  () =>
+    pb.collection('posts').getFullList<Post>({
+      fields: 'category,tags,deleted',
+      filter: 'deleted!=true',
+    }),
+  'admin/tags-posts'
+);
+
+const countMap = new Map<string, number>();
+for (const p of posts) {
+  for (const t of p.tags || []) countMap.set(t, (countMap.get(t) || 0) + 1);
+}
 ---
 <AdminLayout title="标签管理">
   <h1>标签管理</h1>
-  <p><a href="/admin">← 返回</a></p>
+  <p><a href="/admin/categories">→ 分类管理</a></p>
 
   <form id="new-tag" class="flex gap-2 flex-wrap mb-4">
     <input name="name" placeholder="标签名" required class="px-1.5 py-0.5 flex-1 min-w-[160px]" />
     <input name="slug" placeholder="slug（可空）" class="px-1.5 py-0.5 w-40" />
     <input name="description" placeholder="描述（可空）" class="px-1.5 py-0.5 w-60" />
-    <button type="submit">+ 新建</button>
+    <button type="submit" class="btn btn-primary">+ 新建</button>
   </form>
 
-  <table class="w-full border-collapse">
-    <thead>
-      <tr class="text-left border-b border-[var(--border)]">
-        <th>名称</th><th>slug</th><th>描述</th><th>操作</th>
-      </tr>
-    </thead>
-    <tbody>
-      {tags.map(t => (
-        <tr data-id={t.id} class="border-b border-[var(--border)]">
-          <td><input class="f-name" value={t.name} class="w-full" /></td>
-          <td><input class="f-slug" value={t.slug || ''} class="w-full" /></td>
-          <td><input class="f-desc" value={t.description || ''} class="w-full" /></td>
-          <td class="flex gap-2">
-            <button class="btn-save">保存</button>
-            <button class="btn-del text-red-600">删除</button>
-          </td>
+  <div class="table-wrap">
+    <table class="admin-table w-full">
+      <thead>
+        <tr>
+          <th>名称</th><th>slug</th><th>描述</th><th>文章数</th><th>操作</th>
         </tr>
-      ))}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {tags.map(t => {
+          const count = (t.id && countMap.get(t.id)) || 0;
+          return (
+            <tr data-id={t.id} data-name={t.name} data-count={count}>
+              <td><input class="f-name" value={t.name} class="w-full" /></td>
+              <td><input class="f-slug" value={t.slug || ''} class="w-full" /></td>
+              <td><input class="f-desc" value={t.description || ''} class="w-full" /></td>
+              <td>
+                <a href={`/admin?tag=${t.id}`}>
+                  <span class="badge badge-muted">{count}</span>
+                </a>
+              </td>
+              <td class="flex gap-2">
+                <button class="btn btn-sm btn-save">保存</button>
+                <button class="btn btn-sm btn-danger btn-del">删除</button>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
   {tags.length === 0 && <p>暂无标签。</p>}
 
   <script>
-    const pb = self.vanblog?.pb;
+    const toast = (msg: string, type: 'success' | 'error' | 'info', ttl?: number) =>
+      self.vanblogUI?.toast(msg, type, ttl);
+
+    const confirmDialog = (opts: { title?: string; message: string; confirmText?: string; danger?: boolean }) =>
+      self.vanblogUI?.confirmDialog(opts) ?? Promise.resolve(false);
 
     document.getElementById('new-tag')!.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const pb = self.vanblog?.pb;
       if (!pb) return;
       const fd = new FormData(e.target as HTMLFormElement);
       try {
@@ -59,28 +88,52 @@ const { data: tags = [] } = await safe(
           description: fd.get('description') || undefined,
         });
         location.reload();
-      } catch (err) { alert('新建失败: ' + (err as Error).message); }
+      } catch (err) {
+        toast('新建失败: ' + (err as Error).message, 'error');
+      }
     });
 
     document.querySelectorAll<HTMLElement>('tr[data-id]').forEach((tr) => {
       const id = tr.dataset.id!;
-      if (!pb) return;
-      tr.querySelector<HTMLElement>('.btn-save')!.onclick = async () => {
+      const saveBtn = tr.querySelector<HTMLButtonElement>('.btn-save')!;
+
+      saveBtn.onclick = async () => {
+        const pb = self.vanblog?.pb;
+        if (!pb) return;
         try {
           await pb.collection('tags').update(id, {
             name: (tr.querySelector('.f-name') as HTMLInputElement).value,
             slug: (tr.querySelector('.f-slug') as HTMLInputElement).value,
             description: (tr.querySelector('.f-desc') as HTMLInputElement).value,
           });
-          alert('已保存');
-        } catch (err) { alert('保存失败: ' + (err as Error).message); }
+          const orig = saveBtn.textContent;
+          saveBtn.textContent = '✓ 已保存';
+          setTimeout(() => { saveBtn.textContent = orig; }, 1500);
+        } catch (err) {
+          toast('保存失败: ' + (err as Error).message, 'error');
+        }
       };
+
       tr.querySelector<HTMLElement>('.btn-del')!.onclick = async () => {
-        if (!confirm('确定删除该标签？')) return;
+        const pb = self.vanblog?.pb;
+        if (!pb) return;
+        const name = tr.dataset.name || '该标签';
+        const count = Number(tr.dataset.count || 0);
+        const using = count > 0 ? `（${count} 篇文章正在使用）` : '';
+        const ok = await confirmDialog({
+          title: '删除标签',
+          message: `确定删除「${name}」？${using}`,
+          confirmText: '删除',
+          danger: true,
+        });
+        if (!ok) return;
         try {
           await pb.vanblog.tags.delete(id);
           tr.remove();
-        } catch (err) { alert('删除失败: ' + (err as Error).message); }
+          toast('已删除', 'success');
+        } catch (err) {
+          toast('删除失败: ' + (err as Error).message, 'error');
+        }
       };
     });
   </script>
