@@ -135,14 +135,23 @@ ok "seed 完成(1 篇 showcase + $SEED_COUNT 篇 HN/arXiv 语料)"
 # ── 4. 清零引用 tag(showcase 的 gofakeit 标签只有名字没有文章,tag 页
 #    「0 文章」即由此来;devseed 每次重建都会再造一批,放 setup 里跟随
 #    每次重置自动生效)──────────────────────────────────────────
+# 宿主侧步骤打的是容器 80 的宿主发布端口,必须带 allowedDomains 内的 Host 头
+# (demo 加固守卫对名单外 Host 的写请求一律 400——欢迎文曾因此从未建成功);
+# 端口按容器现场解析,避免同宿主多实例时打到别的 vanblog 上。
+PUBLISHED_PORT=$(docker port "$VANBLOG_CONTAINER" 80/tcp 2>/dev/null | head -1 | awk -F: '{print $NF}')
+HOST_PB_URL="${VANBLOG_DEMO_HOST_PB_URL:-http://127.0.0.1:${PUBLISHED_PORT:-8080}}"
 info "清理零引用 tag…"
-python3 - "$PB_URL" "$SUPER_TOKEN" << 'PYEOF' || warn "零引用 tag 清理失败(不影响就绪)"
+python3 - "$HOST_PB_URL" "$DOMAIN" "$SUPER_TOKEN" << 'PYEOF' || warn "零引用 tag 清理失败(不影响就绪)"
 import json, sys, urllib.request
-pb, token = sys.argv[1], sys.argv[2]
+pb, host, token = sys.argv[1], sys.argv[2], sys.argv[3]
 def get(u):
-    return json.load(urllib.request.urlopen(u))
+    req = urllib.request.Request(u)
+    req.add_header('Host', host)
+    return json.load(urllib.request.urlopen(req))
 def delete(u):
-    req = urllib.request.Request(u, method='DELETE', headers={'Authorization': 'Bearer ' + token})
+    req = urllib.request.Request(u, method='DELETE')
+    req.add_header('Authorization', 'Bearer ' + token)
+    req.add_header('Host', host)
     return urllib.request.urlopen(req).status
 tags = get(pb + '/api/collections/tags/records?perPage=200')['items']
 posts = get(pb + '/api/collections/posts/records?perPage=200&fields=id,tags')['items']
@@ -162,14 +171,15 @@ ok "零引用 tag 清理完成"
 # ── 5. 置顶欢迎文(公开演示的试玩说明,含后台凭据)──────────────────
 # 写成文章而非 login 页硬编码:自部署实例零改动,演示实例随每次重置自动重建。
 info "创建置顶欢迎文…"
-python3 - "$PB_URL" "$TOKEN" "$ADMIN_ID" << 'PYEOF' || warn "欢迎文创建失败(不影响就绪)"
+python3 - "$HOST_PB_URL" "$DOMAIN" "$TOKEN" "$ADMIN_ID" << 'PYEOF' || warn "欢迎文创建失败(不影响就绪)"
 import json, sys, urllib.request
-pb, token, admin = sys.argv[1], sys.argv[2], sys.argv[3]
+pb, host, token, admin = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 def call(u, method='GET', body=None):
     data = json.dumps(body).encode() if body is not None else None
     r = urllib.request.Request(u, data=data, method=method)
     r.add_header('Authorization', 'Bearer ' + token)
     r.add_header('Content-Type', 'application/json')
+    r.add_header('Host', host)
     return json.load(urllib.request.urlopen(r))
 pathname = 'welcome-demo'
 content = """## 👋 欢迎来到 VanBlog 公开演示站
