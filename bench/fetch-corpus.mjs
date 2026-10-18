@@ -260,9 +260,24 @@ if (MODE === "replay") {
 
   const all = [];
   let failures = 0;
+  // 公开 API 的 429/超时是常态(arXiv 按 IP 限流尤甚),而 replay 是 demo 重置
+  // 每小时无人值守走的路:单次请求失败不该直接判整轮死刑——先重试退避
+  // (2s/6s),耗尽后才计一次失败。严格契约不变:仍缺篇即 exit 1。
+  const withRetry = async (label, fn, tries = 3) => {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await fn();
+      } catch (e) {
+        if (attempt >= tries) throw e;
+        const wait = 2000 * 3 ** (attempt - 1);
+        console.error(`[fetch-corpus] ${label}: ${e.message}(第 ${attempt} 次失败,${wait}ms 后重试)`);
+        await sleep(wait);
+      }
+    }
+  };
   for (const id of hnIds) {
     try {
-      all.push(await fetchHNById(id));
+      all.push(await withRetry(`hn ${id}`, () => fetchHNById(id)));
     } catch (e) {
       failures++;
       console.error(`[fetch-corpus] hn ${id}: ${e.message}`);
@@ -271,8 +286,9 @@ if (MODE === "replay") {
   }
   for (let i = 0; i < arxivIds.length; i += 50) {
     if (i > 0) await sleep(1000); // be polite
+    const batch = arxivIds.slice(i, i + 50);
     try {
-      all.push(...(await fetchArxivByIds(arxivIds.slice(i, i + 50))));
+      all.push(...(await withRetry(`arxiv batch(${batch.length})`, () => fetchArxivByIds(batch))));
     } catch (e) {
       failures++;
       console.error(`[fetch-corpus] arxiv batch: ${e.message}`);
