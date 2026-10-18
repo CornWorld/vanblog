@@ -33,6 +33,11 @@ packs/*/schema.js
 # Freshness sidecar produced by `vanblog pack build` (same lifecycle as schema.js)
 packs/*/schema.js.meta.json
 
+# DreamCat 主题的本地开发副本 —— 既不进仓库、也不进镜像(见 .dockerignore 同名条目);
+# 正式环境经主题卷 /var/lib/vanblog/themes 安装,规范源是独立主题仓。
+# 放在 themes/ 下只是为了让 `pnpm dev` 能解析 ../shared-config.mjs 与 ../app/integrations/。
+/themes/dreamcat/
+
 # Go build artifacts
 vault/vanblog
 vault/bin/

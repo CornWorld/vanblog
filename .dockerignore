@@ -12,3 +12,6 @@ app/.astro
 .astro
 .DS_Store
 docs/.site
+# DreamCat 主题只在正式环境经主题卷(/var/lib/vanblog/themes)安装,不进镜像:
+# 它依赖仓外的 @vanblog/mdui-lite dist,混进 astro-build 的逐主题循环会整条构建失败。
+themes/dreamcat
