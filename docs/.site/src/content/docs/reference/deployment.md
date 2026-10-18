@@ -9,7 +9,7 @@ title: 部署
 ### 路径一:一键脚本(推荐新手)
 
 ```bash
-curl -L https://raw.githubusercontent.com/cornworld/vanblog/main/vanblog.sh -o vanblog.sh
+curl -L https://raw.githubusercontent.com/cornworld/vanblog/main-go/vanblog.sh -o vanblog.sh
 chmod +x vanblog.sh
 ./vanblog.sh
 ```

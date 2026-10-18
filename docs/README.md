@@ -37,7 +37,7 @@ title: Vanblog 文档
 
 ## 部署方式（一句话）
 
-- **推荐**：`curl -sL https://raw.githubusercontent.com/cornworld/vanblog/main/vanblog.sh | bash`
+- **推荐**：`curl -sL https://raw.githubusercontent.com/cornworld/vanblog/main-go/vanblog.sh | bash`
 - 或 `docker compose up -d`（见 [部署](reference/deployment.md)）
 - 镜像：`ghcr.io/cornworld/vanblog:{prod,dev}-latest`
 

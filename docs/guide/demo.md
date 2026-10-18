@@ -15,7 +15,7 @@ title: Demo 站
 
 1. **DNS**：把 `vanblog.corn.im` 解析到服务器公网 IP（A 记录）。
 2. **一键部署**（任选）：
-   - `curl -sL https://raw.githubusercontent.com/cornworld/vanblog/main/vanblog.sh | bash`（推荐，脚本引导邮箱/端口）
+   - `curl -sL https://raw.githubusercontent.com/cornworld/vanblog/main-go/vanblog.sh | bash`（推荐，脚本引导邮箱/端口）
    - 或手动 `git clone … && docker compose up -d`
 3. **初始化 demo**：跑仓库里的 [demo-setup.sh](../../scripts/ops/demo-setup.sh)：
 

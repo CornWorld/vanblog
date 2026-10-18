@@ -9,7 +9,7 @@ title: 快速开始
 ## 方案 A：一键脚本（推荐）
 
 ```bash
-curl -sL https://raw.githubusercontent.com/cornworld/vanblog/main/vanblog.sh | bash
+curl -sL https://raw.githubusercontent.com/cornworld/vanblog/main-go/vanblog.sh | bash
 ```
 
 脚本会引导你配置：邮箱（Let's Encrypt 通知）、HTTP/HTTPS 端口、是否 HTTP_ONLY（外置反代选是）、是否暴露 8080 管理端口。

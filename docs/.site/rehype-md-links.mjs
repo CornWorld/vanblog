@@ -11,7 +11,7 @@ import { join, relative, resolve, sep, dirname } from 'node:path';
 
 const MIRROR_DIR = resolve('src/content/docs'); // astro build cwd = docs/.site
 const DOCS_SRC = resolve('..'); // 上级 docs/
-const GH_BLOB = 'https://github.com/CornWorld/vanblog/blob/main/docs';
+const GH_BLOB = 'https://github.com/CornWorld/vanblog/blob/main-go/docs';
 
 function walkMd(dir, prefix, out) {
   if (!existsSync(dir)) return out;

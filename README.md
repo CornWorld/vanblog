@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/CornWorld/vanblog/blob/main/docs/README.md">📖 文档</a>
+  <a href="https://github.com/CornWorld/vanblog/blob/main-go/docs/README.md">📖 文档</a>
   ·
   <a href="https://vanblog.corn.im">🚀 Demo</a>
   ·
@@ -45,7 +45,7 @@ Vanblog 原版由 [Mereithhh](https://github.com/Mereithhh) 开发，因个人�
 ## 快速开始
 
 ```bash
-curl -sL https://raw.githubusercontent.com/cornworld/vanblog/main/vanblog.sh | bash
+curl -sL https://raw.githubusercontent.com/cornworld/vanblog/main-go/vanblog.sh | bash
 ```
 
 或：
