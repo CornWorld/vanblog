@@ -47,6 +47,16 @@ title: 主题参考
 - **切换**：后台「外观」→ 选择主题（实时预览）。
 - **运行时新增**：把主题（含 `dist/`）放进 `VANBLOG_THEMES_DIR`（默认 `/var/lib/vanblog/themes`）。prod 下 fsnotify 自动检测重扫；后台「重新加载主题」按钮兜底。
 - **CLI**：`./vanblog.sh pack theme install <dir|zip>` / `remove <name>` / `list`。
+- ⚠️ **自建主题必须带解析链**：在主仓之外构建的 `dist/` 里对平台依赖（`piccolore` 等）和主题自身依赖是**裸导入**，运行时从主题目录向上解析。只把 `theme.json + dist/` 拷进主题卷而没有 `node_modules` 时，一选中该主题就是**全站 500**，错误只出现在容器日志：
+  `[theme-host] unhandled error: ERR_MODULE_NOT_FOUND: Cannot find package 'piccolore'`。
+  修法（容器内置主题靠 `/build/node_modules`，自装主题照抄这条链）：
+
+  ```bash
+  ln -s /build/node_modules /var/lib/vanblog/themes/node_modules   # 或把依赖装进主题目录
+  ```
+
+  内置主题（`base` / `vanblog`）不受影响——它们随镜像构建，解析链已在镜像里。
+- **调色盘随主题走**：主题可自带 `palettes/<name>/{palette.json,tokens.css}`，放进 `VANBLOG_PALETTES_DIR`（镜像内置目录为 `/build/hooks/palettes`）后由 `/api/palettes` + `/api/palette.css` 枚举；`theme.json` 的 `recommendedPalette` 指向其中一套。
 
 ## 新建主题
 
