@@ -34,11 +34,18 @@ if [ "$SELFUPDATE_SKIP" != 1 ] && command -v curl >/dev/null 2>&1 && command -v 
   if curl -sL --max-time 120 "$TARBALL" | tar xz -C "$TMP" --strip-components=1 2>/dev/null \
      && [ -f "$TMP/scripts/ops/demo-reset.sh" ] && [ -f "$TMP/bench/seed.mjs" ]; then
     mkdir -p "$DEMO_HOME"
-    rm -rf "$DEMO_HOME/scripts" "$DEMO_HOME/bench"
-    cp -a "$TMP/scripts" "$TMP/bench" "$DEMO_HOME/"
+    # 写盘结果必须复核后再宣称成功:2026-10 实测 /opt/vanblog 属主为 root 时,
+    # rm -rf 失败 → cp -a 只把新副本套进旧目录,脚本却照旧打印「自更新完成」,
+    # 宿主副本就此静止(修:chown corn:corn /opt/vanblog)。
+    if rm -rf "$DEMO_HOME/scripts" "$DEMO_HOME/bench" 2>/dev/null \
+       && cp -a "$TMP/scripts" "$TMP/bench" "$DEMO_HOME/" 2>/dev/null \
+       && [ -f "$DEMO_HOME/scripts/ops/demo-reset.sh" ] && [ -f "$DEMO_HOME/bench/seed.mjs" ]; then
+      rm -rf "$TMP"
+      ok "自更新完成,切到新副本继续"
+      exec bash "$DEMO_HOME/scripts/ops/demo-reset.sh" --no-selfupdate "$@"
+    fi
     rm -rf "$TMP"
-    ok "自更新完成,切到新副本继续"
-    exec bash "$DEMO_HOME/scripts/ops/demo-reset.sh" --no-selfupdate "$@"
+    warn "自更新写盘失败($DEMO_HOME 不可写?属主应为运行用户),继续用本地副本: $SCRIPT_DIR"
   else
     warn "自更新失败(网络/仓库?),回退本地副本继续"
     rm -rf "$TMP"

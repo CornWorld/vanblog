@@ -82,9 +82,15 @@ SUPER_PASS="${VANBLOG_DEMO_SUPER_PASSWORD:-$(openssl rand -hex 16 2>/dev/null ||
 vex vanblog superuser upsert "$SUPER_EMAIL" "$SUPER_PASS" --dir=/pb_data >/dev/null \
   || { err "superuser 轮换失败"; exit 1; }
 DEMO_HOME="${VANBLOG_DEMO_HOME:-/opt/vanblog}"
-printf '%s' "$SUPER_PASS" > "$DEMO_HOME/SUPER_PASSWORD"
-chmod 600 "$DEMO_HOME/SUPER_PASSWORD" 2>/dev/null
-ok "superuser 密码已轮换(已存 $DEMO_HOME/SUPER_PASSWORD)"
+mkdir -p "$DEMO_HOME" 2>/dev/null || true
+# 同一类坑的第二个落点:写盘失败时不能照旧打印「已存」(2026-10 实测 /opt/vanblog
+# 属主为 root 时每次重置都只留一行 Permission denied,而操作者看到的是 OK)。
+if printf '%s' "$SUPER_PASS" > "$DEMO_HOME/SUPER_PASSWORD" 2>/dev/null; then
+  chmod 600 "$DEMO_HOME/SUPER_PASSWORD" 2>/dev/null
+  ok "superuser 密码已轮换(已存 $DEMO_HOME/SUPER_PASSWORD)"
+else
+  warn "superuser 密码已轮换,但无法写入 $DEMO_HOME/SUPER_PASSWORD(目录属主应为运行用户;chown 或设 VANBLOG_DEMO_HOME)"
+fi
 
 # ── 2. 设置 allowedDomains（关键：setup 后空白名单 = TLS 拒绝）──
 info "设置 site.allowedDomains = [$DOMAIN]…"
@@ -111,14 +117,33 @@ ok "site/showcase 就绪"
 # 3b. 真实语料文章:Hacker News / arXiv(复用 bench 工具链;语料按仓库内
 #     corpus.ids.json 钉定 ID,--replay 确定性重建)。脚本用容器自带 node
 #     执行,宿主无需 node;直连容器内管理端口。
+#     非致命设计(2026-10-18):fetch-corpus 已带重试退避,但 arXiv 按 IP
+#     限流可能连重试一起打穿——此时回退宿主缓存,再没有就跳过语料。语料
+#     缺席不影响这次重置的其余步骤(tag 清理 / 置顶欢迎文)照常执行。
 BENCH_DIR="${VANBLOG_DEMO_BENCH_DIR:-$SCRIPT_DIR/../../bench}"
 [ -f "$BENCH_DIR/seed.mjs" ] || { err "未找到 bench 工具链: $BENCH_DIR/seed.mjs
   (部署机上需与 scripts/ 一起同步仓库 bench/ 目录,或设 VANBLOG_DEMO_BENCH_DIR)"; exit 1; }
 
+CORPUS_CACHE="${VANBLOG_DEMO_CORPUS_CACHE:-$DEMO_HOME/corpus.jsonl}"
+
 info "抓取语料(fetch-corpus --replay)…"
 docker cp "$BENCH_DIR" "$VANBLOG_CONTAINER:/tmp/bench" >/dev/null || { err "bench 脚本拷入容器失败"; exit 1; }
-vex sh -c 'node /tmp/bench/fetch-corpus.mjs --replay > /tmp/bench/corpus.jsonl' \
-  || { err "语料抓取失败(容器需可访问外网)"; exit 1; }
+CORPUS_SRC="fresh"
+if vex sh -c 'node /tmp/bench/fetch-corpus.mjs --replay > /tmp/bench/corpus.jsonl'; then
+  if docker cp "$VANBLOG_CONTAINER:/tmp/bench/corpus.jsonl" "$CORPUS_CACHE" >/dev/null 2>&1; then
+    ok "语料缓存已刷新: $CORPUS_CACHE"
+  else
+    warn "语料缓存写盘失败(下轮抓取失败时无兜底): $CORPUS_CACHE"
+  fi
+elif [ -f "$CORPUS_CACHE" ]; then
+  warn "语料抓取失败,回退宿主缓存 $CORPUS_CACHE"
+  docker cp "$CORPUS_CACHE" "$VANBLOG_CONTAINER:/tmp/bench/corpus.jsonl" >/dev/null 2>&1 \
+    && CORPUS_SRC="cache" \
+    || { CORPUS_SRC="skip"; warn "缓存拷入容器失败"; }
+else
+  CORPUS_SRC="skip"
+  warn "语料抓取失败且无缓存,跳过语料灌入(站点保留 showcase + 置顶欢迎文)"
+fi
 
 info "登录 superuser(categories/tags 创建权限;已轮换密码)…"
 SUPER_TOKEN=$(pbc -f -X POST "$PB_URL/api/collections/_superusers/auth-with-password" \
@@ -126,11 +151,17 @@ SUPER_TOKEN=$(pbc -f -X POST "$PB_URL/api/collections/_superusers/auth-with-pass
   -d "{\"identity\":\"$SUPER_EMAIL\",\"password\":\"$SUPER_PASS\"}" | jget 'd.get("token") or ""')
 [ -n "$SUPER_TOKEN" ] && [ "$SUPER_TOKEN" != "null" ] || { err "superuser 登录失败(轮换密码不一致?)"; exit 1; }
 
-info "灌入 $SEED_COUNT 篇真实文章…"
-vex node /tmp/bench/seed.mjs "$PB_URL" "$SUPER_TOKEN" "$TOKEN" "$SEED_COUNT" /tmp/bench/corpus.jsonl \
-  || { err "语料灌入失败"; exit 1; }
+if [ "$CORPUS_SRC" = "skip" ]; then
+  warn "本轮未灌语料(来源缺失),继续完成 tag 清理与欢迎文"
+else
+  info "灌入 $SEED_COUNT 篇真实文章(语料来源: $CORPUS_SRC)…"
+  if vex node /tmp/bench/seed.mjs "$PB_URL" "$SUPER_TOKEN" "$TOKEN" "$SEED_COUNT" /tmp/bench/corpus.jsonl; then
+    ok "seed 完成(1 篇 showcase + $SEED_COUNT 篇语料,来源 $CORPUS_SRC)"
+  else
+    warn "语料灌入失败(站点保留 showcase + 置顶欢迎文)"
+  fi
+fi
 vex rm -rf /tmp/bench
-ok "seed 完成(1 篇 showcase + $SEED_COUNT 篇 HN/arXiv 语料)"
 
 # ── 4. 清零引用 tag(showcase 的 gofakeit 标签只有名字没有文章,tag 页
 #    「0 文章」即由此来;devseed 每次重建都会再造一批,放 setup 里跟随

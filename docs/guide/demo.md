@@ -68,6 +68,15 @@ cd $VANBLOG_BASE_PATH && docker compose down -v
 - ⚠️ 逻辑：定位容器（compose/裸 run 均可）→ `docker stop` → 清空宿主
   `/pb_data` 绑定目录 → `docker start` → 跑 `demo-setup.sh`（重建 demo
   管理员 + 白名单 + site/showcase + HN 语料文章 + 置顶欢迎文）
+- ⚠️ **`$VANBLOG_DEMO_HOME`（默认 `/opt/vanblog`）属主必须是运行用户**（如 `corn`）：
+  它是 `root` 时 `rm -rf` / 写盘都会失败——自更新会写不进宿主副本
+  （2026-10-18 起会明确 warn，旧版则误报「自更新完成」而副本静止）、
+  `SUPER_PASSWORD` 也不会落盘（同样改为 warn）。修：`sudo chown <user>:<user> /opt/vanblog`。
+- ⚠️ **语料抓取不是单点依赖**（2026-10-18 起）：`fetch-corpus --replay` 自身带
+  重试退避（2s/6s，一次 arXiv `429` 不再直接判死），失败则回退宿主缓存
+  `${VANBLOG_DEMO_CORPUS_CACHE:-$VANBLOG_DEMO_HOME/corpus.jsonl}`，再没有就
+  **跳过语料但不中断重置**（tag 清理与置顶欢迎文照常执行，站点仍可玩）。
+  每次成功抓取都会刷新该缓存；缓存可随 `bench/` 一起预热。
 - 手动触发：`sudo systemctl start vanblog-demo-reset.service`
 
 ## 演示模式加固（VANBLOG_DEMO=1）
@@ -98,7 +107,7 @@ UI（`/_/`）交给全世界。demo-setup 每次重置用随机密码轮换 supe
 
 ## 维护约定
 
-- **账号**：公开 `demo`/`demo1234`。被改也不要紧——每日定时重置会恢复；等不及就手动触发上面的 service。
+- **账号**：公开 `demo`/`demo1234`。被改也不要紧——每小时定时重置会恢复；等不及就手动触发上面的 service。
 - **主题/内容**：可自由折腾，反正会重置。别在 demo 上配真实 S3/邮箱。
 - **证书**：Let's Encrypt 按域名签发，`allowedDomains` 改了要同步 `vanblog.corn.im`。
 - **评论**：如需展示评论，使用 `prod-artalk` 镜像并在 `/setup` 向导中启用 Artalk 后重启（见 [配置参考](../reference/configuration.md)）。
