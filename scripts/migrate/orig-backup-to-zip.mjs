@@ -123,10 +123,20 @@ function imgKeyFor(name) {
 }
 
 // 原版图片引用形态:
-//   <img src="/static/img/xxx.png">            (dev/本地相对路径)
-//   <img src="https://pic.xx.com/img/xxx.png"> (配置了图床域名)
-//   <img src="/img/xxx.png">                   (prod favicon 类 toRootPath,罕见)
-const IMG_REF = /(?:\/static\/img\/|\/img\/)([A-Za-z0-9._-]+)\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)/gi;
+//   <img src="/static/img/xxx.png">            (dev/本地相对路径) → 改写 + 打包字节
+//   <img src="/img/xxx.png">                   (prod favicon 类 toRootPath,罕见) → 同上
+//   <img src="https://pic.xx.com/img/xxx.png"> (带域名的绝对链接) → 一律不动
+//
+// 绝对链接为什么不动:它可能是本站图床域名,也可能是 PicGo/S3 等外部图床,光看
+// URL 形态无法区分(旧实现按 basename 认领字节并只换路径、留下旧域名,产出
+// `https://旧域名/api/files/<新站记录>` 这种两边都不存在的地址)。判定改成
+// "只认相对路径":外部图床链接保持原样可用,本站图床域名的站迁移后把域名指到
+// 新站即可;被跳过的数量在转换汇总里点名。
+// 负向后视:匹配点前若是主机名/协议字符(ex. `https://a.com/img/x.png`),说明这
+// 是绝对 URL,跳过;`"`、`(`、空白等仍是相对路径。
+const IMG_REF = /(?<![A-Za-z0-9._%-])(?:\/static\/img\/|\/img\/)([A-Za-z0-9._-]+)\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)/gi;
+
+let imgAbsoluteSkipped = 0;
 
 for (const a of articles) {
   if (a.deleted) { skipDeleted.push(a.title || a.pathname || a.id); continue; }
@@ -142,6 +152,8 @@ for (const a of articles) {
     imgRewrites++;
     return `/api/files/${key}/${fileName}`;
   });
+  // 绝对链接计数(仅统计,不改写)
+  imgAbsoluteSkipped += (content.match(/[A-Za-z0-9._%-](?:\/static\/img\/|\/img\/)[A-Za-z0-9._-]+\.(?:png|jpe?g|gif|webp|svg|bmp|ico|avif)/gi) || []).length;
 
   outPosts.push({
     id: String(a.id ?? ""),
@@ -170,7 +182,10 @@ const draftCount = Array.isArray(raw.drafts) ? raw.drafts.length : 0;
 console.error(``);
 console.error(`转换完成 → ${outDir}`);
 console.error(`  文章: ${outPosts.length}(回收站跳过 ${skipDeleted.length},草稿不迁移: ${draftCount})`);
-console.error(`  图片改写: ${imgRewrites}(无字节保留原链 ${imgMissing})`);
+console.error(`  图片改写: ${imgRewrites}(无字节保留原链 ${imgMissing},带域名的绝对链接保持原样 ${imgAbsoluteSkipped})`);
+if (imgAbsoluteSkipped > 0) {
+  console.error("  提示: 上面这些绝对图片链接未打包、也未改写;若域名是你自己的图床,迁移后把该域名指向新站即可。");
+}
 console.error(`下一步:`);
 console.error(`  cd ${outDir} && zip -r ../vanblog-import.zip .`);
 console.error(`  然后在新版后台「数据迁移」上传 vanblog-import.zip`);
