@@ -17,9 +17,12 @@
 //   article.hidden=true  → status "hidden";其余 "published"
 //   article.deleted=true → 跳过(先在原版回收站恢复需要的文章再重新导出)
 //   drafts               → 跳过(原版草稿箱与文章集合分离,需在原版先发布)
-//   /static/img/<name> 与
-//   <picDomain>/img/<name> 等 img 引用 → 改写为 /api/files/<key>/<name>,
-//                                        字节放入 images/<key>/<name>
+//   /static/img/<name>、/img/<name> 等相对引用 → 改写为 /api/files/<key>/<name>,
+//                                              字节放入 images/<key>/<name>
+//   带域名的绝对链接(<picDomain>/img/<name>、S3/PicGo 外链) → 原样保留、不打包,
+//                                              只在汇总里计数(备份 JSON 的 setting
+//                                              只有 static 站点设置,不含图床配置,
+//                                              光凭 URL 形态分不出自有域名与第三方)
 //   分类/标签按名字原样保留(导入端按名字 resolve-or-create)
 //
 // 用法:
