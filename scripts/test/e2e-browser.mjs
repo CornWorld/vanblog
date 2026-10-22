@@ -343,7 +343,7 @@ await clickabilitySweep('/post/e2e-locked', '锁定文详情');
 // 只在语料规模 + timeline 模板出现,旧 sweep 每页只抽查前 12 条且不扫
 // timeline,全部漏掉)──
 console.log('== 站内链接完整性 ==');
-await assert('L1 主要页面全部同源链接零死链', async () => {
+await assert('主要页面全部同源链接零死链', async () => {
   const entries = ['/', '/timeline', '/archive', '/tag', '/category', '/post/e2e-normal'];
   const hrefs = new Set();
   for (const p of entries) {
@@ -360,7 +360,7 @@ await assert('L1 主要页面全部同源链接零死链', async () => {
     if (res.status() >= 400) throw new Error(`死链 ${href} → ${res.status()}`);
   }
 });
-await assert('L2 未知路径返回真 404 并渲染 404 页', async () => {
+await assert('未知路径返回真 404 并渲染 404 页', async () => {
   // 两层未知面都要盖:根路径未知页,与 /post/* 下未知 slug——后者曾 302 弹
   // /admin/(page.request.get 跟随重定向后拿到 200,只测根路径必漏)。
   for (const p of ['/e2e-no-such-page-404', '/post/e2e-no-such-post-404']) {

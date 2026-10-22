@@ -23,7 +23,7 @@
 //   REVIEW   — 与 base 内容有差异，需人工过目；对 .astro/.ts/.tsx 文件，比较
 //              契约面（Props 接口属性 ∪ Astro.props 解构变量）：仅当 base 侧
 //              契约变量在 override 侧缺失（如 base 新增 prop）才额外标注
-//              「L0 contract drift」，并在 detail 中列出缺失的契约变量名
+//              「S0 contract drift」，并在 detail 中列出缺失的契约变量名
 //   OK       — 与 base 完全一致，无需处理
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -72,7 +72,7 @@ function walk(dir, prefix = '') {
   return out;
 }
 
-/** File types whose Props/Astro.props contract is part of the L0 surface. */
+/** File types whose Props/Astro.props contract is part of the S0 surface. */
 const FRONTMATTER_SRC = /\.(astro|ts|tsx)$/;
 
 /**
@@ -108,7 +108,7 @@ function extractDestructuredNames(text) {
 }
 
 /**
- * L0 contract surface for a file: Props property names ∪ Astro.props
+ * S0 contract surface for a file: Props property names ∪ Astro.props
  * destructured keys. Used to detect contract drift without being sensitive
  * to unrelated textual differences.
  */
@@ -148,7 +148,7 @@ function classify(rel, overridePath, basePath) {
     const overrideContract = extractContract(override.toString('utf8'));
     const missing = [...baseContract].filter((name) => !overrideContract.has(name));
     if (missing.length > 0) {
-      detail += `｜L0 contract drift（base 新增 prop: ${missing.join(', ')}）`;
+      detail += `｜S0 contract drift（base 新增 prop: ${missing.join(', ')}）`;
     }
   }
   return { status: 'REVIEW', rel, detail };

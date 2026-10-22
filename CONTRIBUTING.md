@@ -50,7 +50,7 @@ test(migration): 补导入回环测试
 - `app/src/pages/admin/**`、`app/src/pages/api/**` — 控制面板 / API 端点
 - `app/src/lib/**`、`app/src/loaders/**`、`app/src/live.config.*`、`app/src/middleware.*` — 平台基础设施
 - `vault/pb_migrations/*.go` — 已锁定的 schema 迁移
-- `sdk/src/` 公开 API 签名（L0 契约，破坏需 major 版本）
+- `sdk/src/` 公开 API 签名（S0 契约，破坏需 major 版本）
 - `themes/<name>/src/base-overrides/{pages/admin,pages/api,lib,loaders}/**`
 
 ## 主题 / Pack 开发

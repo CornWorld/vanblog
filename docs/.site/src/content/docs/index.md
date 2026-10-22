@@ -12,13 +12,13 @@ title: Vanblog 文档
 
 | 你想做什么                 | 去这里                                     |
 | -------------------------- | ------------------------------------------ |
-| 5 分钟把 Vanblog 跑起来    | [快速开始 (L0)](guide/quickstart.md)       |
-| 升级 / 备份 / 回滚         | [备份与升级 (L2)](guide/backup-upgrade.md) |
-| 从原版 Vanblog 迁移        | [从原版迁移 (L2)](guide/migration.md)      |
-| 外置反代 + TLS / HTTP_ONLY | [反代与安全 (L2)](guide/reverse-proxy.md)  |
-| 安装和启用 Pack            | [Pack 使用 (L2)](guide/packs.md)           |
-| 部署评论（Artalk 同源）    | [评论集成 (L2)](guide/comments-artalk.md)  |
-| 写文章 / 换主题 / 后台功能 | [功能使用 (L1)](guide/features.md)         |
+| 5 分钟把 Vanblog 跑起来    | [快速开始 (入门)](guide/quickstart.md)       |
+| 升级 / 备份 / 回滚         | [备份与升级 (运维)](guide/backup-upgrade.md) |
+| 从原版 Vanblog 迁移        | [从原版迁移 (迁移)](guide/migration.md)      |
+| 外置反代 + TLS / HTTP_ONLY | [反代与安全 (运维)](guide/reverse-proxy.md)  |
+| 安装和启用 Pack            | [Pack 使用 (进阶)](guide/packs.md)           |
+| 部署评论（Artalk 同源）    | [评论集成 (运维)](guide/comments-artalk.md)  |
+| 写文章 / 换主题 / 后台功能 | [功能使用 (进阶)](guide/features.md)         |
 | 遇到问题先查这里           | [FAQ](faq.md)                              |
 | 体验 / 部署 Demo 站        | [Demo 站](guide/demo.md)                   |
 

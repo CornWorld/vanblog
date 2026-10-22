@@ -36,7 +36,7 @@ title: Vanblog Theme 作者手册
 2. [Theme 项目结构](#2-theme-项目结构)
 3. [`@vanblog/base/*` alias 引用方式](#3-vanblogbase-alias-引用方式)
 4. [覆盖 base（base-overrides）](#4-覆盖-basebase-overrides)
-5. [L0/L1/L2 三层 API Surface](#5-l0l1l2-三层-api-surface)
+5. [S0/S1/S2 三层 API Surface](#5-s0s1s2-三层-api-surface)
 6. [模板契约清单（frontmatter 变量）](#6-模板契约清单frontmatter-变量)
 7. [禁区列表](#7-禁区列表)
 8. [升级流程](#8-升级流程)
@@ -258,7 +258,7 @@ import { fmtDate } from "@vanblog/sdk"; // ← SDK 走 @vanblog/sdk，不是 @va
 import { safe } from "@vanblog/base/lib/safe"; // ← 内部工具走 @vanblog/base/lib/...
 ```
 
-> **注意**：公开 API（`fmtDate`、`stripMarkdown`、`safe`、`pb.vanblog.*`）走 `@vanblog/sdk`，是 L0 契约层；`@vanblog/base/lib/*` 是 L2 内部层，**无稳定性保证**，升级时自负。
+> **注意**：公开 API（`fmtDate`、`stripMarkdown`、`safe`、`pb.vanblog.*`）走 `@vanblog/sdk`，是 S0 契约层；`@vanblog/base/lib/*` 是 S2 内部层，**无稳定性保证**，升级时自负。
 
 ### 3.4 alias 解析规则（重要）
 
@@ -327,7 +327,7 @@ const { title } = Astro.props;
 
 ### 4.3 例子 2：覆盖 PostCard 组件
 
-base 的 `app/src/components/PostCard.astro` 接受 `post` 和 `mode` props（L1 契约）。theme 想改卡片样式：
+base 的 `app/src/components/PostCard.astro` 接受 `post` 和 `mode` props（S1 契约）。theme 想改卡片样式：
 
 ```astro
 ---
@@ -352,7 +352,7 @@ const { post, mode = 'list' } = Astro.props;
 </style>
 ```
 
-> **L1 契约提醒**：`post` 和 `mode` 是 L1 props，**必须保留**（不能改名、不能改类型语义）。可以加新 props（必须 optional + 有默认值）。详见 [§5](#5-l0l1l2-三层-api-surface)。
+> **S1 契约提醒**：`post` 和 `mode` 是 S1 props，**必须保留**（不能改名、不能改类型语义）。可以加新 props（必须 optional + 有默认值）。详见 [§5](#5-s0s1s2-三层-api-surface)。
 
 ### 4.4 例子 3：覆盖全局样式
 
@@ -377,11 +377,13 @@ base 的 `app/src/styles/global.css` 定义了 CSS 变量。theme 想覆盖某�
 
 ---
 
-## 5. L0/L1/L2 三层 API Surface
+## 5. S0/S1/S2 三层 API Surface
 
 base 升级时哪些改动安全、哪些会破坏 theme？按"距 theme 作者远近"分三层：
 
-### 5.1 L0 契约层（永远稳定）
+> **命名约定**：S0/S1/S2 是**稳定性轴**（base 对外承诺的强弱）。架构层另用 L0 后端 / L1 平台层 / L2 主题（见 `reference/themes.md`），两套编号不互通——看到 L 指位置，看到 S 指承诺。
+
+### 5.1 S0 契约层（永远稳定）
 
 | 类型                     | 示例                                                                                                           | 稳定性保证                                              |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
@@ -389,36 +391,36 @@ base 升级时哪些改动安全、哪些会破坏 theme？按"距 theme 作者�
 | **SDK 函数签名**         | `pb.vanblog.posts.listPublished(page, perPage)`、`stripMarkdown(content, len)`、`fmtDate(ts)`、`safe(fn, key)` | 参数名/顺序/返回类型不变；新增参数必须 optional         |
 | **PB collection 字段名** | `posts.title`、`posts.content`、`posts.created`、`posts.tags`、`posts.category`                                | 与 `vault/pb_migrations/*.go` 锁定，破坏需 major + 迁移 |
 
-**theme 该怎么用 L0**：放心依赖，base 升级不会炸。对应 PHP CMS 的 `the_title()` / `$this->title()`。
+**theme 该怎么用 S0**：放心依赖，base 升级不会炸。对应 PHP CMS 的 `the_title()` / `$this->title()`。
 
 ```astro
 ---
-// ✅ 安全：依赖 L0 frontmatter 变量
+// ✅ 安全：依赖 S0 frontmatter 变量
 const { posts, totalPages, page } = Astro.props;
-// ✅ 安全：依赖 L0 SDK 函数
+// ✅ 安全：依赖 S0 SDK 函数
 import { fmtDate, stripMarkdown } from '@vanblog/sdk';
 ---
 ```
 
-### 5.2 L1 组件 API 层（语义稳定，可加不可减）
+### 5.2 S1 组件 API 层（语义稳定，可加不可减）
 
 | 类型                   | 示例                                                                   | 稳定性保证                                                                                                                  |
 | ---------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | **base 组件 props 名** | `BaseLayout.title`、`PostCard.post`、`PostCard.mode`、`PackPage.title` | 可加新 props（必须 optional + 合理默认）；**不可删旧 props**；不可改 prop 类型语义（`string` 不能变 `string \| undefined`） |
 | **组件 import 路径**   | `@vanblog/base/layouts/BaseLayout.astro`                               | alias 路径不变；文件位置可在 `app/src/` 内部移动                                                                            |
 
-**theme 该怎么用 L1**：覆盖组件时保留所有现有 props 的名字和类型；可以加新 props 但要给默认值。
+**theme 该怎么用 S1**：覆盖组件时保留所有现有 props 的名字和类型；可以加新 props 但要给默认值。
 
 ```astro
 ---
 // themes/my-theme/src/base-overrides/components/PostCard.astro
-// ✅ 保留 L1 props：post, mode
+// ✅ 保留 S1 props：post, mode
 // ✅ 加新 props：variant（optional + 有默认值）
 const { post, mode = 'list', variant = 'default' } = Astro.props;
 ---
 ```
 
-### 5.3 L2 内部实现层（无保证，theme 自负）
+### 5.3 S2 内部实现层（无保证，theme 自负）
 
 | 类型                  | 示例                                                     | 稳定性保证                          |
 | --------------------- | -------------------------------------------------------- | ----------------------------------- |
@@ -427,11 +429,11 @@ const { post, mode = 'list', variant = 'default' } = Astro.props;
 | **内部 helper 函数**  | `app/src/lib/markdown.ts` 内的私有函数                   | 无保证                              |
 | **组件嵌套结构**      | PostCard 是否包了 `<article>`；BaseLayout 是否含 `<nav>` | 无保证                              |
 
-**theme 该怎么用 L2**：**尽量别依赖**。如果你的 override 复制了 base 组件源码然后改 class 名，base 升级时你需要跑轻量 `override_check`（admin 的 MCP 端点 `GET /api/vanblog/mcp/override_check?theme=<name>`，或直接 `node scripts/check/override-check.mjs themes/<name>`，见 [§11](#11-mcp-tools)）看报告，手动适配。
+**theme 该怎么用 S2**：**尽量别依赖**。如果你的 override 复制了 base 组件源码然后改 class 名，base 升级时你需要跑轻量 `override_check`（admin 的 MCP 端点 `GET /api/vanblog/mcp/override_check?theme=<name>`，或直接 `node scripts/check/override-check.mjs themes/<name>`，见 [§11](#11-mcp-tools)）看报告，手动适配。
 
 ```astro
 ---
-// ❌ 危险：依赖 L2 内部 class 名
+// ❌ 危险：依赖 S2 内部 class 名
 import '@vanblog/base/components/PostCard.astro';
 ---
 <!-- 假设 base 的 PostCard 输出 .post-card__inner，升级可能改名 -->
@@ -444,15 +446,15 @@ import '@vanblog/base/components/PostCard.astro';
 
 | 你的 override 依赖的层                         | base 升级时                                   | 你需要做什么                                                  |
 | ---------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------- |
-| 只依赖 L0                                      | 不会炸                                        | 无需做事                                                      |
-| 依赖 L1（覆盖 base 组件，保留 props）          | 极少炸（除非 base 删了 prop，这违反 L1 契约） | 跑 `override_check` 看一眼（见 [§11](#11-mcp-tools)）         |
-| 依赖 L2（复制源码改 class、依赖内部 DOM 结构） | 可能炸                                        | 必须跑 `override_check` + 手动适配（见 [§11](#11-mcp-tools)） |
+| 只依赖 S0                                      | 不会炸                                        | 无需做事                                                      |
+| 依赖 S1（覆盖 base 组件，保留 props）          | 极少炸（除非 base 删了 prop，这违反 S1 契约） | 跑 `override_check` 看一眼（见 [§11](#11-mcp-tools)）         |
+| 依赖 S2（复制源码改 class、依赖内部 DOM 结构） | 可能炸                                        | 必须跑 `override_check` + 手动适配（见 [§11](#11-mcp-tools)） |
 
 ---
 
 ## 6. 模板契约清单（frontmatter 变量）
 
-每个 base 页面在 frontmatter 里拿到一组固定变量（L0 契约）。theme 的 `src/pages/<same-path>.astro` 必须消费这些变量——可以重组布局，不能改变量名。
+每个 base 页面在 frontmatter 里拿到一组固定变量（S0 契约）。theme 的 `src/pages/<same-path>.astro` 必须消费这些变量——可以重组布局，不能改变量名。
 
 ### 6.1 Public 页面（路径前缀 `pages/`，被 BaseLayout 包裹）
 
@@ -500,7 +502,7 @@ import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
 import PostCard from '@vanblog/base/components/PostCard.astro';
 import { fmtDate } from '@vanblog/sdk';
 
-// L0 契约变量：posts, totalPages, page
+// S0 契约变量：posts, totalPages, page
 const { posts, totalPages, page } = Astro.props;
 ---
 <BaseLayout title="首页">
@@ -518,7 +520,7 @@ const { posts, totalPages, page } = Astro.props;
 </BaseLayout>
 ```
 
-> **frontmatter 变量从哪来**：base 的 `app/src/pages/index.astro` 通过 `live.config.ts` 注册的 Live Collection 在 frontmatter 注入这些变量。theme 的同名页面也会被 Astro 注入同样的变量——这是 L0 契约的运行时保证。
+> **frontmatter 变量从哪来**：base 的 `app/src/pages/index.astro` 通过 `live.config.ts` 注册的 Live Collection 在 frontmatter 注入这些变量。theme 的同名页面也会被 Astro 注入同样的变量——这是 S0 契约的运行时保证。
 
 ---
 
@@ -564,9 +566,9 @@ vault/pb_migrations/ ← 数据库迁移（已锁定）
 
 theme 作者 pull 主仓库后，base 自动更新（alias 解析到新的 `app/src/`）。**绝大多数升级不会炸 theme**，因为：
 
-- 你的 `src/pages/*.astro` 只依赖 L0 frontmatter 变量（永远稳定）
-- 你的 `src/base-overrides/` 如果只覆盖 L1（保留 props），base 加新 props 也不影响你
-- 只有当你的 override 依赖 L2（复制源码改 class 名、依赖内部 DOM 结构）时，才可能炸
+- 你的 `src/pages/*.astro` 只依赖 S0 frontmatter 变量（永远稳定）
+- 你的 `src/base-overrides/` 如果只覆盖 S1（保留 props），base 加新 props 也不影响你
+- 只有当你的 override 依赖 S2（复制源码改 class 名、依赖内部 DOM 结构）时，才可能炸
 
 ### 8.1 标准升级流程
 
@@ -580,7 +582,7 @@ node scripts/check/override-check.mjs themes/my-theme app/src
 # 或通过 admin 的 MCP 端点（admin-only）：
 #   GET /api/vanblog/mcp/override_check?theme=my-theme
 # 输出：ORPHANED / REVIEW / OK 分组报告；REVIEW 的 .astro/.ts/.tsx 若
-#       frontmatter 与 base 不一致，会额外标注 L0 frontmatter drift（见 §11）
+#       frontmatter 与 base 不一致，会额外标注 S0 frontmatter drift（见 §11）
 
 # 3. 根据 diff 报告修复（通常只需要改几个 class 名）
 # 4. dev 预览 + build 验证
@@ -603,9 +605,9 @@ diff themes/my-theme/src/base-overrides/layouts/BaseLayout.astro \
 
 重点看：
 
-- **L0 破坏**：frontmatter 变量名变了？SDK 函数签名变了？（极少见，会写在 CHANGELOG）
-- **L1 破坏**：base 删了某个 prop？改了 prop 类型？（违反契约，应该报 bug）
-- **L2 差异**：DOM 结构、class 名变了？（你自己适配）
+- **S0 破坏**：frontmatter 变量名变了？SDK 函数签名变了？（极少见，会写在 CHANGELOG）
+- **S1 破坏**：base 删了某个 prop？改了 prop 类型？（违反契约，应该报 bug）
+- **S2 差异**：DOM 结构、class 名变了？（你自己适配）
 
 ### 8.3 升级检查清单
 
@@ -668,7 +670,7 @@ import BaseLayout from '@vanblog/base/layouts/BaseLayout.astro';
 import { fmtDate } from '@vanblog/sdk';
 import HeroBanner from '../components/HeroBanner.astro';
 
-// L0 契约变量
+// S0 契约变量
 const { posts, totalPages, page } = Astro.props;
 ---
 <BaseLayout title="首页">

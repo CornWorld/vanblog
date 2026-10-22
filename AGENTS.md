@@ -45,7 +45,7 @@ npmmirror 偶发瞬时失败,重试即可。
 ## 主题规则
 
 - 每个 theme 是独立 Astro 项目，通过 `@vanblog/base/*` alias 引用平台层
-- 覆盖 base 组件时**保留所有现有 props**，可加 optional 新 props——详见 `docs/developer/theme-implementer-guide.md` 的 L0/L1/L2（内部稳定性政策）
+- 覆盖 base 组件时**保留所有现有 props**，可加 optional 新 props——详见 `docs/developer/theme-implementer-guide.md` 的 S0/S1/S2（base 稳定性契约）
 - theme 必须自备：`src/middleware.ts`（可 re-export base）、`src/live.config.ts`（可空）、`src/layouts/PackPage.astro`
 - CSS 永远用 `var(--color-*)`，不要硬编码颜色
 
@@ -60,7 +60,7 @@ npmmirror 偶发瞬时失败,重试即可。
 ## 迁移与升级
 
 - 数据迁移走 Go 层 `POST /api/vanblog/migrate/import`（body=导出 ZIP，限 100MB，事务；原版备份 JSON 先用 `scripts/migrate/orig-backup-to-zip.mjs` 转换）——见 `vault/internal/migration/`
-- 升级检查：对每个 `themes/<active>/src/base-overrides/<rel>` diff `app/src/<rel>`，按 L0/L1/L2 判断影响（L0 永远稳定、L1 可加不可减、L2 无保证）
+- 升级检查：对每个 `themes/<active>/src/base-overrides/<rel>` diff `app/src/<rel>`，按 S0/S1/S2 判断影响（S0 永远稳定、S1 可加不可减、S2 无保证）
 
 ## 内置 Agent
 

@@ -29,6 +29,7 @@ title: Theme 概念模型：平台层 / base 主题 / vanblog 主题
 - **平台层不是主题**。它不决定站点长什么样，只保证"能拿到数据、能渲染出页面骨架、admin 可用"。
 - **主题是独立 Astro 项目**。一个主题拥有自己的 `src/pages/`、`src/layouts/`、`src/components/`，通过 `@vanblog/base/*` alias 引用平台层基础设施。
 - **主题之间互不可见、互不继承**。没有 child-theme 机制。
+- **编号不重叠**：本表的 L0/L1/L2 指**位置**；base 对外承诺的强弱另行编号 S0 契约 / S1 组件 API / S2 内部实现，见 `developer/theme-implementer-guide.md` §5。
 
 ## 2. base 主题
 

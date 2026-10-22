@@ -5,7 +5,7 @@ title: 内置主题对齐上游原版的决策:Vendor-as-Islands
 # 内置主题对齐上游原版的决策:Vendor-as-Islands
 
 > 读者:主题作者、维护者。回答一个问题:**原版 mereithhh/vanblog 的 Next.js 前台(fork)与本仓库 Astro 重写的关系怎么处理**。
-> 相关:[theme-implementer-guide](theme-implementer-guide.md)(L0/L1/L2 契约)、[architecture-layering](../internal/architecture-layering.md)。
+> 相关:[theme-implementer-guide](theme-implementer-guide.md)(S0/S1/S2 契约)、[architecture-layering](../internal/architecture-layering.md)。
 
 ## 决策
 
@@ -67,7 +67,7 @@ title: 内置主题对齐上游原版的决策:Vendor-as-Islands
 
 | 方案 | 否决理由 |
 | --- | --- |
-| 整站跑原版 Next.js 前台 | AI-maintained 无人类维护承诺;第二个 Node 运行时;锁死 Waline;让位 pack/L0 生态;双前台路由/构建体系冲突 |
+| 整站跑原版 Next.js 前台 | AI-maintained 无人类维护承诺;第二个 Node 运行时;锁死 Waline;让位 pack 与后端(L0)生态;双前台路由/构建体系冲突 |
 | 保留手搓 Astro 组件逐个补交互 | 32 条交互逐个补永远追不上上游 fix;每条都要人肉对照上游行为;上游改一处我们盲一处 |
 | 平行维护两个前台 | 同「整站跑原版」,且用户永远只看一个 |
 
@@ -127,7 +127,7 @@ node scripts/dev/vendor-sync.mjs sync-headers               # 再生成全部文
 node scripts/dev/vendor-sync.mjs metrics [--json]           # 审计指标(下表可复算)
 ```
 
-上游爆发日(批量 `fix:`)流程:`git -C refs/mereithhh-original fetch` → `affected <pinned>..<HEAD>` → direct 盲 apply;replay patch+按 `rewrites` 重放;manual 读信号、不盲 apply、跑下方 parity 三件套;skipped-hit 复核缺席理由;UNTRIAGED(上游新文件)先补台账再动手。影响面判断沿用 L0/L1/L2:vendor 属主题内 L2(上游行为即规格);seam 与 `base-overrides` 锁定路径不受 vendor 更新影响。上游改数据面字段:同步改 Go 端 `SearchResult`/页面 props,不改 seam 签名。
+上游爆发日(批量 `fix:`)流程:`git -C refs/mereithhh-original fetch` → `affected <pinned>..<HEAD>` → direct 盲 apply;replay patch+按 `rewrites` 重放;manual 读信号、不盲 apply、跑下方 parity 三件套;skipped-hit 复核缺席理由;UNTRIAGED(上游新文件)先补台账再动手。影响面判断沿用架构层 L0/L1/L2:vendor 属主题内 L2(上游行为即规格);seam 与 `base-overrides` 锁定路径不受 vendor 更新影响。上游改数据面字段:同步改 Go 端 `SearchResult`/页面 props,不改 seam 签名。
 
 ### 审计指标(2026-09-14 基线,`metrics` 可复算)
 

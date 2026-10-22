@@ -8,7 +8,7 @@ title: 开发者文档
 
 | 文档                                                                    | 读者      | 内容                                         |
 | ----------------------------------------------------------------------- | --------- | -------------------------------------------- |
-| [theme-implementer-guide.md](theme-implementer-guide.md)               | 主题作者  | 概念模型 + L0/L1/L2 契约、组件覆盖、必备文件 |
+| [theme-implementer-guide.md](theme-implementer-guide.md)               | 主题作者  | 概念模型 + S0/S1/S2 契约、组件覆盖、必备文件 |
 | [sdk-design.md](sdk-design.md)                                         | SDK 用户  | SDK 架构与 API 设计(内部模块)                |
 | [agent-design.md](agent-design.md)                                     | 维护者    | 内置 agent(pi)架构                          |
 | [architecture-layering.md](../internal/architecture-layering.md)       | 维护者    | 整体分层原则                                 |

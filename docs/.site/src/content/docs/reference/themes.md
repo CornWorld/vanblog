@@ -14,6 +14,8 @@ title: 主题参考
 | L1 平台层 | `app/`     | 数据访问 + 渲染基础设施 + base 布局；admin / api 是平台层 |
 | L2 主题   | `themes/*` | 站点视觉 / 信息架构 / 交互（独立 Astro 项目）             |
 
+> 这套 L0/L1/L2 指**位置**。base 对外承诺的强弱另有一套编号 S0 契约 / S1 组件 API / S2 内部实现，见 `developer/theme-implementer-guide.md` §5。
+
 ## 内置主题
 
 | 主题              | 定位                                                                                            |

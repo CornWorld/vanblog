@@ -12,7 +12,7 @@ Use this skill when the user asks about:
 
 **This file is orchestration only.** For domain knowledge, always read `docs/` live:
 
-- `docs/developer/theme-implementer-guide.md` — Theme system architecture + concept model, L0/L1/L2 contracts, overrides
+- `docs/developer/theme-implementer-guide.md` — Theme system architecture + concept model, S0/S1/S2 contracts, overrides
 - `docs/internal/theme-host-design.md` — Theme host internals, loading mechanism
 - `docs/reference/deployment.md` — Deploying VanBlog (facts)
 - `docs/developer/sdk-design.md` — Vanblog SDK architecture
@@ -67,7 +67,7 @@ sessions. One entry per file per domain, newest first:
 - status: active
 - domain: theme
 - 升级后必须逐个 diff themes/*/src/base-overrides/<rel> vs app/src/<rel>,
-  按 L0/L1/L2 判断影响;L0 永远稳定、L1 可加不可减、L2 无保证
+  按 S0/S1/S2 判断影响;S0 永远稳定、S1 可加不可减、S2 无保证
 ```
 
 Rules:
@@ -89,8 +89,8 @@ Rules:
 
 ## Theme Development Workflow
 
-1. **Read** `docs/developer/theme-implementer-guide.md` (concept model + L0/L1/L2)
-2. Understand the L0/L1/L2 contract levels
+1. **Read** `docs/developer/theme-implementer-guide.md` (concept model + S0/S1/S2)
+2. Understand the S0/S1/S2 contract levels
 3. **Do not touch** restricted override paths: `themes/*/src/base-overrides/{pages/admin,pages/api,lib,loaders}/`
 4. Build validation: `cd themes/<name> && pnpm build`
 5. Type checking: `cd themes/<name> && pnpm check`
@@ -106,8 +106,8 @@ Rules:
      find "$theme/src/base-overrides" -type f | sed "s|$theme/src/base-overrides/||"
    done
    ```
-3. L0 contract violations fail at build time — do not attempt to work around
-4. L1/L2 changes: review diffs between versions, adapt overrides
+3. S0 contract violations fail at build time — do not attempt to work around
+4. S1/S2 changes: review diffs between versions, adapt overrides
 
 ## Data Migration (mereithhh/VanBlog)
 

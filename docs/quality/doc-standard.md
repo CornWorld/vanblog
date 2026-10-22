@@ -24,7 +24,7 @@
 | 层                               | 目录/文件                                 | 读者                                       | 职责                                                                                      | 写作铁律                                                      |
 | -------------------------------- | ----------------------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | **R · 参考层**（事实 SSOT）      | `docs/reference/*.md`，按系统细分         | 查表型用户 / 高级用户                      | 存放**事实**：环境变量表、端口、路径、命令、字段、API。每个事实在此**且仅在此**定义一次。 | 每个事实唯一；只陈述事实，不写教程叙事                        |
-| **G · 使用层**（面向不同 level） | `docs/guide/*.md`                         | 按 level 细分：L0 新手 / L1 普通 / L2 折腾 | 教用户**完成任务**（写文章、换主题、反代、升级）。                                        | 出现事实 → 用链接 `ref` 到 R 层，不抄录；允许一句带链接的总结 |
+| **G · 使用层**（面向不同 level） | `docs/guide/*.md`                         | 按 level 细分：入门 / 进阶 / 运维          | 教用户**完成任务**（写文章、换主题、反代、升级）。                                        | 出现事实 → 用链接 `ref` 到 R 层，不抄录；允许一句带链接的总结 |
 | **F · 门面层**                   | `README.md`、`docs/README.md`（文档索引） | 路人 / 潜在用户                            | 门面 + 索引。给出定位、截图、最快的上手路径、到文档的入口。                               | 只做入口与最短路径；不放任何可被 R/G 层覆盖的长事实           |
 | **Q · 问答层**                   | `docs/faq.md`                             | 出问题的用户                               | 症状 → 原因 → **解决方案（ref 到 R/G）**。                                                | 每条 FAQ 结论必须 ref，不得把解决步骤整段复制进来             |
 
@@ -37,7 +37,7 @@
 1. **参数值**：端口号、路径、卷挂载点、默认值、镜像名/标签、域名
 2. **命令**：`docker compose ...`、`./vanblog.sh ...`、`go build ...`
 3. **配置键**：环境变量名（`VANBLOG_*`）、site 集合字段名、JSON 结构
-4. **契约**：API 端点、权限规则、L0/L1/L2 契约
+4. **契约**：API 端点、权限规则、S0/S1/S2 契约
 
 ### 文档生命周期：`status: superseded`
 
@@ -160,11 +160,11 @@ docs/reference/api.md              R API 事实
 docs/reference/packs.md            R Pack 事实
 docs/reference/themes.md           R 主题事实
 docs/reference/architecture.md     R 架构事实
-docs/guide/quickstart.md           G L0 新手：5 分钟跑起来
-docs/guide/backup-upgrade.md       G L2：备份/升级/回滚（ref reference/backup.md）
-docs/guide/reverse-proxy.md        G L2：反代/安全（ref reference/deployment.md）
-docs/guide/packs.md                G L2：安装/启用 Pack（ref reference/packs.md）
-docs/guide/comments-artalk.md      G L2：评论部署操作（架构事实 ref internal/comments-system.md）
+docs/guide/quickstart.md           G 入门：5 分钟跑起来
+docs/guide/backup-upgrade.md       G 运维：备份/升级/回滚（ref reference/backup.md）
+docs/guide/reverse-proxy.md        G 运维：反代/安全（ref reference/deployment.md）
+docs/guide/packs.md                G 进阶：安装/启用 Pack（ref reference/packs.md）
+docs/guide/comments-artalk.md      G 运维：评论部署操作（架构事实 ref internal/comments-system.md）
 docs/faq.md                        Q 症状 → 原因 → ref
 docs/developer/theme-implementer-guide.md   G 开发者（主题作者）
 docs/developer/sdk-design.md               G 开发者（SDK）

@@ -2,7 +2,7 @@
 title: Pack 使用
 ---
 
-# Pack 使用（L2）
+# Pack 使用（进阶）
 
 > 概念与格式见 [参考: Pack](../reference/packs.md)。
 
